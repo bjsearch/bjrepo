@@ -62,11 +62,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const message = await client.messages.create({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const createParams: any = {
       model: 'claude-opus-4-7',
       max_tokens: 4096,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      thinking: { type: 'adaptive' } as any,
+      thinking: { type: 'adaptive' },
       system: SYSTEM_PROMPT,
       messages: [
         {
@@ -74,7 +74,8 @@ export async function POST(request: NextRequest) {
           content: `Please analyze this English diary entry and provide feedback:\n\n${content}`,
         },
       ],
-    })
+    }
+    const message = await client.messages.create(createParams)
 
     const textBlock = message.content.find((b) => b.type === 'text')
     if (!textBlock || textBlock.type !== 'text') {
