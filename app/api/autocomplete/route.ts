@@ -12,7 +12,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ suggestion: '' })
     }
 
-    const params: Parameters<typeof client.messages.create>[0] = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const params: any = {
       model: 'claude-haiku-4-5',
       max_tokens: 60,
       system: `You are an English diary writing assistant providing inline autocomplete.
@@ -27,7 +28,7 @@ Rules:
     }
 
     const message = await client.messages.create(params)
-    const textBlock = message.content.find((b) => b.type === 'text')
+    const textBlock = message.content.find((b: { type: string }) => b.type === 'text')
     const suggestion = (textBlock as { type: 'text'; text: string } | undefined)?.text.trim() ?? ''
 
     return NextResponse.json({ suggestion })
