@@ -6,6 +6,7 @@ import DiaryEditor from '@/components/DiaryEditor'
 import WritingAnalysis from '@/components/WritingAnalysis'
 import VideoRecommendations from '@/components/VideoRecommendations'
 import DiaryCalendar from '@/components/DiaryCalendar'
+import Dictionary from '@/components/Dictionary'
 import { DiaryEntry, AnalysisResult, YouTubeVideo } from '@/lib/types'
 
 const STORAGE_KEY = 'english-diary-entries'
@@ -247,6 +248,7 @@ export default function Home() {
                 onAnalyze={handleAnalyze}
                 isAnalyzing={isAnalyzing}
               />
+              <Dictionary />
             </div>
             <div className="space-y-4">
               <WritingAnalysis analysis={analysis} isLoading={isAnalyzing} error={analysisError} />
