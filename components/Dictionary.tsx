@@ -105,7 +105,7 @@ export default function Dictionary() {
           <div className="w-3 h-3 rounded-full bg-teal-500"></div>
           <span className="text-xs font-semibold text-teal-600 uppercase tracking-wide">Korean → English</span>
         </div>
-        <h2 className="text-lg font-semibold text-slate-800 mb-3">단어 검색</h2>
+        <h2 className="text-base font-semibold text-slate-800 mb-2">단어 검색</h2>
 
         {/* Search Bar */}
         <div className="flex gap-2">
@@ -187,10 +187,9 @@ export default function Dictionary() {
 
       {/* Empty State */}
       {!result && !isLoading && !error && (
-        <div className="px-6 py-8 text-center">
-          <div className="text-4xl mb-3">🔍</div>
-          <p className="text-slate-500 text-sm">한국어 단어나 표현을 입력하면</p>
-          <p className="text-slate-400 text-xs mt-1">영어 번역 · 발음 · 예문 · 관련 표현을 알려드려요</p>
+        <div className="px-6 py-4 flex items-center gap-3 text-slate-400">
+          <span className="text-2xl">🔍</span>
+          <p className="text-sm">한국어 단어나 표현을 입력하면 영어 번역 · 발음 · 예문을 알려드려요</p>
         </div>
       )}
 

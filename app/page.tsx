@@ -240,18 +240,18 @@ export default function Home() {
 
         {/* Editor View */}
         {view === 'editor' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div>
               <DiaryEditor
                 entry={currentEntry}
                 onUpdate={updateEntry}
                 onAnalyze={handleAnalyze}
                 isAnalyzing={isAnalyzing}
               />
-              <Dictionary />
             </div>
             <div className="space-y-4">
               <WritingAnalysis analysis={analysis} isLoading={isAnalyzing} error={analysisError} />
+              <Dictionary />
               {showVideos && (
                 <VideoRecommendations videos={videos} isLoading={isLoadingVideos} topics={analysis?.topics || []} />
               )}
