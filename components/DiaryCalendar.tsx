@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay, isSameMonth, addMonths, subMonths, isToday, parseISO } from 'date-fns'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameMonth, addMonths, subMonths, isToday, parseISO } from 'date-fns'
 import { DiaryEntry } from '@/lib/types'
 
 interface Props {
@@ -12,29 +12,37 @@ interface Props {
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
+function avgScore(entries: DiaryEntry[]): number | null {
+  const scores = entries.map(e => e.analysis?.score).filter((s): s is number => s !== undefined)
+  if (scores.length === 0) return null
+  return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+}
+
+function scoreStyle(score: number): { bg: string; text: string } {
+  if (score >= 80) return { bg: 'bg-emerald-500', text: 'text-white' }
+  if (score >= 60) return { bg: 'bg-amber-400', text: 'text-white' }
+  return { bg: 'bg-red-400', text: 'text-white' }
+}
+
 export default function DiaryCalendar({ entries, currentEntry, onSelectDate }: Props) {
   const [viewMonth, setViewMonth] = useState(new Date())
 
   const monthStart = startOfMonth(viewMonth)
   const monthEnd = endOfMonth(viewMonth)
   const days = eachDayOfInterval({ start: monthStart, end: monthEnd })
-  const startPad = getDay(monthStart) // 0=Sun
+  const startPad = getDay(monthStart)
 
-  const entryByDate = entries.reduce((acc, e) => {
-    acc[e.date] = e
+  // Group all entries by date (support multiple per day)
+  const entriesByDate = entries.reduce((acc, e) => {
+    if (!acc[e.date]) acc[e.date] = []
+    acc[e.date].push(e)
     return acc
-  }, {} as Record<string, DiaryEntry>)
-
-  const scoreColor = (score: number) => {
-    if (score >= 80) return 'bg-emerald-500'
-    if (score >= 60) return 'bg-amber-400'
-    return 'bg-red-400'
-  }
+  }, {} as Record<string, DiaryEntry[]>)
 
   const currentDateStr = format(parseISO(currentEntry.date), 'yyyy-MM-dd')
 
-  const writtenDays = entries.filter(e => e.content.trim()).length
-  const analyzedDays = entries.filter(e => e.analysis).length
+  const writtenDays = Object.values(entriesByDate).filter(es => es.some(e => e.content.trim())).length
+  const analyzedDays = Object.values(entriesByDate).filter(es => es.some(e => e.analysis)).length
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
@@ -67,7 +75,6 @@ export default function DiaryCalendar({ entries, currentEntry, onSelectDate }: P
             </button>
           </div>
         </div>
-        {/* Stats */}
         <div className="flex gap-3 mt-2">
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
             <div className="w-2.5 h-2.5 rounded-full bg-indigo-400"></div>
@@ -93,51 +100,59 @@ export default function DiaryCalendar({ entries, currentEntry, onSelectDate }: P
 
         {/* Day cells */}
         <div className="grid grid-cols-7 gap-y-1">
-          {/* Leading empty cells */}
           {Array.from({ length: startPad }).map((_, i) => (
             <div key={`pad-${i}`} />
           ))}
 
           {days.map(day => {
             const dateStr = format(day, 'yyyy-MM-dd')
-            const entry = entryByDate[dateStr]
-            const hasContent = entry && entry.content.trim().length > 0
-            const hasAnalysis = entry?.analysis
+            const dayEntries = entriesByDate[dateStr] ?? []
+            const hasContent = dayEntries.some(e => e.content.trim())
+            const score = avgScore(dayEntries)
+            const hasScore = score !== null
+            const isMultiple = dayEntries.filter(e => e.analysis).length > 1
             const isSelected = dateStr === currentDateStr
             const isCurrentMonth = isSameMonth(day, viewMonth)
             const isTodayDate = isToday(day)
+            const style = hasScore ? scoreStyle(score!) : null
 
             return (
               <button
                 key={dateStr}
                 onClick={() => onSelectDate(day)}
                 className={`
-                  relative flex flex-col items-center justify-center rounded-xl py-1.5 transition-all
-                  ${isSelected ? 'bg-indigo-600 text-white shadow-sm' : ''}
+                  relative flex flex-col items-center justify-center rounded-xl py-1 gap-0.5 transition-all min-h-[52px]
+                  ${isSelected ? 'bg-indigo-600 shadow-sm' : ''}
                   ${!isSelected && hasContent ? 'hover:bg-indigo-50' : ''}
                   ${!isSelected && !hasContent ? 'hover:bg-slate-50' : ''}
                   ${!isCurrentMonth ? 'opacity-30' : ''}
                 `}
               >
+                {/* Date number */}
                 <span className={`
-                  text-xs font-medium leading-none
+                  text-xs font-semibold leading-none
                   ${isSelected ? 'text-white' : isTodayDate ? 'text-indigo-600' : 'text-slate-700'}
                 `}>
                   {format(day, 'd')}
                 </span>
 
-                {/* Dot indicator */}
-                <div className="h-1.5 mt-0.5 flex items-center justify-center">
-                  {hasAnalysis && !isSelected && (
-                    <div className={`w-1.5 h-1.5 rounded-full ${scoreColor(entry.analysis!.score)}`} />
-                  )}
-                  {hasContent && !hasAnalysis && !isSelected && (
-                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-300" />
-                  )}
-                  {isSelected && hasContent && (
-                    <div className="w-1.5 h-1.5 rounded-full bg-white/70" />
-                  )}
-                </div>
+                {/* Score badge */}
+                {hasScore && (
+                  <span className={`
+                    text-[10px] font-bold leading-none px-1 py-0.5 rounded-md
+                    ${isSelected
+                      ? 'bg-white/25 text-white'
+                      : `${style!.bg} ${style!.text}`
+                    }
+                  `}>
+                    {isMultiple ? '~' : ''}{score}
+                  </span>
+                )}
+
+                {/* Written but not analyzed — small dot */}
+                {hasContent && !hasScore && (
+                  <div className={`w-1 h-1 rounded-full ${isSelected ? 'bg-white/60' : 'bg-indigo-300'}`} />
+                )}
               </button>
             )
           })}
@@ -148,19 +163,23 @@ export default function DiaryCalendar({ entries, currentEntry, onSelectDate }: P
       <div className="px-4 pb-4 flex flex-wrap gap-x-4 gap-y-1">
         <div className="flex items-center gap-1.5 text-xs text-slate-400">
           <div className="w-2 h-2 rounded-full bg-indigo-300"></div>
-          <span>Written</span>
+          <span>작성됨</span>
         </div>
         <div className="flex items-center gap-1.5 text-xs text-slate-400">
-          <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-          <span>Score 80+</span>
+          <div className="w-3 h-3 rounded bg-emerald-500"></div>
+          <span>80+</span>
         </div>
         <div className="flex items-center gap-1.5 text-xs text-slate-400">
-          <div className="w-2 h-2 rounded-full bg-amber-400"></div>
-          <span>Score 60+</span>
+          <div className="w-3 h-3 rounded bg-amber-400"></div>
+          <span>60+</span>
         </div>
         <div className="flex items-center gap-1.5 text-xs text-slate-400">
-          <div className="w-2 h-2 rounded-full bg-red-400"></div>
-          <span>Score &lt;60</span>
+          <div className="w-3 h-3 rounded bg-red-400"></div>
+          <span>&lt;60</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-xs text-slate-400">
+          <span className="font-bold">~</span>
+          <span>평균점수</span>
         </div>
       </div>
     </div>
