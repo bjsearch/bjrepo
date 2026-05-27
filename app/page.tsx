@@ -38,6 +38,14 @@ async function saveEntry(entry: DiaryEntry) {
   })
 }
 
+async function removeEntry(id: string) {
+  await fetch('/api/entries', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id }),
+  })
+}
+
 type View = 'editor' | 'calendar'
 
 export default function Home() {
@@ -152,6 +160,27 @@ export default function Home() {
     }
   }
 
+  const handleDeleteEntry = async (entry: DiaryEntry) => {
+    if (!window.confirm(`"${entry.date}" 일기를 삭제할까요? 복구할 수 없어요.`)) return
+    clearTimeout(saveDebounceRef.current)
+    setEntries((prev) => prev.filter((e) => e.id !== entry.id))
+    await removeEntry(entry.id)
+    if (currentEntry.id === entry.id) {
+      const today = format(new Date(), 'yyyy-MM-dd')
+      const remaining = entries.filter((e) => e.id !== entry.id)
+      const todayEntry = remaining.find((e) => e.date === today)
+      if (todayEntry) {
+        setCurrentEntry(todayEntry)
+        setAnalysis(todayEntry.analysis || null)
+      } else {
+        setCurrentEntry(createEntryForDate(new Date()))
+        setAnalysis(null)
+      }
+      setVideos([])
+      setAnalysisError(null)
+    }
+  }
+
   const handleTodayEntry = () => {
     const today = format(new Date(), 'yyyy-MM-dd')
     const existing = entries.find((e) => e.date === today)
@@ -246,7 +275,7 @@ export default function Home() {
                 </div>
                 <div className="lg:col-span-2 space-y-4">
                   <CalendarStats entries={entries} />
-                  <RecentEntries entries={entries} onSelect={handleSelectEntry} onToday={handleTodayEntry} />
+                  <RecentEntries entries={entries} onSelect={handleSelectEntry} onToday={handleTodayEntry} onDelete={handleDeleteEntry} />
                 </div>
               </div>
             )}
@@ -259,6 +288,7 @@ export default function Home() {
                     entry={currentEntry}
                     onUpdate={updateEntry}
                     onAnalyze={handleAnalyze}
+                    onDelete={entries.some(e => e.id === currentEntry.id) ? () => handleDeleteEntry(currentEntry) : undefined}
                     isAnalyzing={isAnalyzing}
                   />
                 </div>
@@ -349,10 +379,11 @@ function CalendarStats({ entries }: { entries: DiaryEntry[] }) {
   )
 }
 
-function RecentEntries({ entries, onSelect, onToday }: {
+function RecentEntries({ entries, onSelect, onToday, onDelete }: {
   entries: DiaryEntry[]
   onSelect: (e: DiaryEntry) => void
   onToday: () => void
+  onDelete: (e: DiaryEntry) => void
 }) {
   const sorted = [...entries]
     .filter(e => e.content.trim())
@@ -385,30 +416,40 @@ function RecentEntries({ entries, onSelect, onToday }: {
           {sorted.map(entry => {
             const wordCount = entry.content.trim().split(/\s+/).length
             return (
-              <button
-                key={entry.id}
-                onClick={() => onSelect(entry)}
-                className="w-full text-left px-5 py-3.5 hover:bg-slate-50 transition-colors"
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-semibold text-slate-700">
-                    {format(parseISO(entry.date), 'EEE, MMM d, yyyy')}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    {entry.analysis && (
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                        entry.analysis.score >= 80 ? 'bg-emerald-100 text-emerald-700' :
-                        entry.analysis.score >= 60 ? 'bg-amber-100 text-amber-700' :
-                        'bg-red-100 text-red-700'
-                      }`}>
-                        {entry.analysis.score}pts
-                      </span>
-                    )}
-                    <span className="text-xs text-slate-400">{wordCount}w</span>
+              <div key={entry.id} className="flex items-center group hover:bg-slate-50 transition-colors">
+                <button
+                  onClick={() => onSelect(entry)}
+                  className="flex-1 text-left px-5 py-3.5 min-w-0"
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-semibold text-slate-700">
+                      {format(parseISO(entry.date), 'EEE, MMM d, yyyy')}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {entry.analysis && (
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                          entry.analysis.score >= 80 ? 'bg-emerald-100 text-emerald-700' :
+                          entry.analysis.score >= 60 ? 'bg-amber-100 text-amber-700' :
+                          'bg-red-100 text-red-700'
+                        }`}>
+                          {entry.analysis.score}pts
+                        </span>
+                      )}
+                      <span className="text-xs text-slate-400">{wordCount}w</span>
+                    </div>
                   </div>
-                </div>
-                <p className="text-xs text-slate-400 truncate">{entry.content.slice(0, 100)}</p>
-              </button>
+                  <p className="text-xs text-slate-400 truncate">{entry.content.slice(0, 100)}</p>
+                </button>
+                <button
+                  onClick={() => onDelete(entry)}
+                  title="Delete entry"
+                  className="flex-shrink-0 mr-3 p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
             )
           })}
         </div>

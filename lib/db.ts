@@ -33,6 +33,11 @@ export async function upsertEntry(entry: DiaryEntry): Promise<void> {
   `
 }
 
+export async function deleteEntry(id: string): Promise<void> {
+  await ensureTable()
+  await sql`DELETE FROM diary_entries WHERE id = ${id}`
+}
+
 function rowToEntry(row: Record<string, unknown>): DiaryEntry {
   return {
     id:        row.id as string,

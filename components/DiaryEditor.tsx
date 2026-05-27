@@ -8,10 +8,11 @@ interface Props {
   entry: DiaryEntry
   onUpdate: (content: string) => void
   onAnalyze: () => void
+  onDelete?: () => void
   isAnalyzing: boolean
 }
 
-export default function DiaryEditor({ entry, onUpdate, onAnalyze, isAnalyzing }: Props) {
+export default function DiaryEditor({ entry, onUpdate, onAnalyze, onDelete, isAnalyzing }: Props) {
   const [content, setContent] = useState(entry.content)
   const [wordCount, setWordCount] = useState(0)
   const [charCount, setCharCount] = useState(0)
@@ -237,11 +238,25 @@ export default function DiaryEditor({ entry, onUpdate, onAnalyze, isAnalyzing }:
 
       {/* Footer */}
       <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between">
-        <div className="text-xs text-slate-400">
-          {wordCount < 10 ? (
-            <span className="text-amber-500">Write at least {10 - wordCount} more words to analyze</span>
-          ) : (
-            <span className="text-emerald-500">Ready to analyze! 🎉</span>
+        <div className="flex items-center gap-3">
+          <div className="text-xs text-slate-400">
+            {wordCount < 10 ? (
+              <span className="text-amber-500">Write at least {10 - wordCount} more words to analyze</span>
+            ) : (
+              <span className="text-emerald-500">Ready to analyze! 🎉</span>
+            )}
+          </div>
+          {onDelete && (
+            <button
+              onClick={onDelete}
+              title="Delete this entry"
+              className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500 transition-colors px-2 py-1 rounded-lg hover:bg-red-50"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Delete
+            </button>
           )}
         </div>
         <button

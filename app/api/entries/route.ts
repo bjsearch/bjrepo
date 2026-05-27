@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAllEntries, upsertEntry } from '@/lib/db'
+import { getAllEntries, upsertEntry, deleteEntry } from '@/lib/db'
 
 export async function GET() {
   try {
@@ -20,5 +20,16 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('DB POST error:', error)
     return NextResponse.json({ error: 'Failed to save entry' }, { status: 500 })
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const { id } = await req.json()
+    await deleteEntry(id)
+    return NextResponse.json({ ok: true })
+  } catch (error) {
+    console.error('DB DELETE error:', error)
+    return NextResponse.json({ error: 'Failed to delete entry' }, { status: 500 })
   }
 }
