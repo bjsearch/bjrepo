@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { format, parseISO } from 'date-fns'
 import DiaryEditor from '@/components/DiaryEditor'
 import WritingAnalysis from '@/components/WritingAnalysis'
@@ -8,8 +8,6 @@ import VideoRecommendations from '@/components/VideoRecommendations'
 import DiaryCalendar from '@/components/DiaryCalendar'
 import Dictionary from '@/components/Dictionary'
 import { DiaryEntry, AnalysisResult, YouTubeVideo } from '@/lib/types'
-
-const STORAGE_KEY = 'english-diary-entries'
 
 function createEntryForDate(date: Date): DiaryEntry {
   const now = new Date().toISOString()
@@ -22,19 +20,22 @@ function createEntryForDate(date: Date): DiaryEntry {
   }
 }
 
-function loadEntries(): DiaryEntry[] {
-  if (typeof window === 'undefined') return []
+async function fetchEntries(): Promise<DiaryEntry[]> {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    return stored ? JSON.parse(stored) : []
+    const res = await fetch('/api/entries')
+    if (!res.ok) return []
+    return await res.json()
   } catch {
     return []
   }
 }
 
-function saveEntries(entries: DiaryEntry[]) {
-  if (typeof window === 'undefined') return
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries))
+async function saveEntry(entry: DiaryEntry) {
+  await fetch('/api/entries', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entry),
+  })
 }
 
 type View = 'editor' | 'calendar'
@@ -48,16 +49,20 @@ export default function Home() {
   const [isLoadingVideos, setIsLoadingVideos] = useState(false)
   const [analysisError, setAnalysisError] = useState<string | null>(null)
   const [view, setView] = useState<View>('editor')
+  const [isLoadingEntries, setIsLoadingEntries] = useState(true)
+  const saveDebounceRef = useRef<ReturnType<typeof setTimeout>>()
 
   useEffect(() => {
-    const loaded = loadEntries()
-    setEntries(loaded)
-    const today = format(new Date(), 'yyyy-MM-dd')
-    const todayEntry = loaded.find((e) => e.date === today)
-    if (todayEntry) {
-      setCurrentEntry(todayEntry)
-      if (todayEntry.analysis) setAnalysis(todayEntry.analysis)
-    }
+    fetchEntries().then((loaded) => {
+      setEntries(loaded)
+      const today = format(new Date(), 'yyyy-MM-dd')
+      const todayEntry = loaded.find((e) => e.date === today)
+      if (todayEntry) {
+        setCurrentEntry(todayEntry)
+        if (todayEntry.analysis) setAnalysis(todayEntry.analysis)
+      }
+      setIsLoadingEntries(false)
+    })
   }, [])
 
   const updateEntry = useCallback(
@@ -66,10 +71,12 @@ export default function Home() {
       setCurrentEntry(updated)
       setEntries((prev) => {
         const exists = prev.find((e) => e.id === updated.id)
-        const next = exists ? prev.map((e) => (e.id === updated.id ? updated : e)) : [...prev, updated]
-        saveEntries(next)
-        return next
+        return exists ? prev.map((e) => (e.id === updated.id ? updated : e)) : [...prev, updated]
       })
+
+      // Debounced DB save (1.5s after last keystroke)
+      clearTimeout(saveDebounceRef.current)
+      saveDebounceRef.current = setTimeout(() => saveEntry(updated), 1500)
     },
     [currentEntry]
   )
@@ -96,10 +103,10 @@ export default function Home() {
       setEntries((prev) => {
         const next = prev.map((e) => (e.id === updatedEntry.id ? updatedEntry : e))
         const exists = next.find((e) => e.id === updatedEntry.id)
-        const final = exists ? next : [...next, updatedEntry]
-        saveEntries(final)
-        return final
+        return exists ? next : [...next, updatedEntry]
       })
+      // Save analysis to DB immediately
+      await saveEntry(updatedEntry)
 
       if (data.topics?.length > 0) {
         setIsLoadingVideos(true)
@@ -178,7 +185,6 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Streak badge */}
             {streak > 0 && (
               <div className="hidden sm:flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-xl px-3 py-1.5">
                 <span className="text-sm">🔥</span>
@@ -186,7 +192,6 @@ export default function Home() {
               </div>
             )}
 
-            {/* View toggle */}
             <div className="flex bg-slate-100 rounded-xl p-1">
               <button
                 onClick={() => setView('editor')}
@@ -221,65 +226,75 @@ export default function Home() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Calendar View */}
-        {view === 'calendar' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fadeIn">
-            <div className="lg:col-span-1">
-              <DiaryCalendar
-                entries={entries}
-                currentEntry={currentEntry}
-                onSelectDate={handleSelectDate}
-              />
-            </div>
-            <div className="lg:col-span-2 space-y-4">
-              <CalendarStats entries={entries} />
-              <RecentEntries entries={entries} onSelect={handleSelectEntry} onToday={handleTodayEntry} />
+        {/* Loading state */}
+        {isLoadingEntries && (
+          <div className="flex items-center justify-center py-20">
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-10 h-10 border-4 border-indigo-100 border-t-indigo-500 rounded-full animate-spin" />
+              <p className="text-sm text-slate-400">일기를 불러오는 중...</p>
             </div>
           </div>
         )}
 
-        {/* Editor View */}
-        {view === 'editor' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div>
-              <DiaryEditor
-                entry={currentEntry}
-                onUpdate={updateEntry}
-                onAnalyze={handleAnalyze}
-                isAnalyzing={isAnalyzing}
-              />
-            </div>
-            <div className="space-y-4">
-              <WritingAnalysis analysis={analysis} isLoading={isAnalyzing} error={analysisError} />
-              <Dictionary />
-              {showVideos && (
-                <VideoRecommendations videos={videos} isLoading={isLoadingVideos} topics={analysis?.topics || []} />
-              )}
-              {analysis && !showVideos && analysis.topics.length > 0 && (
-                <VideoRecommendations videos={[]} isLoading={false} topics={analysis.topics} />
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Tips Banner */}
-        {view === 'editor' && !analysis && !isAnalyzing && (
-          <div className="mt-4 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 rounded-2xl p-5">
-            <h3 className="text-sm font-semibold text-indigo-700 mb-3">💡 Tips for Better English Writing</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {[
-                { icon: '📝', tip: 'Write every day, even just 50 words' },
-                { icon: '🎯', tip: 'Use new vocabulary you learned recently' },
-                { icon: '💭', tip: 'Write about your feelings and emotions' },
-                { icon: '🔄', tip: 'Review your corrections and improve' },
-              ].map((item) => (
-                <div key={item.tip} className="flex items-start gap-2">
-                  <span className="text-lg flex-shrink-0">{item.icon}</span>
-                  <p className="text-xs text-indigo-600 leading-relaxed">{item.tip}</p>
+        {!isLoadingEntries && (
+          <>
+            {/* Calendar View */}
+            {view === 'calendar' && (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fadeIn">
+                <div className="lg:col-span-1">
+                  <DiaryCalendar entries={entries} currentEntry={currentEntry} onSelectDate={handleSelectDate} />
                 </div>
-              ))}
-            </div>
-          </div>
+                <div className="lg:col-span-2 space-y-4">
+                  <CalendarStats entries={entries} />
+                  <RecentEntries entries={entries} onSelect={handleSelectEntry} onToday={handleTodayEntry} />
+                </div>
+              </div>
+            )}
+
+            {/* Editor View */}
+            {view === 'editor' && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div>
+                  <DiaryEditor
+                    entry={currentEntry}
+                    onUpdate={updateEntry}
+                    onAnalyze={handleAnalyze}
+                    isAnalyzing={isAnalyzing}
+                  />
+                </div>
+                <div className="space-y-4">
+                  <WritingAnalysis analysis={analysis} isLoading={isAnalyzing} error={analysisError} />
+                  <Dictionary />
+                  {showVideos && (
+                    <VideoRecommendations videos={videos} isLoading={isLoadingVideos} topics={analysis?.topics || []} />
+                  )}
+                  {analysis && !showVideos && analysis.topics.length > 0 && (
+                    <VideoRecommendations videos={[]} isLoading={false} topics={analysis.topics} />
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Tips Banner */}
+            {view === 'editor' && !analysis && !isAnalyzing && (
+              <div className="mt-4 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 rounded-2xl p-5">
+                <h3 className="text-sm font-semibold text-indigo-700 mb-3">💡 Tips for Better English Writing</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[
+                    { icon: '📝', tip: 'Write every day, even just 50 words' },
+                    { icon: '🎯', tip: 'Use new vocabulary you learned recently' },
+                    { icon: '💭', tip: 'Write about your feelings and emotions' },
+                    { icon: '🔄', tip: 'Review your corrections and improve' },
+                  ].map((item) => (
+                    <div key={item.tip} className="flex items-start gap-2">
+                      <span className="text-lg flex-shrink-0">{item.icon}</span>
+                      <p className="text-xs text-indigo-600 leading-relaxed">{item.tip}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </main>
     </div>
@@ -296,8 +311,7 @@ function calcStreak(entries: DiaryEntry[]): number {
   if (written.length === 0) return 0
 
   let streak = 0
-  const today = format(new Date(), 'yyyy-MM-dd')
-  let check = today
+  let check = format(new Date(), 'yyyy-MM-dd')
 
   for (const date of written) {
     if (date === check) {
