@@ -7,7 +7,8 @@ export async function GET() {
     return NextResponse.json(entries)
   } catch (error) {
     console.error('DB GET error:', error)
-    return NextResponse.json({ error: 'Failed to load entries' }, { status: 500 })
+    const msg = error instanceof Error ? error.message : String(error)
+    return NextResponse.json({ error: 'Failed to load entries', detail: msg }, { status: 500 })
   }
 }
 
