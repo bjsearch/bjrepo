@@ -9,7 +9,13 @@ interface Props {
   error: string | null
 }
 
-type Tab = 'grammar' | 'sentences' | 'expressions' | 'feedback'
+type Tab = 'grammar' | 'sentences' | 'expressions' | 'vocabulary' | 'feedback'
+
+const levelColors: Record<string, string> = {
+  basic: 'bg-green-100 text-green-700',
+  intermediate: 'bg-blue-100 text-blue-700',
+  advanced: 'bg-purple-100 text-purple-700',
+}
 
 export default function WritingAnalysis({ analysis, isLoading, error }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('grammar')
@@ -26,8 +32,9 @@ export default function WritingAnalysis({ analysis, isLoading, error }: Props) {
 
   const tabs: { id: Tab; label: string; icon: string; count?: number }[] = [
     { id: 'grammar', label: 'Grammar', icon: '✏️', count: analysis?.grammar_corrections.length },
-    { id: 'sentences', label: 'Better Sentences', icon: '💬', count: analysis?.better_sentences.length },
+    { id: 'sentences', label: 'Sentences', icon: '💬', count: analysis?.better_sentences.length },
     { id: 'expressions', label: 'Expressions', icon: '🌟', count: analysis?.modern_expressions.length },
+    { id: 'vocabulary', label: 'Words & Idioms', icon: '📚', count: (analysis?.vocabulary?.length ?? 0) + (analysis?.idioms?.length ?? 0) },
     { id: 'feedback', label: 'Feedback', icon: '📊' },
   ]
 
@@ -57,9 +64,9 @@ export default function WritingAnalysis({ analysis, isLoading, error }: Props) {
             <p className="text-slate-400 text-sm mt-1">Claude AI is reviewing your diary entry</p>
           </div>
           <div className="flex gap-2 mt-2">
-            {['Checking grammar', 'Finding expressions', 'Writing feedback'].map((step, i) => (
+            {['Checking grammar', 'Finding expressions', 'Picking vocabulary'].map((step, i) => (
               <div key={step} className="text-xs text-slate-500 flex items-center gap-1">
-                <div className={`w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse`} style={{ animationDelay: `${i * 0.3}s` }}></div>
+                <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" style={{ animationDelay: `${i * 0.3}s` }}></div>
                 {step}
               </div>
             ))}
@@ -101,11 +108,12 @@ export default function WritingAnalysis({ analysis, isLoading, error }: Props) {
             <p className="text-slate-400 text-xs mt-0.5">일기를 쓰고 <span className="text-indigo-500 font-medium">"Analyze My Writing"</span>을 클릭하세요</p>
           </div>
         </div>
-        <div className="mt-3 grid grid-cols-4 gap-2">
+        <div className="mt-3 grid grid-cols-5 gap-2">
           {[
             { icon: '✏️', label: 'Grammar' },
             { icon: '💬', label: 'Sentences' },
             { icon: '🌟', label: 'Expressions' },
+            { icon: '📚', label: 'Words' },
             { icon: '📊', label: 'Score' },
           ].map((item) => (
             <div key={item.label} className="flex flex-col items-center gap-1 bg-slate-50 rounded-xl py-2.5">
@@ -139,7 +147,6 @@ export default function WritingAnalysis({ analysis, isLoading, error }: Props) {
             </span>
           </div>
         </div>
-        {/* Score bar */}
         <div className="mt-3 bg-white/20 rounded-full h-2">
           <div
             className="bg-white rounded-full h-2 transition-all duration-1000"
@@ -154,7 +161,7 @@ export default function WritingAnalysis({ analysis, isLoading, error }: Props) {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-3 text-xs font-medium whitespace-nowrap transition-colors ${
               activeTab === tab.id
                 ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50'
                 : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
@@ -279,6 +286,103 @@ export default function WritingAnalysis({ analysis, isLoading, error }: Props) {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Vocabulary & Idioms Tab */}
+        {activeTab === 'vocabulary' && (
+          <div className="space-y-5">
+            {/* Vocabulary Section */}
+            {analysis.vocabulary && analysis.vocabulary.length > 0 && (
+              <div>
+                <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                  <span>📖</span> 단어 (Vocabulary)
+                </h4>
+                <div className="space-y-2">
+                  {analysis.vocabulary.map((item, i) => (
+                    <div key={i} className="border border-slate-100 rounded-xl overflow-hidden">
+                      <button
+                        onClick={() => toggleExpanded(i + 100)}
+                        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-slate-50 transition-colors"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="font-bold text-slate-800 text-sm">{item.word}</span>
+                          <span className="text-xs text-slate-400 italic">{item.part_of_speech}</span>
+                          <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${levelColors[item.level]}`}>
+                            {item.level}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                          <span className="text-sm text-slate-600 font-medium">{item.meaning_ko}</span>
+                          <svg className={`w-4 h-4 text-slate-400 transition-transform ${expandedItems.has(i + 100) ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      </button>
+                      {expandedItems.has(i + 100) && (
+                        <div className="px-4 pb-3 space-y-2 border-t border-slate-50">
+                          <p className="text-xs text-slate-500 mt-2">{item.meaning_en}</p>
+                          <div className="bg-emerald-50 rounded-lg px-3 py-2">
+                            <span className="text-xs text-emerald-600 font-medium">Example: </span>
+                            <span className="text-xs text-emerald-700 italic">{item.example}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Idioms Section */}
+            {analysis.idioms && analysis.idioms.length > 0 && (
+              <div>
+                <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                  <span>💡</span> 숙어 (Idioms & Phrases)
+                </h4>
+                <div className="space-y-2">
+                  {analysis.idioms.map((item, i) => (
+                    <div key={i} className="border border-slate-100 rounded-xl overflow-hidden">
+                      <button
+                        onClick={() => toggleExpanded(i + 200)}
+                        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-slate-50 transition-colors"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-bold text-indigo-700 text-sm">"{item.idiom}"</span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                          <span className="text-sm text-slate-600 font-medium">{item.meaning_ko}</span>
+                          <svg className={`w-4 h-4 text-slate-400 transition-transform ${expandedItems.has(i + 200) ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      </button>
+                      {expandedItems.has(i + 200) && (
+                        <div className="px-4 pb-3 space-y-2 border-t border-slate-50">
+                          <p className="text-xs text-slate-500 mt-2">{item.meaning_en}</p>
+                          <div className="bg-indigo-50 rounded-lg px-3 py-2">
+                            <span className="text-xs text-indigo-600 font-medium">Example: </span>
+                            <span className="text-xs text-indigo-700 italic">{item.example}</span>
+                          </div>
+                          <div className="bg-amber-50 rounded-lg px-3 py-2">
+                            <span className="text-xs text-amber-600 font-medium">사용법: </span>
+                            <span className="text-xs text-amber-700">{item.context}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {(!analysis.vocabulary || analysis.vocabulary.length === 0) &&
+             (!analysis.idioms || analysis.idioms.length === 0) && (
+              <div className="text-center py-8">
+                <div className="text-3xl mb-2">📚</div>
+                <p className="text-slate-500 text-sm">단어 정보가 없습니다</p>
+              </div>
+            )}
           </div>
         )}
 

@@ -33,6 +33,25 @@ Your analysis must be returned as valid JSON with this exact structure:
       "category": "idiom|slang|phrasal_verb|collocation"
     }
   ],
+  "vocabulary": [
+    {
+      "word": "useful word or phrase from the diary or related to its topics",
+      "part_of_speech": "noun|verb|adjective|adverb|phrase",
+      "meaning_ko": "한국어 뜻",
+      "meaning_en": "clear English definition",
+      "example": "natural example sentence using this word",
+      "level": "basic|intermediate|advanced"
+    }
+  ],
+  "idioms": [
+    {
+      "idiom": "English idiom or fixed phrase",
+      "meaning_ko": "한국어 뜻",
+      "meaning_en": "what this idiom means in plain English",
+      "example": "natural sentence using the idiom",
+      "context": "when and how to use it (casual conversation / formal writing / etc.)"
+    }
+  ],
   "overall_feedback": "2-3 sentences of encouraging, constructive overall feedback",
   "topics": ["topic1", "topic2", "topic3"],
   "level": "beginner|intermediate|advanced",
@@ -45,6 +64,8 @@ Rules:
 - Provide 2-5 grammar corrections (only if there are actual errors; don't invent errors)
 - Provide 2-3 better sentence alternatives
 - Suggest 3-5 modern English expressions RELATED to the topics in the diary
+- Provide 5-8 vocabulary items: pick words/phrases that appear in the diary AND add related useful words matching the diary's context. Prioritize words worth memorizing.
+- Provide 4-6 idioms: choose common English idioms that are relevant to the diary's topics or emotions. These should be practical and frequently used by native speakers.
 - Score should be 0-100 based on grammar, vocabulary, and fluency
 - Topics should be 2-4 specific topics from the diary entry (for YouTube video search)
 - Be encouraging and constructive, not discouraging

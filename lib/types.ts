@@ -28,10 +28,29 @@ export interface ModernExpression {
   category: 'idiom' | 'slang' | 'phrasal_verb' | 'collocation'
 }
 
+export interface VocabularyItem {
+  word: string
+  part_of_speech: string
+  meaning_ko: string
+  meaning_en: string
+  example: string
+  level: 'basic' | 'intermediate' | 'advanced'
+}
+
+export interface IdiomItem {
+  idiom: string
+  meaning_ko: string
+  meaning_en: string
+  example: string
+  context: string
+}
+
 export interface AnalysisResult {
   grammar_corrections: GrammarCorrection[]
   better_sentences: BetterSentence[]
   modern_expressions: ModernExpression[]
+  vocabulary: VocabularyItem[]
+  idioms: IdiomItem[]
   overall_feedback: string
   topics: string[]
   level: 'beginner' | 'intermediate' | 'advanced'
