@@ -5,6 +5,15 @@ export interface DiaryEntry {
   analysis?: AnalysisResult
   createdAt: string
   updatedAt: string
+  userId?: string
+}
+
+export interface User {
+  id: string
+  username: string
+  role: 'user' | 'admin'
+  createdAt: string
+  entryCount?: number
 }
 
 export interface GrammarCorrection {

@@ -7,7 +7,10 @@ import WritingAnalysis from '@/components/WritingAnalysis'
 import VideoRecommendations from '@/components/VideoRecommendations'
 import DiaryCalendar from '@/components/DiaryCalendar'
 import Dictionary from '@/components/Dictionary'
+import LoginPage from '@/components/LoginPage'
+import AdminView from '@/components/AdminView'
 import { DiaryEntry, AnalysisResult, YouTubeVideo } from '@/lib/types'
+import { SessionUser } from '@/lib/auth'
 
 function createEntryForDate(date: Date): DiaryEntry {
   const now = new Date().toISOString()
@@ -49,6 +52,10 @@ async function removeEntry(id: string) {
 type View = 'editor' | 'calendar'
 
 export default function Home() {
+  const [user, setUser] = useState<SessionUser | null>(null)
+  const [authLoading, setAuthLoading] = useState(true)
+  const [showAdmin, setShowAdmin] = useState(false)
+
   const [entries, setEntries] = useState<DiaryEntry[]>([])
   const [currentEntry, setCurrentEntry] = useState<DiaryEntry>(createEntryForDate(new Date()))
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null)
@@ -57,10 +64,24 @@ export default function Home() {
   const [isLoadingVideos, setIsLoadingVideos] = useState(false)
   const [analysisError, setAnalysisError] = useState<string | null>(null)
   const [view, setView] = useState<View>('editor')
-  const [isLoadingEntries, setIsLoadingEntries] = useState(true)
+  const [isLoadingEntries, setIsLoadingEntries] = useState(false)
   const saveDebounceRef = useRef<ReturnType<typeof setTimeout>>()
 
+  // Auth check on mount
   useEffect(() => {
+    fetch('/api/auth/me')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        setUser(data)
+        setAuthLoading(false)
+      })
+      .catch(() => setAuthLoading(false))
+  }, [])
+
+  // Load entries when user is set
+  useEffect(() => {
+    if (!user) return
+    setIsLoadingEntries(true)
     fetchEntries().then((loaded) => {
       setEntries(loaded)
       const today = format(new Date(), 'yyyy-MM-dd')
@@ -71,7 +92,7 @@ export default function Home() {
       }
       setIsLoadingEntries(false)
     })
-  }, [])
+  }, [user])
 
   const updateEntry = useCallback(
     (content: string) => {
@@ -195,8 +216,32 @@ export default function Home() {
     setView('editor')
   }
 
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' })
+    setUser(null)
+    setEntries([])
+    setCurrentEntry(createEntryForDate(new Date()))
+    setAnalysis(null)
+    setVideos([])
+  }
+
   const showVideos = analysis && (videos.length > 0 || isLoadingVideos)
   const streak = calcStreak(entries)
+
+  // Auth loading
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-indigo-100 border-t-indigo-500 rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  // Not logged in
+  if (!user) return <LoginPage onLogin={setUser} />
+
+  // Admin view
+  if (showAdmin) return <AdminView onClose={() => setShowAdmin(false)} />
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -248,6 +293,33 @@ export default function Home() {
                     {entries.filter(e => e.content.trim()).length}
                   </span>
                 )}
+              </button>
+            </div>
+
+            {/* User info + logout */}
+            <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200">
+              {user.role === 'admin' && (
+                <button
+                  onClick={() => setShowAdmin(true)}
+                  className="flex items-center gap-1.5 text-xs bg-rose-50 text-rose-600 border border-rose-200 px-2.5 py-1.5 rounded-lg hover:bg-rose-100 transition-colors font-medium"
+                >
+                  🛡️ Admin
+                </button>
+              )}
+              <div className="flex items-center gap-1.5 text-xs text-slate-500 px-2 py-1.5">
+                <div className="w-5 h-5 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold text-xs">
+                  {user.username.charAt(0).toUpperCase()}
+                </div>
+                <span className="hidden sm:inline font-medium">{user.username}</span>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="text-xs text-slate-400 hover:text-slate-600 px-2 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                title="로그아웃"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
               </button>
             </div>
           </div>
