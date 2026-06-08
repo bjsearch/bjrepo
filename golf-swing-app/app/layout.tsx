@@ -13,7 +13,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <body className="bg-gradient-to-b from-emerald-50 to-white min-h-screen text-gray-800">
+      <body className="bg-gradient-to-br from-emerald-50 via-white to-teal-50 min-h-screen text-slate-800">
         {children}
       </body>
     </html>
