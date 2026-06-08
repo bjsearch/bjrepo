@@ -43,3 +43,25 @@ npx vercel env add ANTHROPIC_API_KEY production
 npx vercel --prod      # 프로덕션 배포
 ```
 
+## Netlify 배포
+
+`netlify.toml`과 `@netlify/plugin-nextjs`가 이미 설정되어 있습니다.
+이 디렉터리도 모노레포 안에 있으므로 **Base directory를 `golf-swing-app`으로 지정**해야 합니다.
+
+### 대시보드로 배포
+1. https://app.netlify.com/start 에서 GitHub 저장소(`bjsearch/bjrepo`)와
+   브랜치(`claude/inspiring-wozniak-ArLgz`)를 선택해 Import
+2. **Base directory**: `golf-swing-app`
+3. **Build command**: `npm run build` (자동 인식됨, `netlify.toml`에 명시되어 있음)
+4. **Publish directory**: `golf-swing-app/.next` (Base directory를 지정하면 자동으로 `.next`가 됨)
+5. Site settings → Environment variables에 `ANTHROPIC_API_KEY` 추가
+6. Deploy site
+
+### CLI로 배포
+```bash
+npm install -g netlify-cli
+cd golf-swing-app
+netlify init           # 또는 netlify link로 기존 사이트 연결
+netlify env:set ANTHROPIC_API_KEY <your_key>
+netlify deploy --prod
+```
