@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 
 export type VisionContentBlock = { type: 'text'; text: string } | { type: 'image'; base64: string }
 
-const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
+const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-pro'
 const ANTHROPIC_MODEL = 'claude-sonnet-4-6'
 
 const GEMINI_MODEL_IDS = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.5-flash-lite'] as const
