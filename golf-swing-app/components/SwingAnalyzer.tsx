@@ -7,9 +7,85 @@ import { extractFrames } from '@/lib/extractFrames'
 import { fetchGlobalStats, fetchHistory, saveAnalysis } from '@/lib/history'
 import { ClubSelection, SwingAnalysisResult, describeClub } from '@/lib/types'
 
-type Status = 'idle' | 'extracting' | 'analyzing' | 'done' | 'error'
+type Status = 'idle' | 'extracting' | 'detecting' | 'analyzing' | 'done' | 'error'
 
-const FRAME_COUNT = 4
+/** Frames sampled across the clip for the AI to pick swing-phase frames from. */
+const CANDIDATE_FRAME_COUNT = 10
+
+const PHASE_KEYS = ['address', 'backswingTop', 'impact', 'finish'] as const
+
+const STEPS: { key: Status; label: string }[] = [
+  { key: 'extracting', label: '프레임 추출' },
+  { key: 'detecting', label: '스윙 구간 탐지' },
+  { key: 'analyzing', label: 'AI 스윙 분석' },
+]
+
+function StepIndicator({ status }: { status: Status }) {
+  const activeIndex = STEPS.findIndex((s) => s.key === status)
+  return (
+    <div className="flex items-center">
+      {STEPS.map((step, i) => {
+        const state = activeIndex < 0 ? 'pending' : i < activeIndex ? 'done' : i === activeIndex ? 'active' : 'pending'
+        return (
+          <div key={step.key} className={`flex items-center ${i < STEPS.length - 1 ? 'flex-1' : ''}`}>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span
+                className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold border transition ${
+                  state === 'done'
+                    ? 'bg-lime-400 text-emerald-950 border-transparent'
+                    : state === 'active'
+                      ? 'bg-lime-400/15 text-lime-300 border-lime-400/50'
+                      : 'bg-white/5 text-slate-500 border-white/10'
+                }`}
+              >
+                {state === 'done' ? '✓' : i + 1}
+              </span>
+              <span className={`text-[11px] whitespace-nowrap ${state === 'pending' ? 'text-slate-500' : 'text-slate-300'}`}>
+                {step.label}
+              </span>
+            </div>
+            {i < STEPS.length - 1 && (
+              <span className={`flex-1 h-px mx-2 ${state === 'done' ? 'bg-lime-400/40' : 'bg-white/10'}`} />
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+/**
+ * Asks the AI to pick which of the sampled candidate frames best represent
+ * each swing phase (in time order). Falls back to heuristic positions if the
+ * detection call fails or returns something unusable.
+ */
+async function detectPhaseFrames(candidateFrames: string[]): Promise<string[]> {
+  try {
+    const res = await fetch('/api/detect-phases', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ frames: candidateFrames }),
+    })
+    const raw = await res.text()
+    const data = raw ? JSON.parse(raw) : null
+    const indices = PHASE_KEYS.map((key) => data?.indices?.[key])
+    const valid =
+      res.ok &&
+      indices.every((n) => typeof n === 'number' && n >= 0 && n < candidateFrames.length) &&
+      indices.every((n, i) => i === 0 || (n as number) > (indices[i - 1] as number))
+
+    if (valid) {
+      return indices.map((i) => candidateFrames[i as number])
+    }
+  } catch {
+    // fall through to the heuristic fallback below
+  }
+
+  const fallbackFractions = [0.05, 0.35, 0.65, 0.95]
+  return fallbackFractions.map(
+    (f) => candidateFrames[Math.min(candidateFrames.length - 1, Math.floor(f * candidateFrames.length))],
+  )
+}
 
 export default function SwingAnalyzer() {
   const [file, setFile] = useState<File | null>(null)
@@ -47,26 +123,39 @@ export default function SwingAnalyzer() {
     setProgress(0)
 
     try {
+      // 1단계: 영상에서 후보 프레임 추출 (0–33%)
       setStatus('extracting')
-      const extractedFrames = await extractFrames(file, FRAME_COUNT, (done, total) => {
-        // Frame extraction = first half of the progress bar (0–50%)
-        setProgress(Math.round((done / total) * 50))
+      const candidateFrames = await extractFrames(file, CANDIDATE_FRAME_COUNT, (done, total) => {
+        setProgress(Math.round((done / total) * 33))
       })
-      setFrames(extractedFrames)
 
+      // 2단계: 어드레스·백스윙 탑·임팩트·피니쉬 구간 탐지 (33–66%, 애니메이션)
+      setStatus('detecting')
+      const detectingTimer = window.setInterval(() => {
+        setProgress((p) => (p < 65 ? p + 1 : p))
+      }, 250)
+
+      let phaseFrames: string[]
+      try {
+        phaseFrames = await detectPhaseFrames(candidateFrames)
+      } finally {
+        window.clearInterval(detectingTimer)
+      }
+      setProgress(66)
+      setFrames(phaseFrames)
+
+      // 3단계: AI 스윙 분석 (66–96%, 애니메이션)
       setStatus('analyzing')
-      // The analysis call itself can't report real progress, so animate
-      // smoothly from 50% toward 90% while waiting for the response.
       const analyzingTimer = window.setInterval(() => {
-        setProgress((p) => (p < 90 ? p + 1 : p))
-      }, 400)
+        setProgress((p) => (p < 96 ? p + 1 : p))
+      }, 350)
 
       let res: Response
       try {
         res = await fetch('/api/analyze-swing', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ frames: extractedFrames, clubDescription: describeClub(club) }),
+          body: JSON.stringify({ frames: phaseFrames, clubDescription: describeClub(club) }),
         })
       } finally {
         window.clearInterval(analyzingTimer)
@@ -123,7 +212,16 @@ export default function SwingAnalyzer() {
     }
   }
 
-  const isBusy = status === 'extracting' || status === 'analyzing'
+  const isBusy = status === 'extracting' || status === 'detecting' || status === 'analyzing'
+
+  const stageLabel =
+    status === 'extracting'
+      ? '프레임 추출'
+      : status === 'detecting'
+        ? '스윙 구간 탐지'
+        : status === 'analyzing'
+          ? 'AI 분석'
+          : ''
 
   return (
     <div className="space-y-6">
@@ -154,21 +252,25 @@ export default function SwingAnalyzer() {
           className="w-full rounded-full bg-gradient-to-r from-lime-400 via-emerald-400 to-teal-400 text-emerald-950 font-bold py-3.5 shadow-[0_0_24px_rgba(132,204,22,0.3)] transition hover:shadow-[0_0_36px_rgba(132,204,22,0.45)] hover:-translate-y-0.5 active:translate-y-0 disabled:bg-none disabled:bg-white/5 disabled:text-slate-500 disabled:shadow-none disabled:cursor-not-allowed disabled:translate-y-0"
         >
           {status === 'extracting' && '영상에서 프레임 추출 중...'}
+          {status === 'detecting' && '스윙 구간(어드레스·백스윙 탑·임팩트·피니쉬) 탐지 중...'}
           {status === 'analyzing' && 'AI가 스윙을 분석하는 중...'}
           {(status === 'idle' || status === 'done' || status === 'error') && '⛳ 스윙 분석하기'}
         </button>
 
         {isBusy && (
-          <div className="space-y-1.5">
-            <div className="h-2.5 w-full rounded-full bg-white/5 ring-1 ring-white/10 overflow-hidden">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-lime-400 via-emerald-400 to-teal-400 shadow-[0_0_10px_rgba(132,204,22,0.6)] transition-all duration-300 ease-out"
-                style={{ width: `${progress}%` }}
-              />
+          <div className="space-y-3">
+            <StepIndicator status={status} />
+            <div className="space-y-1.5">
+              <div className="h-2.5 w-full rounded-full bg-white/5 ring-1 ring-white/10 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-lime-400 via-emerald-400 to-teal-400 shadow-[0_0_10px_rgba(132,204,22,0.6)] transition-all duration-300 ease-out"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <p className="text-xs text-slate-400 text-right">
+                {stageLabel} · {progress}%
+              </p>
             </div>
-            <p className="text-xs text-slate-400 text-right">
-              {status === 'extracting' ? '프레임 추출' : 'AI 분석'} · {progress}%
-            </p>
           </div>
         )}
 
