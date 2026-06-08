@@ -54,7 +54,7 @@ recommendedPlayers는 2~3명을 추천하세요. 클럽 종류(${clubDescription
 이미지만으로 정확한 스윙 속도나 club path 등을 측정할 수 없는 점을 감안해, 시각적으로 관찰 가능한 자세·정렬·균형·템포 위주로 분석하세요.`
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5',
+      model: 'claude-sonnet-4-6',
       max_tokens: 2048,
       messages: [
         {
@@ -80,7 +80,15 @@ recommendedPlayers는 2~3명을 추천하세요. 클럽 종류(${clubDescription
     return NextResponse.json(parsed)
   } catch (err) {
     console.error('swing analysis error', err)
-    return NextResponse.json({ error: '스윙 분석 중 오류가 발생했습니다.' }, { status: 500 })
+    const detail = err instanceof Anthropic.APIError
+      ? `${err.status} ${err.message}`
+      : err instanceof Error
+        ? err.message
+        : String(err)
+    return NextResponse.json(
+      { error: `스윙 분석 중 오류가 발생했습니다. (${detail})` },
+      { status: 500 },
+    )
   }
 }
 
