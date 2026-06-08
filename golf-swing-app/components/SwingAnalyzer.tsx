@@ -24,6 +24,16 @@ function candidateFrameCount(phaseCount: 4 | 6): number {
   return phaseCount === 6 ? 14 : 10
 }
 
+/** Smallest allowed trimmed-clip length, in seconds, so there's still enough footage to sample frames from. */
+const MIN_TRIM_SPAN = 0.5
+
+function formatTime(seconds: number): string {
+  const total = Math.max(0, seconds)
+  const minutes = Math.floor(total / 60)
+  const secs = (total % 60).toFixed(1).padStart(4, '0')
+  return `${minutes}:${secs}`
+}
+
 const STEPS: { key: Status; label: string }[] = [
   { key: 'extracting', label: '프레임 추출' },
   { key: 'detecting', label: '스윙 구간 탐지' },
@@ -106,6 +116,9 @@ async function detectPhaseFrames(
 export default function SwingAnalyzer() {
   const [file, setFile] = useState<File | null>(null)
   const [videoUrl, setVideoUrl] = useState<string | null>(null)
+  const [videoDuration, setVideoDuration] = useState<number | null>(null)
+  const [trimStart, setTrimStart] = useState(0)
+  const [trimEnd, setTrimEnd] = useState(0)
   const [club, setClub] = useState<ClubSelection>({ category: 'iron', number: 7 })
   const [provider, setProvider] = useState<AIProvider>('anthropic')
   const [geminiModel, setGeminiModel] = useState<string>(DEFAULT_GEMINI_MODEL)
@@ -119,6 +132,7 @@ export default function SwingAnalyzer() {
   const [globalAverageScore, setGlobalAverageScore] = useState<number | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = e.target.files?.[0] ?? null
@@ -130,9 +144,42 @@ export default function SwingAnalyzer() {
     setError(null)
     setStatus('idle')
     setProgress(0)
+    setVideoDuration(null)
+    setTrimStart(0)
+    setTrimEnd(0)
     if (videoUrl) URL.revokeObjectURL(videoUrl)
     setVideoUrl(selected ? URL.createObjectURL(selected) : null)
   }
+
+  function handleVideoLoadedMetadata(e: React.SyntheticEvent<HTMLVideoElement>) {
+    const duration = e.currentTarget.duration
+    if (isFinite(duration) && duration > 0) {
+      setVideoDuration(duration)
+      setTrimStart(0)
+      setTrimEnd(duration)
+    }
+  }
+
+  function handleTrimStartChange(value: number) {
+    const next = Math.min(Math.max(0, value), trimEnd - MIN_TRIM_SPAN)
+    setTrimStart(next)
+    if (videoRef.current) videoRef.current.currentTime = next
+  }
+
+  function handleTrimEndChange(value: number) {
+    const max = videoDuration ?? value
+    const next = Math.max(Math.min(max, value), trimStart + MIN_TRIM_SPAN)
+    setTrimEnd(next)
+    if (videoRef.current) videoRef.current.currentTime = next
+  }
+
+  function resetTrim() {
+    if (videoDuration == null) return
+    setTrimStart(0)
+    setTrimEnd(videoDuration)
+  }
+
+  const isTrimmed = videoDuration != null && (trimStart > 0.05 || videoDuration - trimEnd > 0.05)
 
   async function handleAnalyze() {
     if (!file) return
@@ -146,9 +193,15 @@ export default function SwingAnalyzer() {
 
       // 1단계: 영상에서 후보 프레임 추출 (0–33%)
       setStatus('extracting')
-      const candidateFrames = await extractFrames(file, candidateFrameCount(phaseCount), (done, total) => {
-        setProgress(Math.round((done / total) * 33))
-      })
+      const trimRange = isTrimmed ? { start: trimStart, end: trimEnd } : undefined
+      const candidateFrames = await extractFrames(
+        file,
+        candidateFrameCount(phaseCount),
+        (done, total) => {
+          setProgress(Math.round((done / total) * 33))
+        },
+        trimRange,
+      )
 
       // 2단계: 스윙 구간 탐지 (33–66%, 애니메이션)
       setStatus('detecting')
@@ -268,7 +321,75 @@ export default function SwingAnalyzer() {
         </div>
 
         {videoUrl && (
-          <video src={videoUrl} controls className="w-full max-h-96 rounded-xl bg-black ring-1 ring-white/10 shadow-inner" />
+          <video
+            ref={videoRef}
+            src={videoUrl}
+            controls
+            onLoadedMetadata={handleVideoLoadedMetadata}
+            className="w-full max-h-96 rounded-xl bg-black ring-1 ring-white/10 shadow-inner"
+          />
+        )}
+
+        {videoUrl && videoDuration != null && videoDuration > MIN_TRIM_SPAN * 2 && (
+          <div className="space-y-2.5 rounded-xl border border-white/10 bg-white/[0.02] p-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-slate-300 flex items-center gap-1.5">
+                <span aria-hidden>✂️</span> 분석 구간 자르기
+              </p>
+              {isTrimmed && (
+                <button
+                  type="button"
+                  onClick={resetTrim}
+                  disabled={isBusy}
+                  className="text-[11px] text-slate-400 hover:text-lime-300 underline underline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  전체 구간으로 되돌리기
+                </button>
+              )}
+            </div>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              스윙 동작이 들어있는 구간만 잘라서 분석하면 더 정확한 결과를 얻을 수 있어요. 슬라이더를 옮기면 영상이 해당 지점으로 이동합니다.
+            </p>
+
+            <div className="space-y-1.5">
+              <label className="flex items-center justify-between text-[11px] text-slate-400">
+                <span>시작 지점</span>
+                <span className="font-mono text-slate-300">{formatTime(trimStart)}</span>
+              </label>
+              <input
+                type="range"
+                min={0}
+                max={videoDuration}
+                step={0.1}
+                value={trimStart}
+                onChange={(e) => handleTrimStartChange(Number(e.target.value))}
+                disabled={isBusy}
+                className="w-full accent-lime-400 disabled:cursor-not-allowed disabled:opacity-60"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="flex items-center justify-between text-[11px] text-slate-400">
+                <span>끝 지점</span>
+                <span className="font-mono text-slate-300">{formatTime(trimEnd)}</span>
+              </label>
+              <input
+                type="range"
+                min={0}
+                max={videoDuration}
+                step={0.1}
+                value={trimEnd}
+                onChange={(e) => handleTrimEndChange(Number(e.target.value))}
+                disabled={isBusy}
+                className="w-full accent-lime-400 disabled:cursor-not-allowed disabled:opacity-60"
+              />
+            </div>
+
+            <p className="text-[11px] text-slate-500 text-right">
+              선택한 구간 길이: <span className="font-mono text-lime-300/80">{formatTime(trimEnd - trimStart)}</span> / 전체{' '}
+              <span className="font-mono">{formatTime(videoDuration)}</span>
+            </p>
+          </div>
         )}
 
         <ClubSelector value={club} onChange={setClub} />

@@ -12,6 +12,8 @@ export async function extractFrames(
   file: File,
   frameCount = 6,
   onProgress?: (done: number, total: number) => void,
+  /** Optional clip range (in seconds) to sample from instead of the full video. */
+  range?: { start: number; end: number },
 ): Promise<string[]> {
   const url = URL.createObjectURL(file)
   try {
@@ -30,6 +32,13 @@ export async function extractFrames(
       throw new Error('영상 길이를 확인할 수 없습니다.')
     }
 
+    const rangeStart = range ? Math.max(0, Math.min(range.start, duration)) : 0
+    const rangeEnd = range ? Math.max(rangeStart, Math.min(range.end, duration)) : duration
+    const span = rangeEnd - rangeStart
+    if (span <= 0) {
+      throw new Error('잘라낸 구간의 길이가 올바르지 않습니다.')
+    }
+
     const scale = Math.min(1, MAX_DIMENSION / Math.max(video.videoWidth, video.videoHeight))
     const canvas = document.createElement('canvas')
     canvas.width = Math.round(video.videoWidth * scale)
@@ -40,7 +49,7 @@ export async function extractFrames(
     const frames: string[] = []
     for (let i = 0; i < frameCount; i++) {
       const fraction = (i + 0.5) / frameCount
-      const t = duration * fraction
+      const t = rangeStart + span * fraction
       await seekTo(video, t)
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
       const dataUrl = canvas.toDataURL('image/jpeg', 0.6)
