@@ -6,7 +6,15 @@ import AnalysisResult from './AnalysisResult'
 import { extractFrames } from '@/lib/extractFrames'
 import SwingLoaderAnimation from './SwingLoaderAnimation'
 import { fetchGlobalStats, fetchHistory, saveAnalysis } from '@/lib/history'
-import { AI_PROVIDERS, AIProvider, ClubSelection, SwingAnalysisResult, describeClub } from '@/lib/types'
+import {
+  AI_PROVIDERS,
+  AIProvider,
+  ClubSelection,
+  DEFAULT_GEMINI_MODEL,
+  GEMINI_MODELS,
+  SwingAnalysisResult,
+  describeClub,
+} from '@/lib/types'
 
 type Status = 'idle' | 'extracting' | 'detecting' | 'analyzing' | 'done' | 'error'
 
@@ -60,12 +68,12 @@ function StepIndicator({ status }: { status: Status }) {
  * each swing phase (in time order). Falls back to heuristic positions if the
  * detection call fails or returns something unusable.
  */
-async function detectPhaseFrames(candidateFrames: string[], provider: AIProvider): Promise<string[]> {
+async function detectPhaseFrames(candidateFrames: string[], provider: AIProvider, geminiModel: string): Promise<string[]> {
   try {
     const res = await fetch('/api/detect-phases', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ frames: candidateFrames, provider }),
+      body: JSON.stringify({ frames: candidateFrames, provider, geminiModel }),
     })
     const raw = await res.text()
     const data = raw ? JSON.parse(raw) : null
@@ -93,6 +101,7 @@ export default function SwingAnalyzer() {
   const [videoUrl, setVideoUrl] = useState<string | null>(null)
   const [club, setClub] = useState<ClubSelection>({ category: 'iron', number: 7 })
   const [provider, setProvider] = useState<AIProvider>('anthropic')
+  const [geminiModel, setGeminiModel] = useState<string>(DEFAULT_GEMINI_MODEL)
   const [status, setStatus] = useState<Status>('idle')
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
@@ -139,7 +148,7 @@ export default function SwingAnalyzer() {
 
       let phaseFrames: string[]
       try {
-        phaseFrames = await detectPhaseFrames(candidateFrames, provider)
+        phaseFrames = await detectPhaseFrames(candidateFrames, provider, geminiModel)
       } finally {
         window.clearInterval(detectingTimer)
       }
@@ -157,7 +166,7 @@ export default function SwingAnalyzer() {
         res = await fetch('/api/analyze-swing', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ frames: phaseFrames, clubDescription: describeClub(club), provider }),
+          body: JSON.stringify({ frames: phaseFrames, clubDescription: describeClub(club), provider, geminiModel }),
         })
       } finally {
         window.clearInterval(analyzingTimer)
@@ -272,6 +281,34 @@ export default function SwingAnalyzer() {
             ))}
           </div>
         </div>
+
+        {provider === 'gemini' && (
+          <div>
+            <p className="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-1.5">
+              <span aria-hidden>✨</span> Gemini 모델 선택
+            </p>
+            <div className="grid sm:grid-cols-3 gap-2.5">
+              {GEMINI_MODELS.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => setGeminiModel(m.id)}
+                  disabled={isBusy}
+                  className={`rounded-xl border px-4 py-2.5 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                    geminiModel === m.id
+                      ? 'border-sky-400/50 bg-sky-400/10 shadow-[0_0_16px_rgba(56,189,248,0.2)]'
+                      : 'border-white/10 bg-white/[0.02] hover:bg-white/5 hover:border-white/20'
+                  }`}
+                >
+                  <span className={`block text-sm font-bold ${geminiModel === m.id ? 'text-sky-300' : 'text-slate-200'}`}>
+                    {m.label}
+                  </span>
+                  <span className="block text-[11px] text-slate-500 mt-0.5">{m.description}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <button
           type="button"

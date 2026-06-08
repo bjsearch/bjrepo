@@ -5,6 +5,15 @@ export const AI_PROVIDERS: { id: AIProvider; label: string; description: string 
   { id: 'gemini', label: 'Gemini', description: 'Google Gemini로 분석합니다' },
 ]
 
+/** Selectable Gemini model ids, shown when the user picks Gemini as the provider. */
+export const GEMINI_MODELS: { id: string; label: string; description: string }[] = [
+  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', description: '속도와 품질의 균형이 좋은 기본 모델' },
+  { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', description: '더 정교한 분석, 응답이 다소 느림' },
+  { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash-Lite', description: '가장 가볍고 빠른 모델' },
+]
+
+export const DEFAULT_GEMINI_MODEL = GEMINI_MODELS[0].id
+
 export type ClubCategory = 'driver' | 'iron' | 'wedge'
 
 export interface ClubSelection {

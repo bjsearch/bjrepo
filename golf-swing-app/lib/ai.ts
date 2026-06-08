@@ -2,8 +2,14 @@ import Anthropic from '@anthropic-ai/sdk'
 
 export type VisionContentBlock = { type: 'text'; text: string } | { type: 'image'; base64: string }
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
+const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
 const ANTHROPIC_MODEL = 'claude-sonnet-4-6'
+
+const GEMINI_MODEL_IDS = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.5-flash-lite'] as const
+
+export function isGeminiModel(value: unknown): value is (typeof GEMINI_MODEL_IDS)[number] {
+  return typeof value === 'string' && (GEMINI_MODEL_IDS as readonly string[]).includes(value)
+}
 
 /** Thrown when the configured provider's API key is missing, so routes can surface a clear setup error. */
 export class AIConfigError extends Error {}
@@ -29,8 +35,11 @@ export async function generateVisionText(
   blocks: VisionContentBlock[],
   maxTokens: number,
   provider?: Provider,
+  geminiModel?: string,
 ): Promise<string> {
-  return resolveProvider(provider) === 'gemini' ? generateWithGemini(blocks, maxTokens) : generateWithAnthropic(blocks, maxTokens)
+  return resolveProvider(provider) === 'gemini'
+    ? generateWithGemini(blocks, maxTokens, geminiModel)
+    : generateWithAnthropic(blocks, maxTokens)
 }
 
 async function generateWithAnthropic(blocks: VisionContentBlock[], maxTokens: number): Promise<string> {
@@ -58,15 +67,17 @@ async function generateWithAnthropic(blocks: VisionContentBlock[], maxTokens: nu
   return textBlock.text
 }
 
-async function generateWithGemini(blocks: VisionContentBlock[], maxTokens: number): Promise<string> {
+async function generateWithGemini(blocks: VisionContentBlock[], maxTokens: number, geminiModel?: string): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) throw new AIConfigError('서버에 GEMINI_API_KEY가 설정되어 있지 않습니다.')
+
+  const model = geminiModel && isGeminiModel(geminiModel) ? geminiModel : DEFAULT_GEMINI_MODEL
 
   const parts = blocks.map((block) =>
     block.type === 'text' ? { text: block.text } : { inlineData: { mimeType: 'image/jpeg', data: block.base64 } },
   )
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`
   const body = JSON.stringify({
     contents: [{ role: 'user', parts }],
     generationConfig: {
