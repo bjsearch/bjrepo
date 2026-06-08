@@ -66,35 +66,44 @@ async function generateWithGemini(blocks: VisionContentBlock[], maxTokens: numbe
     block.type === 'text' ? { text: block.text } : { inlineData: { mimeType: 'image/jpeg', data: block.base64 } },
   )
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts }],
-        generationConfig: {
-          maxOutputTokens: maxTokens,
-          responseMimeType: 'application/json',
-          // gemini-2.5 모델은 기본적으로 내부 추론(thinking)에 출력 토큰 예산을 먼저 소비해
-          // 정작 응답 본문이 잘리는 경우가 있어, 구조화된 추출 작업에서는 비활성화한다.
-          thinkingConfig: { thinkingBudget: 0 },
-        },
-      }),
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`
+  const body = JSON.stringify({
+    contents: [{ role: 'user', parts }],
+    generationConfig: {
+      maxOutputTokens: maxTokens,
+      responseMimeType: 'application/json',
+      // gemini-2.5 모델은 기본적으로 내부 추론(thinking)에 출력 토큰 예산을 먼저 소비해
+      // 정작 응답 본문이 잘리는 경우가 있어, 구조화된 추출 작업에서는 비활성화한다.
+      thinkingConfig: { thinkingBudget: 0 },
     },
-  )
+  })
 
-  const raw = await res.text()
+  // "high demand"로 인한 일시적인 503/과부하 응답은 잠시 후 재시도하면 해결되는 경우가 많다.
+  const RETRY_DELAYS_MS = [1000, 3000]
   let data: any = null
-  try {
-    data = raw ? JSON.parse(raw) : null
-  } catch {
-    // non-JSON error body, fall through to generic error below
-  }
+  let lastDetail = ''
 
-  if (!res.ok || !data) {
-    const detail = data?.error?.message ?? raw.slice(0, 200) ?? `HTTP ${res.status}`
-    throw new Error(`Gemini API 오류: ${detail}`)
+  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body })
+    const raw = await res.text()
+    let parsed: any = null
+    try {
+      parsed = raw ? JSON.parse(raw) : null
+    } catch {
+      // non-JSON error body, fall through to generic error below
+    }
+
+    if (res.ok && parsed) {
+      data = parsed
+      break
+    }
+
+    lastDetail = parsed?.error?.message ?? raw.slice(0, 200) ?? `HTTP ${res.status}`
+    const isTransient = res.status === 503 || res.status === 429 || /overloaded|high demand|unavailable/i.test(lastDetail)
+    if (!isTransient || attempt === RETRY_DELAYS_MS.length) {
+      throw new Error(`Gemini API 오류: ${lastDetail}`)
+    }
+    await new Promise((resolve) => setTimeout(resolve, RETRY_DELAYS_MS[attempt]))
   }
 
   const candidate = data?.candidates?.[0]
