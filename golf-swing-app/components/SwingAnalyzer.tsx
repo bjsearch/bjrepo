@@ -19,6 +19,7 @@ export default function SwingAnalyzer() {
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<SwingAnalysisResult | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -35,6 +36,7 @@ export default function SwingAnalyzer() {
   async function handleAnalyze() {
     if (!file) return
     setError(null)
+    setSaveError(null)
     setResult(null)
     setProgress(0)
 
@@ -83,7 +85,13 @@ export default function SwingAnalyzer() {
       const analysisResult = data as SwingAnalysisResult
       setResult(analysisResult)
       setStatus('done')
-      saveAnalysis(club, analysisResult)
+
+      try {
+        await saveAnalysis(club, analysisResult)
+        setSaveError(null)
+      } catch (saveErr) {
+        setSaveError(saveErr instanceof Error ? saveErr.message : '분석 결과를 캘린더에 저장하지 못했습니다.')
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.')
       setStatus('error')
@@ -146,9 +154,15 @@ export default function SwingAnalyzer() {
 
       {result && (
         <>
-          <p className="text-xs text-center text-lime-300/70">
-            ✅ 분석 결과가 오늘 날짜의 캘린더에 저장되었습니다 — 상단 "캘린더" 탭에서 확인하세요.
-          </p>
+          {saveError ? (
+            <p className="text-xs text-center text-amber-300/80 bg-amber-500/10 border border-amber-400/20 rounded-full px-3 py-1.5">
+              ⚠️ {saveError}
+            </p>
+          ) : (
+            <p className="text-xs text-center text-lime-300/70">
+              ✅ 분석 결과가 오늘 날짜의 캘린더에 저장되었습니다 — 상단 "캘린더" 탭에서 확인하세요.
+            </p>
+          )}
           <AnalysisResult result={result} />
         </>
       )}

@@ -1,49 +1,42 @@
 import { SavedAnalysis, SwingAnalysisResult, ClubSelection } from './types'
 
-const STORAGE_KEY = 'golf-swing-history-v1'
-
-function todayKey(d = new Date()): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
-export function loadHistory(): SavedAnalysis[] {
-  if (typeof window === 'undefined') return []
+async function readJson(res: Response): Promise<any> {
+  const raw = await res.text()
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed : []
+    return raw ? JSON.parse(raw) : null
   } catch {
-    return []
+    return null
   }
 }
 
-function persist(entries: SavedAnalysis[]) {
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries))
-}
-
-export function saveAnalysis(club: ClubSelection, result: SwingAnalysisResult): SavedAnalysis {
-  const now = new Date()
-  const entry: SavedAnalysis = {
-    id: `${now.getTime()}-${Math.random().toString(36).slice(2, 8)}`,
-    date: todayKey(now),
-    createdAt: now.toISOString(),
-    club,
-    result,
+export async function fetchHistory(): Promise<SavedAnalysis[]> {
+  const res = await fetch('/api/history')
+  const data = await readJson(res)
+  if (!res.ok) {
+    throw new Error(data?.error ?? `분석 기록을 불러오지 못했습니다. (HTTP ${res.status})`)
   }
-  const entries = loadHistory()
-  entries.push(entry)
-  persist(entries)
-  return entry
+  return Array.isArray(data?.entries) ? data.entries : []
 }
 
-export function deleteAnalysis(id: string): SavedAnalysis[] {
-  const entries = loadHistory().filter((e) => e.id !== id)
-  persist(entries)
-  return entries
+export async function saveAnalysis(club: ClubSelection, result: SwingAnalysisResult): Promise<SavedAnalysis> {
+  const res = await fetch('/api/history', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ club, result }),
+  })
+  const data = await readJson(res)
+  if (!res.ok || !data?.entry) {
+    throw new Error(data?.error ?? `분석 결과를 저장하지 못했습니다. (HTTP ${res.status})`)
+  }
+  return data.entry as SavedAnalysis
+}
+
+export async function deleteAnalysis(id: string): Promise<void> {
+  const res = await fetch(`/api/history/${encodeURIComponent(id)}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const data = await readJson(res)
+    throw new Error(data?.error ?? `기록을 삭제하지 못했습니다. (HTTP ${res.status})`)
+  }
 }
 
 export function getAnalysesByDate(history: SavedAnalysis[], date: string): SavedAnalysis[] {

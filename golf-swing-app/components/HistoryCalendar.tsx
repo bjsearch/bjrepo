@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import AnalysisResult from './AnalysisResult'
-import { countByDate, deleteAnalysis, getAnalysesByDate, loadHistory } from '@/lib/history'
+import { countByDate, deleteAnalysis, fetchHistory, getAnalysesByDate } from '@/lib/history'
 import { SavedAnalysis, describeClub } from '@/lib/types'
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
@@ -24,9 +24,24 @@ export default function HistoryCalendar() {
   })
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  async function reload() {
+    setLoading(true)
+    setLoadError(null)
+    try {
+      setHistory(await fetchHistory())
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : '분석 기록을 불러오지 못했습니다.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    setHistory(loadHistory())
+    reload()
   }, [])
 
   const counts = useMemo(() => countByDate(history), [history])
@@ -50,13 +65,42 @@ export default function HistoryCalendar() {
     setExpandedId(null)
   }
 
-  function handleDelete(id: string) {
-    setHistory(deleteAnalysis(id))
-    setExpandedId((cur) => (cur === id ? null : cur))
+  async function handleDelete(id: string) {
+    setDeleteError(null)
+    try {
+      await deleteAnalysis(id)
+      setHistory((cur) => cur.filter((e) => e.id !== id))
+      setExpandedId((cur) => (cur === id ? null : cur))
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : '기록을 삭제하지 못했습니다.')
+    }
   }
 
   const selectedEntries = selectedDate ? getAnalysesByDate(history, selectedDate) : []
   const today = todayKey()
+
+  if (loading) {
+    return (
+      <div className="rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl p-10 text-center text-sm text-slate-400">
+        분석 기록을 불러오는 중...
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="space-y-3">
+        <p className="rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-300">{loadError}</p>
+        <button
+          type="button"
+          onClick={reload}
+          className="text-xs font-semibold text-lime-300 bg-lime-400/10 border border-lime-400/20 rounded-full px-4 py-2 hover:bg-lime-400/20 transition"
+        >
+          다시 시도
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-5">
@@ -132,6 +176,10 @@ export default function HistoryCalendar() {
           <h3 className="text-sm font-semibold text-slate-300 px-1">
             {selectedDate} 분석 기록 {selectedEntries.length > 0 && `(${selectedEntries.length}건)`}
           </h3>
+
+          {deleteError && (
+            <p className="text-xs text-rose-300 bg-rose-500/10 border border-rose-500/20 rounded-xl p-3">{deleteError}</p>
+          )}
 
           {selectedEntries.length === 0 && (
             <p className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-center text-sm text-slate-500">

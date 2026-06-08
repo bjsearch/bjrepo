@@ -15,15 +15,24 @@ Claude API는 동영상을 직접 분석할 수 없으므로, 브라우저에서
 영상의 주요 구간(어드레스~팔로우스루)을 일정 간격의 정지 이미지(JPEG)로 추출한 뒤
 Claude Vision에 전달하여 분석합니다 (`lib/extractFrames.ts`, `app/api/analyze-swing/route.ts`).
 
-분석 기록은 별도 서버/DB 없이 브라우저의 `localStorage`에 저장됩니다 (`lib/history.ts`).
-같은 브라우저에서 캘린더 탭에 들어가면 날짜별로 점수·분석 내용을 다시 열어볼 수 있고,
-필요 없는 기록은 삭제할 수 있습니다. (브라우저/기기를 바꾸면 기록이 보이지 않습니다.)
+분석 기록은 **Neon(Postgres)** 데이터베이스에 저장됩니다 (`lib/db.ts`,
+`app/api/history/route.ts`, `app/api/history/[id]/route.ts`). 앱 첫 실행 시
+`swing_analyses` 테이블이 자동으로 생성되므로 별도 마이그레이션이 필요 없습니다.
+서버에 저장되므로 어떤 브라우저/기기에서 접속하더라도 같은 캘린더 기록을 확인할 수 있습니다.
+
+## 데이터베이스 (Neon Postgres) 설정
+
+1. https://neon.tech 에서 무료 프로젝트를 생성합니다.
+2. 프로젝트 대시보드에서 연결 문자열(Connection string)을 복사합니다.
+   `postgresql://user:password@host/dbname?sslmode=require` 형태입니다.
+3. 로컬 개발 시 `.env.local`에, 배포 환경(Vercel/Netlify)에는 환경 변수로
+   `DATABASE_URL`을 등록합니다.
 
 ## 시작하기
 
 ```bash
 npm install
-cp .env.local.example .env.local   # ANTHROPIC_API_KEY 입력
+cp .env.local.example .env.local   # ANTHROPIC_API_KEY, DATABASE_URL 입력
 npm run dev
 ```
 
@@ -37,7 +46,7 @@ npm run dev
 ### 대시보드로 배포
 1. https://vercel.com/new 에서 이 GitHub 저장소(`bjsearch/bjrepo`)를 Import
 2. "Root Directory"를 `golf-swing-app`으로 설정 (Framework는 Next.js로 자동 인식)
-3. Environment Variables에 `ANTHROPIC_API_KEY` 추가
+3. Environment Variables에 `ANTHROPIC_API_KEY`와 `DATABASE_URL` 추가
 4. Deploy
 
 ### CLI로 배포
@@ -45,6 +54,7 @@ npm run dev
 cd golf-swing-app
 npx vercel link        # 프로젝트 연결 (최초 1회, 로그인 필요)
 npx vercel env add ANTHROPIC_API_KEY production
+npx vercel env add DATABASE_URL production
 npx vercel --prod      # 프로덕션 배포
 ```
 
@@ -59,7 +69,7 @@ npx vercel --prod      # 프로덕션 배포
 2. **Base directory**: `golf-swing-app`
 3. **Build command**: `npm run build` (자동 인식됨, `netlify.toml`에 명시되어 있음)
 4. **Publish directory**: `golf-swing-app/.next` (Base directory를 지정하면 자동으로 `.next`가 됨)
-5. Site settings → Environment variables에 `ANTHROPIC_API_KEY` 추가
+5. Site settings → Environment variables에 `ANTHROPIC_API_KEY`와 `DATABASE_URL` 추가
 6. Deploy site
 
 ### CLI로 배포
@@ -68,5 +78,6 @@ npm install -g netlify-cli
 cd golf-swing-app
 netlify init           # 또는 netlify link로 기존 사이트 연결
 netlify env:set ANTHROPIC_API_KEY <your_key>
+netlify env:set DATABASE_URL <your_neon_connection_string>
 netlify deploy --prod
 ```
