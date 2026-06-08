@@ -23,3 +23,23 @@ npm run dev
 ```
 
 기본 포트는 3001입니다 (`http://localhost:3001`).
+
+## Vercel 배포
+
+이 디렉터리는 모노레포 내 독립 Next.js 앱이므로, Vercel에서 **Root Directory를
+`golf-swing-app`으로 지정**해야 합니다.
+
+### 대시보드로 배포
+1. https://vercel.com/new 에서 이 GitHub 저장소(`bjsearch/bjrepo`)를 Import
+2. "Root Directory"를 `golf-swing-app`으로 설정 (Framework는 Next.js로 자동 인식)
+3. Environment Variables에 `ANTHROPIC_API_KEY` 추가
+4. Deploy
+
+### CLI로 배포
+```bash
+cd golf-swing-app
+npx vercel link        # 프로젝트 연결 (최초 1회, 로그인 필요)
+npx vercel env add ANTHROPIC_API_KEY production
+npx vercel --prod      # 프로덕션 배포
+```
+
