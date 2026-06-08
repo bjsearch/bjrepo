@@ -22,3 +22,37 @@ body {
     stroke-dashoffset: 0;
   }
 }
+
+@keyframes golfSwingClub {
+  0% { transform: rotate(60deg); }
+  28% { transform: rotate(-130deg); }
+  50% { transform: rotate(60deg); }
+  74% { transform: rotate(-155deg); }
+  100% { transform: rotate(60deg); }
+}
+
+.golf-swing-club {
+  transform-origin: 50px 46px;
+  animation: golfSwingClub 2.6s ease-in-out infinite;
+}
+
+@keyframes golfSwingBall {
+  0%, 47% {
+    transform: translate(0, 0);
+    opacity: 1;
+  }
+  59% {
+    transform: translate(24px, -16px);
+    opacity: 0;
+  }
+  60%, 100% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+}
+
+.golf-swing-ball {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: golfSwingBall 2.6s ease-in-out infinite;
+}

@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import ClubSelector from './ClubSelector'
 import AnalysisResult from './AnalysisResult'
 import { extractFrames } from '@/lib/extractFrames'
+import SwingLoaderAnimation from './SwingLoaderAnimation'
 import { fetchGlobalStats, fetchHistory, saveAnalysis } from '@/lib/history'
 import { ClubSelection, SwingAnalysisResult, describeClub } from '@/lib/types'
 
@@ -259,6 +260,7 @@ export default function SwingAnalyzer() {
 
         {isBusy && (
           <div className="space-y-3">
+            <SwingLoaderAnimation />
             <StepIndicator status={status} />
             <div className="space-y-1.5">
               <div className="h-2.5 w-full rounded-full bg-white/5 ring-1 ring-white/10 overflow-hidden">
