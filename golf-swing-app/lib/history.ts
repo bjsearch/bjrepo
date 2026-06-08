@@ -9,6 +9,23 @@ async function readJson(res: Response): Promise<any> {
   }
 }
 
+export interface GlobalScoreStats {
+  average: number | null
+  count: number
+}
+
+export async function fetchGlobalStats(): Promise<GlobalScoreStats> {
+  const res = await fetch('/api/stats')
+  const data = await readJson(res)
+  if (!res.ok) {
+    throw new Error(data?.error ?? `통계를 불러오지 못했습니다. (HTTP ${res.status})`)
+  }
+  return {
+    average: typeof data?.average === 'number' ? data.average : null,
+    count: typeof data?.count === 'number' ? data.count : 0,
+  }
+}
+
 export async function fetchHistory(): Promise<SavedAnalysis[]> {
   const res = await fetch('/api/history')
   const data = await readJson(res)

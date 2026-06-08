@@ -1,12 +1,21 @@
 /**
- * Extracts evenly-spaced JPEG frames from a video file using an off-screen
- * <video> + <canvas>. Returns base64-encoded JPEG strings (no data: prefix).
+ * Extracts JPEG frames from a video file using an off-screen <video> + <canvas>.
+ * Returns base64-encoded JPEG strings (no data: prefix).
  *
  * Frames are downscaled to MAX_DIMENSION so the resulting payload stays well
  * under serverless request-body limits (e.g. Netlify Functions ~6MB) and the
  * vision model responds quickly.
  */
 const MAX_DIMENSION = 480
+
+/**
+ * We can't detect swing phases without pose analysis, so we approximate where
+ * each phase tends to land within the clip: address near the start, the top
+ * of the backswing around a third of the way through, impact around two
+ * thirds, and the finish near the end.
+ */
+export const SWING_PHASE_LABELS = ['어드레스', '백스윙 탑', '임팩트', '피니쉬']
+const SWING_PHASE_FRACTIONS = [0.05, 0.35, 0.65, 0.95]
 
 export async function extractFrames(
   file: File,
@@ -39,7 +48,9 @@ export async function extractFrames(
 
     const frames: string[] = []
     for (let i = 0; i < frameCount; i++) {
-      const t = (duration * (i + 0.5)) / frameCount
+      const fraction =
+        frameCount === SWING_PHASE_FRACTIONS.length ? SWING_PHASE_FRACTIONS[i] : (i + 0.5) / frameCount
+      const t = duration * fraction
       await seekTo(video, t)
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
       const dataUrl = canvas.toDataURL('image/jpeg', 0.6)

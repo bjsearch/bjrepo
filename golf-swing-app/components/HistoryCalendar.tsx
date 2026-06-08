@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import AnalysisResult from './AnalysisResult'
-import { countByDate, deleteAnalysis, fetchHistory, getAnalysesByDate } from '@/lib/history'
+import { countByDate, deleteAnalysis, fetchGlobalStats, fetchHistory, getAnalysesByDate } from '@/lib/history'
 import { SavedAnalysis, describeClub } from '@/lib/types'
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
@@ -27,6 +27,7 @@ export default function HistoryCalendar() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [globalAverageScore, setGlobalAverageScore] = useState<number | null>(null)
 
   async function reload() {
     setLoading(true)
@@ -38,6 +39,13 @@ export default function HistoryCalendar() {
     } finally {
       setLoading(false)
     }
+
+    try {
+      const stats = await fetchGlobalStats()
+      setGlobalAverageScore(stats.average)
+    } catch {
+      setGlobalAverageScore(null)
+    }
   }
 
   useEffect(() => {
@@ -46,7 +54,7 @@ export default function HistoryCalendar() {
 
   const counts = useMemo(() => countByDate(history), [history])
 
-  const averageScore = useMemo(() => {
+  const myAverageScore = useMemo(() => {
     if (history.length === 0) return null
     return history.reduce((sum, e) => sum + e.result.score, 0) / history.length
   }, [history])
@@ -235,7 +243,11 @@ export default function HistoryCalendar() {
 
                 {isExpanded && (
                   <div className="px-4 pb-4">
-                    <AnalysisResult result={entry.result} averageScore={averageScore} />
+                    <AnalysisResult
+                      result={entry.result}
+                      myAverageScore={myAverageScore}
+                      globalAverageScore={globalAverageScore}
+                    />
                   </div>
                 )}
               </div>

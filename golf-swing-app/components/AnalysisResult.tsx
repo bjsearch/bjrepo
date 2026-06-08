@@ -1,3 +1,4 @@
+import { SWING_PHASE_LABELS } from '@/lib/extractFrames'
 import { SwingAnalysisResult, swingGrade, youtubeSearchUrl } from '@/lib/types'
 
 /** Renders feedback text, turning `**bold**` and `__underline__` markers into emphasis. */
@@ -71,28 +72,48 @@ function GradeBadge({ score }: { score: number }) {
   )
 }
 
-function ScoreComparison({ score, average }: { score: number; average: number }) {
+type ComparisonTheme = 'self' | 'global'
+
+const COMPARISON_COLORS: Record<ComparisonTheme, { higher: string; lower: string; similar: string }> = {
+  self: {
+    higher: 'text-lime-300 bg-lime-400/10 border-lime-400/25',
+    lower: 'text-rose-300 bg-rose-500/10 border-rose-400/25',
+    similar: 'text-slate-400 bg-white/5 border-white/10',
+  },
+  global: {
+    higher: 'text-sky-300 bg-sky-400/10 border-sky-400/25',
+    lower: 'text-amber-300 bg-amber-400/10 border-amber-400/25',
+    similar: 'text-slate-400 bg-white/5 border-white/10',
+  },
+}
+
+function ScoreComparison({
+  score,
+  average,
+  label,
+  theme,
+}: {
+  score: number
+  average: number
+  label: string
+  theme: ComparisonTheme
+}) {
   const diff = Math.round((score - average) * 10) / 10
   const avgLabel = average.toFixed(1)
+  const colors = COMPARISON_COLORS[theme]
 
   if (Math.abs(diff) < 0.5) {
     return (
-      <p className="text-xs font-semibold text-slate-400 bg-white/5 border border-white/10 rounded-full px-3.5 py-1.5">
-        ─ 나의 평균 점수({avgLabel}점)와 비슷해요
+      <p className={`text-xs font-semibold rounded-full px-3.5 py-1.5 border ${colors.similar}`}>
+        ─ {label}({avgLabel}점)와 비슷해요
       </p>
     )
   }
 
   const isHigher = diff > 0
   return (
-    <p
-      className={`text-xs font-semibold rounded-full px-3.5 py-1.5 border ${
-        isHigher
-          ? 'text-lime-300 bg-lime-400/10 border-lime-400/25'
-          : 'text-rose-300 bg-rose-500/10 border-rose-400/25'
-      }`}
-    >
-      {isHigher ? '▲' : '▼'} 나의 평균({avgLabel}점)보다 {Math.abs(diff).toFixed(1)}점 {isHigher ? '높아요' : '낮아요'}
+    <p className={`text-xs font-semibold rounded-full px-3.5 py-1.5 border ${isHigher ? colors.higher : colors.lower}`}>
+      {isHigher ? '▲' : '▼'} {label}({avgLabel}점)보다 {Math.abs(diff).toFixed(1)}점 {isHigher ? '높아요' : '낮아요'}
     </p>
   )
 }
@@ -120,12 +141,15 @@ const card = 'rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-x
 
 export default function AnalysisResult({
   result,
-  averageScore,
+  myAverageScore,
+  globalAverageScore,
   frames,
 }: {
   result: SwingAnalysisResult
-  /** The user's average score across past analyses, for comparison. Omit/null if there's no history yet. */
-  averageScore?: number | null
+  /** The user's own average score across past analyses, for comparison. Omit/null if there's no history yet. */
+  myAverageScore?: number | null
+  /** The average score across every user's analyses, for comparison. Omit/null if unavailable. */
+  globalAverageScore?: number | null
   /** Base64-encoded JPEG frames (no data: prefix) that were sent to the AI for this analysis. */
   frames?: string[]
 }) {
@@ -136,7 +160,16 @@ export default function AnalysisResult({
         <GradeBadge score={result.score} />
         <p className="text-xs text-lime-300/80 uppercase tracking-[0.2em] font-semibold">스윙 종합 점수</p>
         <p className="text-slate-300 max-w-md leading-relaxed">{renderEmphasis(result.scoreSummary)}</p>
-        {averageScore != null && <ScoreComparison score={result.score} average={averageScore} />}
+        {(myAverageScore != null || globalAverageScore != null) && (
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {myAverageScore != null && (
+              <ScoreComparison score={result.score} average={myAverageScore} label="나의 평균" theme="self" />
+            )}
+            {globalAverageScore != null && (
+              <ScoreComparison score={result.score} average={globalAverageScore} label="전체 유저 평균" theme="global" />
+            )}
+          </div>
+        )}
       </section>
 
       {frames && frames.length > 0 && (
@@ -149,10 +182,10 @@ export default function AnalysisResult({
               <div key={i} className="space-y-1.5">
                 <img
                   src={`data:image/jpeg;base64,${frame}`}
-                  alt={`분석에 사용된 ${i + 1}번째 프레임`}
+                  alt={`분석에 사용된 ${SWING_PHASE_LABELS[i] ?? `${i + 1}번째`} 프레임`}
                   className="w-full aspect-square object-cover rounded-xl ring-1 ring-white/10 bg-black/40"
                 />
-                <p className="text-center text-[11px] text-slate-500">프레임 {i + 1}</p>
+                <p className="text-center text-[11px] text-slate-500">{SWING_PHASE_LABELS[i] ?? `프레임 ${i + 1}`}</p>
               </div>
             ))}
           </div>

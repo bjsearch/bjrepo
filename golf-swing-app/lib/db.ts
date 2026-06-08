@@ -8,8 +8,10 @@ function getHistoryStore() {
   return getStore(STORE_NAME)
 }
 
+const HISTORY_KEY_PREFIX = 'history:'
+
 function historyKey(userId: string): string {
-  return `history:${userId}`
+  return `${HISTORY_KEY_PREFIX}${userId}`
 }
 
 async function readHistory(userId: string): Promise<SavedAnalysis[]> {
@@ -50,4 +52,29 @@ export async function deleteAnalysisById(userId: string, id: string): Promise<vo
   if (filtered.length !== entries.length) {
     await writeHistory(userId, filtered)
   }
+}
+
+export interface ScoreStats {
+  average: number | null
+  count: number
+}
+
+/** Aggregates the swing score average across every user's saved analyses. */
+export async function getGlobalScoreStats(): Promise<ScoreStats> {
+  const store = getHistoryStore()
+  const { blobs } = await store.list({ prefix: HISTORY_KEY_PREFIX })
+
+  let total = 0
+  let count = 0
+  for (const blob of blobs) {
+    const data = await store.get(blob.key, { type: 'json' })
+    if (Array.isArray(data)) {
+      for (const entry of data as SavedAnalysis[]) {
+        total += entry.result.score
+        count += 1
+      }
+    }
+  }
+
+  return { average: count > 0 ? total / count : null, count }
 }

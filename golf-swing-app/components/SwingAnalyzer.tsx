@@ -4,7 +4,7 @@ import { useRef, useState } from 'react'
 import ClubSelector from './ClubSelector'
 import AnalysisResult from './AnalysisResult'
 import { extractFrames } from '@/lib/extractFrames'
-import { fetchHistory, saveAnalysis } from '@/lib/history'
+import { fetchGlobalStats, fetchHistory, saveAnalysis } from '@/lib/history'
 import { ClubSelection, SwingAnalysisResult, describeClub } from '@/lib/types'
 
 type Status = 'idle' | 'extracting' | 'analyzing' | 'done' | 'error'
@@ -20,7 +20,8 @@ export default function SwingAnalyzer() {
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<SwingAnalysisResult | null>(null)
   const [frames, setFrames] = useState<string[]>([])
-  const [averageScore, setAverageScore] = useState<number | null>(null)
+  const [myAverageScore, setMyAverageScore] = useState<number | null>(null)
+  const [globalAverageScore, setGlobalAverageScore] = useState<number | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -29,7 +30,8 @@ export default function SwingAnalyzer() {
     setFile(selected)
     setResult(null)
     setFrames([])
-    setAverageScore(null)
+    setMyAverageScore(null)
+    setGlobalAverageScore(null)
     setError(null)
     setStatus('idle')
     setProgress(0)
@@ -93,13 +95,20 @@ export default function SwingAnalyzer() {
 
       try {
         const pastEntries = await fetchHistory()
-        setAverageScore(
+        setMyAverageScore(
           pastEntries.length > 0
             ? pastEntries.reduce((sum, e) => sum + e.result.score, 0) / pastEntries.length
             : null,
         )
       } catch {
-        setAverageScore(null)
+        setMyAverageScore(null)
+      }
+
+      try {
+        const stats = await fetchGlobalStats()
+        setGlobalAverageScore(stats.average)
+      } catch {
+        setGlobalAverageScore(null)
       }
 
       try {
@@ -179,7 +188,12 @@ export default function SwingAnalyzer() {
               ✅ 분석 결과가 오늘 날짜의 캘린더에 저장되었습니다 — 상단 "캘린더" 탭에서 확인하세요.
             </p>
           )}
-          <AnalysisResult result={result} averageScore={averageScore} frames={frames} />
+          <AnalysisResult
+            result={result}
+            myAverageScore={myAverageScore}
+            globalAverageScore={globalAverageScore}
+            frames={frames}
+          />
         </>
       )}
     </div>
