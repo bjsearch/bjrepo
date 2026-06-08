@@ -1,80 +1,46 @@
-import { neon } from '@neondatabase/serverless'
+import { getStore } from '@netlify/blobs'
 import { ClubSelection, SavedAnalysis, SwingAnalysisResult } from './types'
 
-function getSql() {
-  const url = process.env.DATABASE_URL
-  if (!url) {
-    throw new Error('서버에 DATABASE_URL이 설정되어 있지 않습니다.')
-  }
-  return neon(url)
+const STORE_NAME = 'swing-analyses'
+const HISTORY_KEY = 'history'
+const MAX_ENTRIES = 500
+
+function getHistoryStore() {
+  return getStore(STORE_NAME)
 }
 
-let schemaReady: Promise<void> | null = null
-
-function ensureSchema(): Promise<void> {
-  if (!schemaReady) {
-    const sql = getSql()
-    schemaReady = (async () => {
-      await sql`
-        CREATE TABLE IF NOT EXISTS swing_analyses (
-          id TEXT PRIMARY KEY,
-          analysis_date DATE NOT NULL,
-          created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-          club JSONB NOT NULL,
-          result JSONB NOT NULL
-        )
-      `
-      await sql`CREATE INDEX IF NOT EXISTS idx_swing_analyses_date ON swing_analyses (analysis_date)`
-    })().catch((err) => {
-      schemaReady = null
-      throw err
-    })
-  }
-  return schemaReady
+async function readHistory(): Promise<SavedAnalysis[]> {
+  const store = getHistoryStore()
+  const data = await store.get(HISTORY_KEY, { type: 'json' })
+  return Array.isArray(data) ? (data as SavedAnalysis[]) : []
 }
 
-function rowToSavedAnalysis(row: any): SavedAnalysis {
-  const created = new Date(row.created_at)
-  return {
-    id: row.id,
-    date: row.analysis_date instanceof Date
-      ? row.analysis_date.toISOString().slice(0, 10)
-      : String(row.analysis_date).slice(0, 10),
-    createdAt: created.toISOString(),
-    club: row.club,
-    result: row.result,
-  }
+async function writeHistory(entries: SavedAnalysis[]): Promise<void> {
+  const store = getHistoryStore()
+  await store.setJSON(HISTORY_KEY, entries)
 }
 
 export async function listAnalyses(): Promise<SavedAnalysis[]> {
-  await ensureSchema()
-  const sql = getSql()
-  const rows = await sql`
-    SELECT id, analysis_date, created_at, club, result
-    FROM swing_analyses
-    ORDER BY created_at DESC
-    LIMIT 500
-  `
-  return rows.map(rowToSavedAnalysis)
+  return readHistory()
 }
 
 export async function insertAnalysis(club: ClubSelection, result: SwingAnalysisResult): Promise<SavedAnalysis> {
-  await ensureSchema()
-  const sql = getSql()
   const now = new Date()
   const id = `${now.getTime()}-${Math.random().toString(36).slice(2, 8)}`
   const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  const entry: SavedAnalysis = { id, date: dateKey, createdAt: now.toISOString(), club, result }
 
-  const rows = await sql`
-    INSERT INTO swing_analyses (id, analysis_date, created_at, club, result)
-    VALUES (${id}, ${dateKey}, ${now.toISOString()}, ${JSON.stringify(club)}::jsonb, ${JSON.stringify(result)}::jsonb)
-    RETURNING id, analysis_date, created_at, club, result
-  `
-  return rowToSavedAnalysis(rows[0])
+  const entries = await readHistory()
+  entries.unshift(entry)
+  if (entries.length > MAX_ENTRIES) entries.length = MAX_ENTRIES
+  await writeHistory(entries)
+  return entry
 }
 
 export async function deleteAnalysisById(id: string): Promise<void> {
-  await ensureSchema()
-  const sql = getSql()
-  await sql`DELETE FROM swing_analyses WHERE id = ${id}`
+  const entries = await readHistory()
+  const filtered = entries.filter((e) => e.id !== id)
+  if (filtered.length !== entries.length) {
+    await writeHistory(filtered)
+  }
 }
