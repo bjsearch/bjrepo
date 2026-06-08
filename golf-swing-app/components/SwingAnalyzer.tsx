@@ -350,6 +350,10 @@ export default function SwingAnalyzer() {
             <p className="text-xs text-slate-500 leading-relaxed">
               스윙 동작이 들어있는 구간만 잘라서 분석하면 더 정확한 결과를 얻을 수 있어요. 슬라이더를 옮기면 영상이 해당 지점으로 이동합니다.
             </p>
+            <p className="text-[11px] text-amber-200/70 bg-amber-500/10 border border-amber-400/20 rounded-lg px-3 py-2 leading-relaxed">
+              💡 특정 영상에서 스윙 구간(어드레스·백스윙 탑·임팩트 등) 인식이 계속 부정확하다면, 스윙 전체 동작이 잘 보이는 구간만 잘라서
+              분석해보세요 — 불필요한 준비/정지 구간이 줄어들어 AI가 각 단계를 더 정확하게 찾아낼 수 있어요.
+            </p>
 
             <div className="space-y-1.5">
               <label className="flex items-center justify-between text-[11px] text-slate-400">
