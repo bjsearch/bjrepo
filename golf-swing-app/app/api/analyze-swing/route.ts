@@ -68,6 +68,7 @@ recommendedPlayers는 정확히 2명만 추천하고, 이름은 유튜브에서 
 
     const parsed = parseAnalysisJson(responseText)
     if (!parsed) {
+      console.error('swing analysis: unparseable AI response', responseText.slice(0, 500))
       return NextResponse.json({ error: 'AI 응답을 분석 결과로 변환하지 못했습니다.' }, { status: 502 })
     }
 

@@ -73,7 +73,13 @@ async function generateWithGemini(blocks: VisionContentBlock[], maxTokens: numbe
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ role: 'user', parts }],
-        generationConfig: { maxOutputTokens: maxTokens },
+        generationConfig: {
+          maxOutputTokens: maxTokens,
+          responseMimeType: 'application/json',
+          // gemini-2.5 모델은 기본적으로 내부 추론(thinking)에 출력 토큰 예산을 먼저 소비해
+          // 정작 응답 본문이 잘리는 경우가 있어, 구조화된 추출 작업에서는 비활성화한다.
+          thinkingConfig: { thinkingBudget: 0 },
+        },
       }),
     },
   )
@@ -91,11 +97,15 @@ async function generateWithGemini(blocks: VisionContentBlock[], maxTokens: numbe
     throw new Error(`Gemini API 오류: ${detail}`)
   }
 
-  const text: string = data?.candidates?.[0]?.content?.parts
+  const candidate = data?.candidates?.[0]
+  const text: string = candidate?.content?.parts
     ?.map((p: any) => (typeof p?.text === 'string' ? p.text : ''))
     .join('')
     .trim()
 
-  if (!text) throw new Error('AI 응답을 읽을 수 없습니다.')
+  if (!text) {
+    const reason = candidate?.finishReason ? ` (finishReason: ${candidate.finishReason})` : ''
+    throw new Error(`AI 응답을 읽을 수 없습니다.${reason}`)
+  }
   return text
 }
