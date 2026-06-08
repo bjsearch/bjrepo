@@ -16,3 +16,9 @@ body {
     transform: translateY(0);
   }
 }
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: 0;
+  }
+}

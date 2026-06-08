@@ -91,20 +91,22 @@ export default function SwingAnalyzer() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border border-slate-200/70 bg-white/80 backdrop-blur shadow-sm p-6 space-y-5">
+      <section className="rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.35)] p-6 space-y-5">
         <div>
-          <p className="text-sm font-semibold text-slate-700 mb-2">스윙 영상 업로드</p>
+          <p className="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-1.5">
+            <span aria-hidden>🎥</span> 스윙 영상 업로드
+          </p>
           <input
             ref={fileInputRef}
             type="file"
             accept="video/*"
             onChange={handleFileChange}
-            className="block w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-5 file:rounded-full file:border-0 file:bg-gradient-to-r file:from-emerald-500 file:to-teal-500 file:text-white file:text-sm file:font-semibold file:shadow-sm hover:file:shadow-md file:transition cursor-pointer"
+            className="block w-full text-sm text-slate-400 file:mr-4 file:py-2.5 file:px-5 file:rounded-full file:border-0 file:bg-gradient-to-r file:from-lime-500 file:to-emerald-500 file:text-emerald-950 file:text-sm file:font-semibold file:shadow-[0_0_16px_rgba(132,204,22,0.3)] hover:file:shadow-[0_0_24px_rgba(132,204,22,0.45)] file:transition cursor-pointer"
           />
         </div>
 
         {videoUrl && (
-          <video src={videoUrl} controls className="w-full max-h-96 rounded-xl bg-black shadow-inner" />
+          <video src={videoUrl} controls className="w-full max-h-96 rounded-xl bg-black ring-1 ring-white/10 shadow-inner" />
         )}
 
         <ClubSelector value={club} onChange={setClub} />
@@ -113,18 +115,18 @@ export default function SwingAnalyzer() {
           type="button"
           onClick={handleAnalyze}
           disabled={!file || isBusy}
-          className="w-full rounded-full bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-semibold py-3.5 shadow-md transition hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 disabled:bg-none disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed disabled:translate-y-0"
+          className="w-full rounded-full bg-gradient-to-r from-lime-400 via-emerald-400 to-teal-400 text-emerald-950 font-bold py-3.5 shadow-[0_0_24px_rgba(132,204,22,0.3)] transition hover:shadow-[0_0_36px_rgba(132,204,22,0.45)] hover:-translate-y-0.5 active:translate-y-0 disabled:bg-none disabled:bg-white/5 disabled:text-slate-500 disabled:shadow-none disabled:cursor-not-allowed disabled:translate-y-0"
         >
           {status === 'extracting' && '영상에서 프레임 추출 중...'}
           {status === 'analyzing' && 'AI가 스윙을 분석하는 중...'}
-          {(status === 'idle' || status === 'done' || status === 'error') && '스윙 분석하기'}
+          {(status === 'idle' || status === 'done' || status === 'error') && '⛳ 스윙 분석하기'}
         </button>
 
         {isBusy && (
           <div className="space-y-1.5">
-            <div className="h-2.5 w-full rounded-full bg-slate-100 overflow-hidden">
+            <div className="h-2.5 w-full rounded-full bg-white/5 ring-1 ring-white/10 overflow-hidden">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-300 ease-out"
+                className="h-full rounded-full bg-gradient-to-r from-lime-400 via-emerald-400 to-teal-400 shadow-[0_0_10px_rgba(132,204,22,0.6)] transition-all duration-300 ease-out"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -135,7 +137,7 @@ export default function SwingAnalyzer() {
         )}
 
         {error && (
-          <p className="text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-xl p-3">{error}</p>
+          <p className="text-sm text-rose-300 bg-rose-500/10 border border-rose-500/20 rounded-xl p-3">{error}</p>
         )}
       </section>
 
