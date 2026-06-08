@@ -46,6 +46,11 @@ export default function HistoryCalendar() {
 
   const counts = useMemo(() => countByDate(history), [history])
 
+  const averageScore = useMemo(() => {
+    if (history.length === 0) return null
+    return history.reduce((sum, e) => sum + e.result.score, 0) / history.length
+  }, [history])
+
   const cells = useMemo(() => {
     const { year, month } = cursor
     const firstDay = new Date(year, month, 1).getDay()
@@ -230,7 +235,7 @@ export default function HistoryCalendar() {
 
                 {isExpanded && (
                   <div className="px-4 pb-4">
-                    <AnalysisResult result={entry.result} />
+                    <AnalysisResult result={entry.result} averageScore={averageScore} />
                   </div>
                 )}
               </div>

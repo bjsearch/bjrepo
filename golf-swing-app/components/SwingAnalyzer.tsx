@@ -4,7 +4,7 @@ import { useRef, useState } from 'react'
 import ClubSelector from './ClubSelector'
 import AnalysisResult from './AnalysisResult'
 import { extractFrames } from '@/lib/extractFrames'
-import { saveAnalysis } from '@/lib/history'
+import { fetchHistory, saveAnalysis } from '@/lib/history'
 import { ClubSelection, SwingAnalysisResult, describeClub } from '@/lib/types'
 
 type Status = 'idle' | 'extracting' | 'analyzing' | 'done' | 'error'
@@ -19,6 +19,8 @@ export default function SwingAnalyzer() {
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<SwingAnalysisResult | null>(null)
+  const [frames, setFrames] = useState<string[]>([])
+  const [averageScore, setAverageScore] = useState<number | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -26,6 +28,8 @@ export default function SwingAnalyzer() {
     const selected = e.target.files?.[0] ?? null
     setFile(selected)
     setResult(null)
+    setFrames([])
+    setAverageScore(null)
     setError(null)
     setStatus('idle')
     setProgress(0)
@@ -42,10 +46,11 @@ export default function SwingAnalyzer() {
 
     try {
       setStatus('extracting')
-      const frames = await extractFrames(file, FRAME_COUNT, (done, total) => {
+      const extractedFrames = await extractFrames(file, FRAME_COUNT, (done, total) => {
         // Frame extraction = first half of the progress bar (0–50%)
         setProgress(Math.round((done / total) * 50))
       })
+      setFrames(extractedFrames)
 
       setStatus('analyzing')
       // The analysis call itself can't report real progress, so animate
@@ -59,7 +64,7 @@ export default function SwingAnalyzer() {
         res = await fetch('/api/analyze-swing', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ frames, clubDescription: describeClub(club) }),
+          body: JSON.stringify({ frames: extractedFrames, clubDescription: describeClub(club) }),
         })
       } finally {
         window.clearInterval(analyzingTimer)
@@ -85,6 +90,17 @@ export default function SwingAnalyzer() {
       const analysisResult = data as SwingAnalysisResult
       setResult(analysisResult)
       setStatus('done')
+
+      try {
+        const pastEntries = await fetchHistory()
+        setAverageScore(
+          pastEntries.length > 0
+            ? pastEntries.reduce((sum, e) => sum + e.result.score, 0) / pastEntries.length
+            : null,
+        )
+      } catch {
+        setAverageScore(null)
+      }
 
       try {
         await saveAnalysis(club, analysisResult)
@@ -163,7 +179,7 @@ export default function SwingAnalyzer() {
               ✅ 분석 결과가 오늘 날짜의 캘린더에 저장되었습니다 — 상단 "캘린더" 탭에서 확인하세요.
             </p>
           )}
-          <AnalysisResult result={result} />
+          <AnalysisResult result={result} averageScore={averageScore} frames={frames} />
         </>
       )}
     </div>

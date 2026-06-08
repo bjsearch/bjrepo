@@ -52,3 +52,28 @@ export function describeClub(club: ClubSelection): string {
 export function youtubeSearchUrl(query: string): string {
   return `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`
 }
+
+export interface SwingGrade {
+  label: string
+  description: string
+}
+
+/** Maps a 0-100 swing score to a coach-style expert tier. */
+export function swingGrade(score: number): SwingGrade {
+  if (score >= 90) {
+    return { label: '투어 프로급', description: '프로 선수에 견줄 만큼 안정적이고 정교한 스윙이에요.' }
+  }
+  if (score >= 80) {
+    return { label: '상급자', description: '기본기가 탄탄하고 군더더기 없는 스윙을 갖췄어요.' }
+  }
+  if (score >= 70) {
+    return { label: '중상급자', description: '전반적으로 안정적이라 디테일만 다듬으면 한 단계 올라갈 수 있어요.' }
+  }
+  if (score >= 60) {
+    return { label: '중급자', description: '기본 동작은 자리 잡았고, 일관성을 더 키우면 좋아요.' }
+  }
+  if (score >= 50) {
+    return { label: '초중급자', description: '기본기를 다지는 단계로, 핵심 동작 위주의 반복 연습이 도움이 돼요.' }
+  }
+  return { label: '입문자', description: '기본 자세와 그립부터 차근차근 익혀나가는 단계예요.' }
+}
