@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server'
-import { AIConfigError, generateVisionText } from '@/lib/ai'
+import { AIConfigError, generateVisionText, isProvider } from '@/lib/ai'
 import type { SwingAnalysisResult } from '@/lib/types'
 
 const MAX_FRAMES = 4
 
 export async function POST(req: Request) {
   try {
-    const { frames, clubDescription } = await req.json()
+    const { frames, clubDescription, provider: requestedProvider } = await req.json()
+    const provider = isProvider(requestedProvider) ? requestedProvider : undefined
 
     if (!Array.isArray(frames) || frames.length === 0) {
       return NextResponse.json({ error: '분석할 프레임이 없습니다.' }, { status: 400 })
@@ -56,6 +57,7 @@ recommendedPlayers는 정확히 2명만 추천하고, 이름은 유튜브에서 
       responseText = await generateVisionText(
         [{ type: 'text', text: instructions }, ...usedFrames.map((base64) => ({ type: 'image' as const, base64 }))],
         1600,
+        provider,
       )
     } catch (err) {
       if (err instanceof AIConfigError) {

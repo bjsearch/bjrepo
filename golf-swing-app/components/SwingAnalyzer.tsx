@@ -6,7 +6,7 @@ import AnalysisResult from './AnalysisResult'
 import { extractFrames } from '@/lib/extractFrames'
 import SwingLoaderAnimation from './SwingLoaderAnimation'
 import { fetchGlobalStats, fetchHistory, saveAnalysis } from '@/lib/history'
-import { ClubSelection, SwingAnalysisResult, describeClub } from '@/lib/types'
+import { AI_PROVIDERS, AIProvider, ClubSelection, SwingAnalysisResult, describeClub } from '@/lib/types'
 
 type Status = 'idle' | 'extracting' | 'detecting' | 'analyzing' | 'done' | 'error'
 
@@ -60,12 +60,12 @@ function StepIndicator({ status }: { status: Status }) {
  * each swing phase (in time order). Falls back to heuristic positions if the
  * detection call fails or returns something unusable.
  */
-async function detectPhaseFrames(candidateFrames: string[]): Promise<string[]> {
+async function detectPhaseFrames(candidateFrames: string[], provider: AIProvider): Promise<string[]> {
   try {
     const res = await fetch('/api/detect-phases', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ frames: candidateFrames }),
+      body: JSON.stringify({ frames: candidateFrames, provider }),
     })
     const raw = await res.text()
     const data = raw ? JSON.parse(raw) : null
@@ -92,6 +92,7 @@ export default function SwingAnalyzer() {
   const [file, setFile] = useState<File | null>(null)
   const [videoUrl, setVideoUrl] = useState<string | null>(null)
   const [club, setClub] = useState<ClubSelection>({ category: 'iron', number: 7 })
+  const [provider, setProvider] = useState<AIProvider>('anthropic')
   const [status, setStatus] = useState<Status>('idle')
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
@@ -138,7 +139,7 @@ export default function SwingAnalyzer() {
 
       let phaseFrames: string[]
       try {
-        phaseFrames = await detectPhaseFrames(candidateFrames)
+        phaseFrames = await detectPhaseFrames(candidateFrames, provider)
       } finally {
         window.clearInterval(detectingTimer)
       }
@@ -156,7 +157,7 @@ export default function SwingAnalyzer() {
         res = await fetch('/api/analyze-swing', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ frames: phaseFrames, clubDescription: describeClub(club) }),
+          body: JSON.stringify({ frames: phaseFrames, clubDescription: describeClub(club), provider }),
         })
       } finally {
         window.clearInterval(analyzingTimer)
@@ -245,6 +246,32 @@ export default function SwingAnalyzer() {
         )}
 
         <ClubSelector value={club} onChange={setClub} />
+
+        <div>
+          <p className="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-1.5">
+            <span aria-hidden>🤖</span> 분석 AI 선택
+          </p>
+          <div className="grid grid-cols-2 gap-2.5">
+            {AI_PROVIDERS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setProvider(p.id)}
+                disabled={isBusy}
+                className={`rounded-xl border px-4 py-2.5 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                  provider === p.id
+                    ? 'border-lime-400/50 bg-lime-400/10 shadow-[0_0_16px_rgba(132,204,22,0.2)]'
+                    : 'border-white/10 bg-white/[0.02] hover:bg-white/5 hover:border-white/20'
+                }`}
+              >
+                <span className={`block text-sm font-bold ${provider === p.id ? 'text-lime-300' : 'text-slate-200'}`}>
+                  {p.label}
+                </span>
+                <span className="block text-[11px] text-slate-500 mt-0.5">{p.description}</span>
+              </button>
+            ))}
+          </div>
+        </div>
 
         <button
           type="button"

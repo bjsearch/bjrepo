@@ -1,3 +1,10 @@
+export type AIProvider = 'anthropic' | 'gemini'
+
+export const AI_PROVIDERS: { id: AIProvider; label: string; description: string }[] = [
+  { id: 'anthropic', label: 'Claude', description: 'Anthropic Claude로 분석합니다' },
+  { id: 'gemini', label: 'Gemini', description: 'Google Gemini로 분석합니다' },
+]
+
 export type ClubCategory = 'driver' | 'iron' | 'wedge'
 
 export interface ClubSelection {

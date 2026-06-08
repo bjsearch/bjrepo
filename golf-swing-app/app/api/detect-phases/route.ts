@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { AIConfigError, generateVisionText, VisionContentBlock } from '@/lib/ai'
+import { AIConfigError, generateVisionText, isProvider, VisionContentBlock } from '@/lib/ai'
 
 const MAX_FRAMES = 12
 
@@ -8,7 +8,8 @@ type PhaseKey = (typeof PHASE_KEYS)[number]
 
 export async function POST(req: Request) {
   try {
-    const { frames } = await req.json()
+    const { frames, provider: requestedProvider } = await req.json()
+    const provider = isProvider(requestedProvider) ? requestedProvider : undefined
 
     if (!Array.isArray(frames) || frames.length < 2) {
       return NextResponse.json({ error: '구간을 찾기에 프레임이 부족합니다.' }, { status: 400 })
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
 
     let responseText: string
     try {
-      responseText = await generateVisionText([{ type: 'text', text: instructions }, ...imageBlocks], 200)
+      responseText = await generateVisionText([{ type: 'text', text: instructions }, ...imageBlocks], 200, provider)
     } catch (err) {
       if (err instanceof AIConfigError) {
         return NextResponse.json({ error: err.message }, { status: 500 })

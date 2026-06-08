@@ -8,15 +8,29 @@ const ANTHROPIC_MODEL = 'claude-sonnet-4-6'
 /** Thrown when the configured provider's API key is missing, so routes can surface a clear setup error. */
 export class AIConfigError extends Error {}
 
-type Provider = 'anthropic' | 'gemini'
+export type Provider = 'anthropic' | 'gemini'
 
-function getProvider(): Provider {
+export const PROVIDERS: { id: Provider; label: string }[] = [
+  { id: 'anthropic', label: 'Claude' },
+  { id: 'gemini', label: 'Gemini' },
+]
+
+export function isProvider(value: unknown): value is Provider {
+  return value === 'anthropic' || value === 'gemini'
+}
+
+function resolveProvider(requested?: Provider): Provider {
+  if (requested) return requested
   return (process.env.AI_PROVIDER || '').trim().toLowerCase() === 'gemini' ? 'gemini' : 'anthropic'
 }
 
-/** Sends a vision prompt (text + base64 JPEG image blocks) to the configured AI provider and returns its raw text reply. */
-export async function generateVisionText(blocks: VisionContentBlock[], maxTokens: number): Promise<string> {
-  return getProvider() === 'gemini' ? generateWithGemini(blocks, maxTokens) : generateWithAnthropic(blocks, maxTokens)
+/** Sends a vision prompt (text + base64 JPEG image blocks) to the given (or default) AI provider and returns its raw text reply. */
+export async function generateVisionText(
+  blocks: VisionContentBlock[],
+  maxTokens: number,
+  provider?: Provider,
+): Promise<string> {
+  return resolveProvider(provider) === 'gemini' ? generateWithGemini(blocks, maxTokens) : generateWithAnthropic(blocks, maxTokens)
 }
 
 async function generateWithAnthropic(blocks: VisionContentBlock[], maxTokens: number): Promise<string> {
