@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
+import { AIConfigError, generateVisionText, VisionContentBlock } from '@/lib/ai'
 
 const MAX_FRAMES = 12
 
@@ -14,21 +14,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: '구간을 찾기에 프레임이 부족합니다.' }, { status: 400 })
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY
-    if (!apiKey) {
-      return NextResponse.json({ error: '서버에 ANTHROPIC_API_KEY가 설정되어 있지 않습니다.' }, { status: 500 })
-    }
-
-    const anthropic = new Anthropic({ apiKey })
     const usedFrames: string[] = frames.slice(0, MAX_FRAMES)
     const lastIndex = usedFrames.length - 1
 
-    const imageBlocks = usedFrames.flatMap((base64: string, i: number) => [
-      { type: 'text' as const, text: `프레임 인덱스 ${i}:` },
-      {
-        type: 'image' as const,
-        source: { type: 'base64' as const, media_type: 'image/jpeg' as const, data: base64 },
-      },
+    const imageBlocks: VisionContentBlock[] = usedFrames.flatMap((base64: string, i: number) => [
+      { type: 'text', text: `프레임 인덱스 ${i}:` },
+      { type: 'image', base64 },
     ])
 
     const instructions = `다음은 골프 스윙 영상에서 시간 순서대로(인덱스 0부터 ${lastIndex}까지) 추출한 연속 프레임 ${usedFrames.length}장입니다.
@@ -45,23 +36,17 @@ export async function POST(req: Request) {
 다른 설명 없이 아래 JSON 형식으로만 응답하세요:
 { "address": 정수, "backswingTop": 정수, "impact": 정수, "finish": 정수 }`
 
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 200,
-      messages: [
-        {
-          role: 'user',
-          content: [{ type: 'text', text: instructions }, ...imageBlocks],
-        },
-      ],
-    })
-
-    const textBlock = message.content.find((block) => block.type === 'text')
-    if (!textBlock || textBlock.type !== 'text') {
-      return NextResponse.json({ error: 'AI 응답을 읽을 수 없습니다.' }, { status: 502 })
+    let responseText: string
+    try {
+      responseText = await generateVisionText([{ type: 'text', text: instructions }, ...imageBlocks], 200)
+    } catch (err) {
+      if (err instanceof AIConfigError) {
+        return NextResponse.json({ error: err.message }, { status: 500 })
+      }
+      throw err
     }
 
-    const indices = parsePhaseIndices(textBlock.text, lastIndex)
+    const indices = parsePhaseIndices(responseText, lastIndex)
     if (!indices) {
       return NextResponse.json({ error: '스윙 구간을 인식하지 못했습니다.' }, { status: 502 })
     }
@@ -69,11 +54,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ indices })
   } catch (err) {
     console.error('phase detection error', err)
-    const detail = err instanceof Anthropic.APIError
-      ? `${err.status} ${err.message}`
-      : err instanceof Error
-        ? err.message
-        : String(err)
+    const detail = err instanceof Error ? err.message : String(err)
     return NextResponse.json(
       { error: `스윙 구간 탐지 중 오류가 발생했습니다. (${detail})` },
       { status: 500 },

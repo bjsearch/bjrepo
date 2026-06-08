@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
+import { AIConfigError, generateVisionText } from '@/lib/ai'
 import type { SwingAnalysisResult } from '@/lib/types'
 
 const MAX_FRAMES = 4
@@ -15,23 +15,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: '클럽 정보가 필요합니다.' }, { status: 400 })
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY
-    if (!apiKey) {
-      return NextResponse.json({ error: '서버에 ANTHROPIC_API_KEY가 설정되어 있지 않습니다.' }, { status: 500 })
-    }
-
-    const anthropic = new Anthropic({ apiKey })
-
     const usedFrames: string[] = frames.slice(0, MAX_FRAMES)
-
-    const imageBlocks = usedFrames.map((base64: string) => ({
-      type: 'image' as const,
-      source: {
-        type: 'base64' as const,
-        media_type: 'image/jpeg' as const,
-        data: base64,
-      },
-    }))
 
     const instructions = `당신은 PGA/LPGA 투어 경험이 있는 골프 스윙 코치입니다.
 아래 이미지 4장은 한 사용자의 골프 스윙 영상에서 스윙 단계를 기준으로 골라낸 프레임으로,
@@ -67,26 +51,20 @@ recommendedPlayers는 정확히 2명만 추천하고, 이름은 유튜브에서 
 \`__밑줄__\`을 추가로 사용하세요 (예: "**어드레스 시 무릎을 살짝 굽혀** 안정적인 자세를 만드세요" / "__임팩트 순간 머리를 고정하세요__").
 모든 문장에 강조가 필요한 것은 아니므로, 정말 핵심적인 부분에만 선택적으로 사용하세요.`
 
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1600,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: instructions },
-            ...imageBlocks,
-          ],
-        },
-      ],
-    })
-
-    const textBlock = message.content.find((block) => block.type === 'text')
-    if (!textBlock || textBlock.type !== 'text') {
-      return NextResponse.json({ error: 'AI 응답을 읽을 수 없습니다.' }, { status: 502 })
+    let responseText: string
+    try {
+      responseText = await generateVisionText(
+        [{ type: 'text', text: instructions }, ...usedFrames.map((base64) => ({ type: 'image' as const, base64 }))],
+        1600,
+      )
+    } catch (err) {
+      if (err instanceof AIConfigError) {
+        return NextResponse.json({ error: err.message }, { status: 500 })
+      }
+      throw err
     }
 
-    const parsed = parseAnalysisJson(textBlock.text)
+    const parsed = parseAnalysisJson(responseText)
     if (!parsed) {
       return NextResponse.json({ error: 'AI 응답을 분석 결과로 변환하지 못했습니다.' }, { status: 502 })
     }
@@ -94,11 +72,7 @@ recommendedPlayers는 정확히 2명만 추천하고, 이름은 유튜브에서 
     return NextResponse.json(parsed)
   } catch (err) {
     console.error('swing analysis error', err)
-    const detail = err instanceof Anthropic.APIError
-      ? `${err.status} ${err.message}`
-      : err instanceof Error
-        ? err.message
-        : String(err)
+    const detail = err instanceof Error ? err.message : String(err)
     return NextResponse.json(
       { error: `스윙 분석 중 오류가 발생했습니다. (${detail})` },
       { status: 500 },
