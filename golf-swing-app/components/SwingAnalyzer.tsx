@@ -6,6 +6,7 @@ import AnalysisResult from './AnalysisResult'
 import { extractFrames } from '@/lib/extractFrames'
 import SwingLoaderAnimation from './SwingLoaderAnimation'
 import { PHASE_SETS, phaseCountForProvider, phaseFractions, phaseLabels } from '@/lib/swingPhases'
+import { buildPhaseFeedbackHint, recordPhaseFeedback } from '@/lib/phaseFeedback'
 import { fetchGlobalStats, fetchHistory, saveAnalysis } from '@/lib/history'
 import {
   AI_PROVIDERS,
@@ -84,6 +85,7 @@ async function detectPhaseFrames(
   phaseCount: 4 | 6,
   provider: AIProvider,
   geminiModel: string,
+  feedbackHint?: string | null,
 ): Promise<string[]> {
   const phaseKeys = PHASE_SETS[phaseCount].map((p) => p.key)
 
@@ -91,7 +93,7 @@ async function detectPhaseFrames(
     const res = await fetch('/api/detect-phases', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ frames: candidateFrames, phaseCount, provider, geminiModel }),
+      body: JSON.stringify({ frames: candidateFrames, phaseCount, provider, geminiModel, feedbackHint }),
     })
     const raw = await res.text()
     const data = raw ? JSON.parse(raw) : null
@@ -181,6 +183,11 @@ export default function SwingAnalyzer() {
 
   const isTrimmed = videoDuration != null && (trimStart > 0.05 || videoDuration - trimEnd > 0.05)
 
+  function handleFrameFeedback(frameIndex: number, accurate: boolean) {
+    const phaseKey = PHASE_SETS[framePhaseCount][frameIndex]?.key
+    if (phaseKey) recordPhaseFeedback(phaseKey, accurate)
+  }
+
   async function handleAnalyze() {
     if (!file) return
     setError(null)
@@ -209,9 +216,16 @@ export default function SwingAnalyzer() {
         setProgress((p) => (p < 65 ? p + 1 : p))
       }, 250)
 
+      const activePhases = PHASE_SETS[phaseCount]
+      const phaseLabelByKey = Object.fromEntries(activePhases.map((p) => [p.key, p.label]))
+      const feedbackHint = buildPhaseFeedbackHint(
+        activePhases.map((p) => p.key),
+        phaseLabelByKey,
+      )
+
       let phaseFrames: string[]
       try {
-        phaseFrames = await detectPhaseFrames(candidateFrames, phaseCount, provider, geminiModel)
+        phaseFrames = await detectPhaseFrames(candidateFrames, phaseCount, provider, geminiModel, feedbackHint)
       } finally {
         window.clearInterval(detectingTimer)
       }
@@ -504,6 +518,7 @@ export default function SwingAnalyzer() {
             globalAverageScore={globalAverageScore}
             frames={frames}
             frameLabels={phaseLabels(framePhaseCount)}
+            onFrameFeedback={handleFrameFeedback}
           />
         </>
       )}

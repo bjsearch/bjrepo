@@ -11,10 +11,12 @@ export async function POST(req: Request) {
       provider: requestedProvider,
       geminiModel: requestedGeminiModel,
       phaseCount: requestedPhaseCount,
+      feedbackHint: requestedFeedbackHint,
     } = await req.json()
     const provider = isProvider(requestedProvider) ? requestedProvider : undefined
     const geminiModel = isGeminiModel(requestedGeminiModel) ? requestedGeminiModel : undefined
     const phaseCount: PhaseCount = isPhaseCount(requestedPhaseCount) ? requestedPhaseCount : 4
+    const feedbackHint = typeof requestedFeedbackHint === 'string' && requestedFeedbackHint.trim() ? requestedFeedbackHint.trim() : null
 
     if (!Array.isArray(frames) || frames.length < 2) {
       return NextResponse.json({ error: '구간을 찾기에 프레임이 부족합니다.' }, { status: 400 })
@@ -41,7 +43,7 @@ export async function POST(req: Request) {
 이 중 아래 ${phases.length}개 구간에 가장 가까운 프레임의 인덱스를 하나씩 선택하세요. 동작의 디테일을 놓치지 않도록 인접 프레임들을 신중하게 비교해서 고르세요.
 
 ${phaseDescriptions}
-
+${feedbackHint ? `\n${feedbackHint}\n` : ''}
 먼저 전체 프레임을 훑어보며 클럽이 가장 높이 올라간 지점(백스윙 탑 후보)과 클럽 헤드가 공에 가장 가까워진 지점(임팩트 후보)처럼 명확히 구분되는 전환점을 찾아 기준으로 삼으세요.
 그다음 그 기준점들 사이·앞·뒤 구간에서 나머지 단계들을 시간 순서에 맞게 채워나가세요. 인접한 프레임끼리 자세·클럽 위치·체중 이동을 세밀하게 비교해 가장 들어맞는 인덱스를 고르세요.
 같은 인덱스를 두 단계에 중복 사용하지 말고, 반드시 시간 순서를 따라야 하므로 ${orderExpression} 가 되도록 선택하세요.

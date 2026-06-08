@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { SwingAnalysisResult, swingGrade, youtubeSearchUrl } from '@/lib/types'
 
 /** Renders feedback text, turning `**bold**` and `__underline__` markers into emphasis. */
@@ -136,6 +137,51 @@ function StageScoreBar({ stage, score, comment }: { stage: string; score: number
   )
 }
 
+type FrameRating = 'accurate' | 'inaccurate'
+
+function FrameFeedback({ onRate }: { onRate: (accurate: boolean) => void }) {
+  const [rating, setRating] = useState<FrameRating | null>(null)
+
+  function handleRate(accurate: boolean) {
+    if (rating) return
+    setRating(accurate ? 'accurate' : 'inaccurate')
+    onRate(accurate)
+  }
+
+  if (rating) {
+    return (
+      <p
+        className={`text-center text-[11px] font-semibold rounded-full px-2 py-1 border ${
+          rating === 'accurate'
+            ? 'text-lime-300 bg-lime-400/10 border-lime-400/25'
+            : 'text-rose-300 bg-rose-500/10 border-rose-400/25'
+        }`}
+      >
+        {rating === 'accurate' ? '✓ 정확해요로 평가했어요' : '✗ 부정확해요로 평가했어요 — 다음 분석에 반영할게요'}
+      </p>
+    )
+  }
+
+  return (
+    <div className="flex items-center justify-center gap-1.5">
+      <button
+        type="button"
+        onClick={() => handleRate(true)}
+        className="flex-1 text-[11px] font-semibold rounded-full px-2 py-1 border border-lime-400/25 text-lime-300 bg-lime-400/5 hover:bg-lime-400/15 transition"
+      >
+        👍 정확해요
+      </button>
+      <button
+        type="button"
+        onClick={() => handleRate(false)}
+        className="flex-1 text-[11px] font-semibold rounded-full px-2 py-1 border border-rose-400/25 text-rose-300 bg-rose-500/5 hover:bg-rose-500/15 transition"
+      >
+        👎 부정확해요
+      </button>
+    </div>
+  )
+}
+
 const card = 'rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.35)]'
 
 export default function AnalysisResult({
@@ -144,6 +190,7 @@ export default function AnalysisResult({
   globalAverageScore,
   frames,
   frameLabels,
+  onFrameFeedback,
 }: {
   result: SwingAnalysisResult
   /** The user's own average score across past analyses, for comparison. Omit/null if there's no history yet. */
@@ -154,6 +201,8 @@ export default function AnalysisResult({
   frames?: string[]
   /** Korean labels (e.g. "어드레스") describing what swing phase each frame represents, in order. */
   frameLabels?: string[]
+  /** Called when the user rates a frame's accuracy, so it can be recorded and used to improve future detections. */
+  onFrameFeedback?: (frameIndex: number, accurate: boolean) => void
 }) {
   return (
     <div className="space-y-5 animate-[fadeIn_0.4s_ease-out]">
@@ -176,9 +225,14 @@ export default function AnalysisResult({
 
       {frames && frames.length > 0 && (
         <section className={`${card} p-6`}>
-          <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-slate-100">
+          <h3 className="font-bold text-lg mb-1 flex items-center gap-2 text-slate-100">
             <span className="text-xl" aria-hidden>🖼️</span> 분석에 사용된 프레임
           </h3>
+          {onFrameFeedback && (
+            <p className="text-xs text-slate-500 mb-4">
+              AI가 고른 구간이 실제 스윙 단계와 맞는지 평가해 주세요. 평가 결과는 다음 분석의 정확도를 높이는 데 활용됩니다.
+            </p>
+          )}
           <div className={`grid grid-cols-2 ${frames.length > 4 ? 'sm:grid-cols-3' : 'sm:grid-cols-4'} gap-3`}>
             {frames.map((frame, i) => (
               <div key={i} className="space-y-1.5">
@@ -188,6 +242,7 @@ export default function AnalysisResult({
                   className="w-full aspect-square object-cover rounded-xl ring-1 ring-white/10 bg-black/40"
                 />
                 <p className="text-center text-[11px] text-slate-500">{frameLabels?.[i] ?? `프레임 ${i + 1}`}</p>
+                {onFrameFeedback && <FrameFeedback onRate={(accurate) => onFrameFeedback(i, accurate)} />}
               </div>
             ))}
           </div>
