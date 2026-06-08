@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { AIConfigError, generateVisionText, isGeminiModel, isProvider, VisionContentBlock } from '@/lib/ai'
 import { isPhaseCount, PHASE_SETS, PhaseCount } from '@/lib/swingPhases'
 
-const MAX_FRAMES = 16
+const MAX_FRAMES = 18
 
 export async function POST(req: Request) {
   try {
@@ -42,8 +42,9 @@ export async function POST(req: Request) {
 
 ${phaseDescriptions}
 
-각 후보 프레임을 시간 순서대로 비교하면서 동작이 전환되는 지점을 찾아내고, 위 설명과 가장 잘 들어맞는 인덱스를 고르세요.
-반드시 시간 순서를 따라야 하므로 ${orderExpression} 가 되도록 선택하세요.
+먼저 전체 프레임을 훑어보며 클럽이 가장 높이 올라간 지점(백스윙 탑 후보)과 클럽 헤드가 공에 가장 가까워진 지점(임팩트 후보)처럼 명확히 구분되는 전환점을 찾아 기준으로 삼으세요.
+그다음 그 기준점들 사이·앞·뒤 구간에서 나머지 단계들을 시간 순서에 맞게 채워나가세요. 인접한 프레임끼리 자세·클럽 위치·체중 이동을 세밀하게 비교해 가장 들어맞는 인덱스를 고르세요.
+같은 인덱스를 두 단계에 중복 사용하지 말고, 반드시 시간 순서를 따라야 하므로 ${orderExpression} 가 되도록 선택하세요.
 다른 설명 없이 아래 JSON 형식으로만 응답하세요:
 ${jsonSchema}`
 

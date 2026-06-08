@@ -21,7 +21,7 @@ type Status = 'idle' | 'extracting' | 'detecting' | 'analyzing' | 'done' | 'erro
 
 /** Frames sampled across the clip for the AI to pick swing-phase frames from (more candidates for finer 6-phase picks). */
 function candidateFrameCount(phaseCount: 4 | 6): number {
-  return phaseCount === 6 ? 14 : 10
+  return phaseCount === 6 ? 18 : 10
 }
 
 /** Smallest allowed trimmed-clip length, in seconds, so there's still enough footage to sample frames from. */
