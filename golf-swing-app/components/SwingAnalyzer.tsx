@@ -8,7 +8,7 @@ import { ClubSelection, SwingAnalysisResult, describeClub } from '@/lib/types'
 
 type Status = 'idle' | 'extracting' | 'analyzing' | 'done' | 'error'
 
-const FRAME_COUNT = 6
+const FRAME_COUNT = 4
 
 export default function SwingAnalyzer() {
   const [file, setFile] = useState<File | null>(null)

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import type { SwingAnalysisResult } from '@/lib/types'
 
-const MAX_FRAMES = 8
+const MAX_FRAMES = 4
 
 export async function POST(req: Request) {
   try {
@@ -38,24 +38,25 @@ export async function POST(req: Request) {
 사용 클럽: ${clubDescription}
 
 이 프레임들을 어드레스 → 백스윙 → 탑 → 다운스윙 → 임팩트 → 팔로우스루 흐름으로 보고 스윙을 분석한 뒤,
-반드시 아래 JSON 형식으로만 응답하세요. 다른 설명, 코드블록, 마크다운 없이 순수 JSON 객체만 출력합니다.
+반드시 아래 JSON 형식으로만 간결하게 응답하세요. 다른 설명, 코드블록, 마크다운 없이 순수 JSON 객체만 출력합니다.
+각 항목은 한 문장 내외로 짧고 핵심만 담아 작성하세요.
 
 {
   "score": 0-100 사이의 정수 종합 점수,
-  "scoreSummary": "점수에 대한 한두 문장 요약 (한국어)",
-  "analysis": ["스윙 단계별 또는 항목별 분석 포인트 (한국어, 3~6개 문자열 배열)"],
-  "practiceTips": ["이 스윙을 개선하기 위한 구체적인 연습 방법 (한국어, 3~6개 문자열 배열)"],
+  "scoreSummary": "점수에 대한 한 문장 요약 (한국어)",
+  "analysis": ["스윙 단계별 또는 항목별 분석 포인트 (한국어, 정확히 3개 문자열 배열, 각 한 문장)"],
+  "practiceTips": ["이 스윙을 개선하기 위한 구체적인 연습 방법 (한국어, 정확히 3개 문자열 배열, 각 한 문장)"],
   "recommendedPlayers": [
-    { "name": "참고하면 좋을 선수 이름", "reason": "이 사용자의 스윙과 관련해 그 선수를 추천하는 이유 (한국어)" }
+    { "name": "참고하면 좋을 선수 이름", "reason": "추천 이유 (한국어, 한 문장)" }
   ]
 }
 
-recommendedPlayers는 2~3명을 추천하세요. 클럽 종류(${clubDescription})의 특성도 분석에 반영하세요.
+recommendedPlayers는 정확히 2명만 추천하세요. 클럽 종류(${clubDescription})의 특성도 분석에 반영하세요.
 이미지만으로 정확한 스윙 속도나 club path 등을 측정할 수 없는 점을 감안해, 시각적으로 관찰 가능한 자세·정렬·균형·템포 위주로 분석하세요.`
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 2048,
+      max_tokens: 1200,
       messages: [
         {
           role: 'user',

@@ -6,7 +6,7 @@
  * under serverless request-body limits (e.g. Netlify Functions ~6MB) and the
  * vision model responds quickly.
  */
-const MAX_DIMENSION = 640
+const MAX_DIMENSION = 480
 
 export async function extractFrames(
   file: File,
