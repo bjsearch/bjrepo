@@ -44,6 +44,12 @@ export async function POST(req: Request) {
 {
   "score": 0-100 사이의 정수 종합 점수,
   "scoreSummary": "점수에 대한 한 문장 요약 (한국어)",
+  "stageScores": [
+    { "stage": "어드레스", "score": 0-100 사이의 정수, "comment": "한 문장 코멘트 (한국어)" },
+    { "stage": "백스윙", "score": 0-100 사이의 정수, "comment": "한 문장 코멘트 (한국어)" },
+    { "stage": "임팩트", "score": 0-100 사이의 정수, "comment": "한 문장 코멘트 (한국어)" },
+    { "stage": "팔로우스루", "score": 0-100 사이의 정수, "comment": "한 문장 코멘트 (한국어)" }
+  ],
   "analysis": ["스윙 단계별 또는 항목별 분석 포인트 (한국어, 정확히 3개 문자열 배열, 각 한 문장)"],
   "practiceTips": ["이 스윙을 개선하기 위한 구체적인 연습 방법 (한국어, 정확히 3개 문자열 배열, 각 한 문장)"],
   "recommendedPlayers": [
@@ -51,12 +57,13 @@ export async function POST(req: Request) {
   ]
 }
 
-recommendedPlayers는 정확히 2명만 추천하세요. 클럽 종류(${clubDescription})의 특성도 분석에 반영하세요.
+stageScores는 반드시 위 4단계(어드레스, 백스윙, 임팩트, 팔로우스루) 순서로, 각 단계를 이미지에서 관찰한 내용에 근거해 개별 점수를 매기세요.
+recommendedPlayers는 정확히 2명만 추천하고, 이름은 유튜브에서 검색 가능한 실제 활동명(영문 또는 한글 정식 명칭)으로 작성하세요. 클럽 종류(${clubDescription})의 특성도 분석에 반영하세요.
 이미지만으로 정확한 스윙 속도나 club path 등을 측정할 수 없는 점을 감안해, 시각적으로 관찰 가능한 자세·정렬·균형·템포 위주로 분석하세요.`
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 1200,
+      max_tokens: 1600,
       messages: [
         {
           role: 'user',
@@ -103,15 +110,22 @@ function parseAnalysisJson(text: string): SwingAnalysisResult | null {
     if (
       typeof data.score !== 'number' ||
       typeof data.scoreSummary !== 'string' ||
+      !Array.isArray(data.stageScores) ||
       !Array.isArray(data.analysis) ||
       !Array.isArray(data.practiceTips) ||
       !Array.isArray(data.recommendedPlayers)
     ) {
       return null
     }
+    const clamp = (n: unknown) => Math.max(0, Math.min(100, Math.round(Number(n) || 0)))
     return {
-      score: Math.max(0, Math.min(100, Math.round(data.score))),
+      score: clamp(data.score),
       scoreSummary: data.scoreSummary,
+      stageScores: data.stageScores.map((s: any) => ({
+        stage: String(s?.stage ?? ''),
+        score: clamp(s?.score),
+        comment: String(s?.comment ?? ''),
+      })),
       analysis: data.analysis.map(String),
       practiceTips: data.practiceTips.map(String),
       recommendedPlayers: data.recommendedPlayers.map((p: any) => ({

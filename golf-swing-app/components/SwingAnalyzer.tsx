@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import ClubSelector from './ClubSelector'
 import AnalysisResult from './AnalysisResult'
 import { extractFrames } from '@/lib/extractFrames'
+import { saveAnalysis } from '@/lib/history'
 import { ClubSelection, SwingAnalysisResult, describeClub } from '@/lib/types'
 
 type Status = 'idle' | 'extracting' | 'analyzing' | 'done' | 'error'
@@ -79,8 +80,10 @@ export default function SwingAnalyzer() {
       }
 
       setProgress(100)
-      setResult(data as SwingAnalysisResult)
+      const analysisResult = data as SwingAnalysisResult
+      setResult(analysisResult)
       setStatus('done')
+      saveAnalysis(club, analysisResult)
     } catch (err) {
       setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.')
       setStatus('error')
@@ -141,7 +144,14 @@ export default function SwingAnalyzer() {
         )}
       </section>
 
-      {result && <AnalysisResult result={result} />}
+      {result && (
+        <>
+          <p className="text-xs text-center text-lime-300/70">
+            ✅ 분석 결과가 오늘 날짜의 캘린더에 저장되었습니다 — 상단 "캘린더" 탭에서 확인하세요.
+          </p>
+          <AnalysisResult result={result} />
+        </>
+      )}
     </div>
   )
 }

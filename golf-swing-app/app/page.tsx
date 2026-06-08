@@ -1,4 +1,4 @@
-import SwingAnalyzer from '@/components/SwingAnalyzer'
+import AppShell from '@/components/AppShell'
 
 export default function Home() {
   return (
@@ -14,7 +14,7 @@ export default function Home() {
           스윙 영상을 올리고 사용한 클럽을 선택하면, AI 코치가 점수·분석·연습법·참고 선수를 알려드립니다.
         </p>
       </header>
-      <SwingAnalyzer />
+      <AppShell />
     </main>
   )
 }
