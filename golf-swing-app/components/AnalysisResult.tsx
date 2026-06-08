@@ -179,7 +179,7 @@ export default function AnalysisResult({
           <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-slate-100">
             <span className="text-xl" aria-hidden>🖼️</span> 분석에 사용된 프레임
           </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className={`grid grid-cols-2 ${frames.length > 4 ? 'sm:grid-cols-3' : 'sm:grid-cols-4'} gap-3`}>
             {frames.map((frame, i) => (
               <div key={i} className="space-y-1.5">
                 <img
