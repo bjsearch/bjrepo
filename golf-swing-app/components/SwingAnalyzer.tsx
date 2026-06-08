@@ -5,6 +5,7 @@ import ClubSelector from './ClubSelector'
 import AnalysisResult from './AnalysisResult'
 import { extractFrames } from '@/lib/extractFrames'
 import SwingLoaderAnimation from './SwingLoaderAnimation'
+import { PHASE_SETS, phaseCountForProvider, phaseFractions, phaseLabels } from '@/lib/swingPhases'
 import { fetchGlobalStats, fetchHistory, saveAnalysis } from '@/lib/history'
 import {
   AI_PROVIDERS,
@@ -18,10 +19,10 @@ import {
 
 type Status = 'idle' | 'extracting' | 'detecting' | 'analyzing' | 'done' | 'error'
 
-/** Frames sampled across the clip for the AI to pick swing-phase frames from. */
-const CANDIDATE_FRAME_COUNT = 10
-
-const PHASE_KEYS = ['address', 'backswingTop', 'impact', 'finish'] as const
+/** Frames sampled across the clip for the AI to pick swing-phase frames from (more candidates for finer 6-phase picks). */
+function candidateFrameCount(phaseCount: 4 | 6): number {
+  return phaseCount === 6 ? 14 : 10
+}
 
 const STEPS: { key: Status; label: string }[] = [
   { key: 'extracting', label: '프레임 추출' },
@@ -68,16 +69,23 @@ function StepIndicator({ status }: { status: Status }) {
  * each swing phase (in time order). Falls back to heuristic positions if the
  * detection call fails or returns something unusable.
  */
-async function detectPhaseFrames(candidateFrames: string[], provider: AIProvider, geminiModel: string): Promise<string[]> {
+async function detectPhaseFrames(
+  candidateFrames: string[],
+  phaseCount: 4 | 6,
+  provider: AIProvider,
+  geminiModel: string,
+): Promise<string[]> {
+  const phaseKeys = PHASE_SETS[phaseCount].map((p) => p.key)
+
   try {
     const res = await fetch('/api/detect-phases', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ frames: candidateFrames, provider, geminiModel }),
+      body: JSON.stringify({ frames: candidateFrames, phaseCount, provider, geminiModel }),
     })
     const raw = await res.text()
     const data = raw ? JSON.parse(raw) : null
-    const indices = PHASE_KEYS.map((key) => data?.indices?.[key])
+    const indices = phaseKeys.map((key) => data?.indices?.[key])
     const valid =
       res.ok &&
       indices.every((n) => typeof n === 'number' && n >= 0 && n < candidateFrames.length) &&
@@ -90,8 +98,7 @@ async function detectPhaseFrames(candidateFrames: string[], provider: AIProvider
     // fall through to the heuristic fallback below
   }
 
-  const fallbackFractions = [0.05, 0.35, 0.65, 0.95]
-  return fallbackFractions.map(
+  return phaseFractions(phaseCount).map(
     (f) => candidateFrames[Math.min(candidateFrames.length - 1, Math.floor(f * candidateFrames.length))],
   )
 }
@@ -107,6 +114,7 @@ export default function SwingAnalyzer() {
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<SwingAnalysisResult | null>(null)
   const [frames, setFrames] = useState<string[]>([])
+  const [framePhaseCount, setFramePhaseCount] = useState<4 | 6>(4)
   const [myAverageScore, setMyAverageScore] = useState<number | null>(null)
   const [globalAverageScore, setGlobalAverageScore] = useState<number | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -134,13 +142,15 @@ export default function SwingAnalyzer() {
     setProgress(0)
 
     try {
+      const phaseCount = phaseCountForProvider(provider)
+
       // 1단계: 영상에서 후보 프레임 추출 (0–33%)
       setStatus('extracting')
-      const candidateFrames = await extractFrames(file, CANDIDATE_FRAME_COUNT, (done, total) => {
+      const candidateFrames = await extractFrames(file, candidateFrameCount(phaseCount), (done, total) => {
         setProgress(Math.round((done / total) * 33))
       })
 
-      // 2단계: 어드레스·백스윙 탑·임팩트·피니쉬 구간 탐지 (33–66%, 애니메이션)
+      // 2단계: 스윙 구간 탐지 (33–66%, 애니메이션)
       setStatus('detecting')
       const detectingTimer = window.setInterval(() => {
         setProgress((p) => (p < 65 ? p + 1 : p))
@@ -148,12 +158,13 @@ export default function SwingAnalyzer() {
 
       let phaseFrames: string[]
       try {
-        phaseFrames = await detectPhaseFrames(candidateFrames, provider, geminiModel)
+        phaseFrames = await detectPhaseFrames(candidateFrames, phaseCount, provider, geminiModel)
       } finally {
         window.clearInterval(detectingTimer)
       }
       setProgress(66)
       setFrames(phaseFrames)
+      setFramePhaseCount(phaseCount)
 
       // 3단계: AI 스윙 분석 (66–96%, 애니메이션)
       setStatus('analyzing')
@@ -166,7 +177,13 @@ export default function SwingAnalyzer() {
         res = await fetch('/api/analyze-swing', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ frames: phaseFrames, clubDescription: describeClub(club), provider, geminiModel }),
+          body: JSON.stringify({
+            frames: phaseFrames,
+            clubDescription: describeClub(club),
+            provider,
+            geminiModel,
+            phaseCount,
+          }),
         })
       } finally {
         window.clearInterval(analyzingTimer)
@@ -361,6 +378,7 @@ export default function SwingAnalyzer() {
             myAverageScore={myAverageScore}
             globalAverageScore={globalAverageScore}
             frames={frames}
+            frameLabels={phaseLabels(framePhaseCount)}
           />
         </>
       )}

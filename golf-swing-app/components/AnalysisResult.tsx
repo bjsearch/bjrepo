@@ -1,4 +1,3 @@
-import { SWING_PHASE_LABELS } from '@/lib/extractFrames'
 import { SwingAnalysisResult, swingGrade, youtubeSearchUrl } from '@/lib/types'
 
 /** Renders feedback text, turning `**bold**` and `__underline__` markers into emphasis. */
@@ -144,6 +143,7 @@ export default function AnalysisResult({
   myAverageScore,
   globalAverageScore,
   frames,
+  frameLabels,
 }: {
   result: SwingAnalysisResult
   /** The user's own average score across past analyses, for comparison. Omit/null if there's no history yet. */
@@ -152,6 +152,8 @@ export default function AnalysisResult({
   globalAverageScore?: number | null
   /** Base64-encoded JPEG frames (no data: prefix) that were sent to the AI for this analysis. */
   frames?: string[]
+  /** Korean labels (e.g. "어드레스") describing what swing phase each frame represents, in order. */
+  frameLabels?: string[]
 }) {
   return (
     <div className="space-y-5 animate-[fadeIn_0.4s_ease-out]">
@@ -182,10 +184,10 @@ export default function AnalysisResult({
               <div key={i} className="space-y-1.5">
                 <img
                   src={`data:image/jpeg;base64,${frame}`}
-                  alt={`분석에 사용된 ${SWING_PHASE_LABELS[i] ?? `${i + 1}번째`} 프레임`}
+                  alt={`분석에 사용된 ${frameLabels?.[i] ?? `${i + 1}번째`} 프레임`}
                   className="w-full aspect-square object-cover rounded-xl ring-1 ring-white/10 bg-black/40"
                 />
-                <p className="text-center text-[11px] text-slate-500">{SWING_PHASE_LABELS[i] ?? `프레임 ${i + 1}`}</p>
+                <p className="text-center text-[11px] text-slate-500">{frameLabels?.[i] ?? `프레임 ${i + 1}`}</p>
               </div>
             ))}
           </div>
