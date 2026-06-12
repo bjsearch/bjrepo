@@ -1,6 +1,7 @@
 export interface AuthUser {
   id: string
   email: string
+  isAdmin: boolean
 }
 
 async function readJson(res: Response): Promise<any> {

@@ -95,3 +95,12 @@ export function phaseLabels(phaseCount: PhaseCount): string[] {
 export function phaseFractions(phaseCount: PhaseCount): number[] {
   return PHASE_SETS[phaseCount].map((p) => phaseFraction(p.pNumber))
 }
+
+/** Maps every phase key (across all phase sets) to its Korean label, for displaying feedback stats. */
+export function phaseLabelByKey(): Record<string, string> {
+  const map: Record<string, string> = {}
+  for (const phases of Object.values(PHASE_SETS)) {
+    for (const p of phases) map[p.key] = p.label
+  }
+  return map
+}

@@ -13,6 +13,14 @@ export interface UserRecord {
 export interface SessionUser {
   id: string
   email: string
+  isAdmin: boolean
+}
+
+/** Email addresses granted admin access (analysis dashboard, etc). */
+const ADMIN_EMAILS = ['byoungjoon.kim@databricks.com']
+
+export function isAdminEmail(email: string): boolean {
+  return ADMIN_EMAILS.includes(email.trim().toLowerCase())
 }
 
 const USERS_STORE = 'swing-users'
@@ -37,6 +45,12 @@ function getSessionSecret(): string {
 
 function hashPassword(password: string, salt: string): string {
   return scryptSync(password, salt, 64).toString('hex')
+}
+
+/** Total number of registered accounts, for the admin dashboard. */
+export async function countUsers(): Promise<number> {
+  const { blobs } = await getUsersStore().list()
+  return blobs.length
 }
 
 export async function findUserByEmail(email: string): Promise<UserRecord | null> {
@@ -75,7 +89,7 @@ function sign(payload: string): string {
   return createHmac('sha256', getSessionSecret()).update(payload).digest('base64url')
 }
 
-export function createSessionToken(user: SessionUser): string {
+export function createSessionToken(user: { id: string; email: string }): string {
   const payload = Buffer.from(
     JSON.stringify({ id: user.id, email: user.email, exp: Date.now() + SESSION_TTL_MS }),
   ).toString('base64url')
@@ -90,7 +104,7 @@ export function verifySessionToken(token: string | undefined | null): SessionUse
     const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'))
     if (typeof data.exp !== 'number' || data.exp < Date.now()) return null
     if (typeof data.id !== 'string' || typeof data.email !== 'string') return null
-    return { id: data.id, email: data.email }
+    return { id: data.id, email: data.email, isAdmin: isAdminEmail(data.email) }
   } catch {
     return null
   }

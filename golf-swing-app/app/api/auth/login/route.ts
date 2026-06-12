@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createSessionToken, verifyUser, SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from '@/lib/auth'
+import { createSessionToken, isAdminEmail, verifyUser, SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     }
 
     const token = createSessionToken({ id: user.id, email: user.email })
-    const res = NextResponse.json({ user: { id: user.id, email: user.email } })
+    const res = NextResponse.json({ user: { id: user.id, email: user.email, isAdmin: isAdminEmail(user.email) } })
     res.cookies.set(SESSION_COOKIE_NAME, token, {
       httpOnly: true,
       secure: true,

@@ -3,9 +3,10 @@
 import { useState } from 'react'
 import SwingAnalyzer from './SwingAnalyzer'
 import HistoryCalendar from './HistoryCalendar'
+import AdminDashboard from './AdminDashboard'
 import AuthGate from './AuthGate'
 
-type Tab = 'analyze' | 'calendar'
+type Tab = 'analyze' | 'calendar' | 'dashboard'
 
 export default function AppShell() {
   const [tab, setTab] = useState<Tab>('analyze')
@@ -51,10 +52,25 @@ export default function AppShell() {
               >
                 📅 캘린더
               </button>
+              {user.isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setTab('dashboard')}
+                  className={`px-5 py-2 rounded-full text-sm font-semibold transition ${
+                    tab === 'dashboard'
+                      ? 'bg-gradient-to-r from-lime-400 to-emerald-500 text-emerald-950 shadow-[0_0_16px_rgba(132,204,22,0.35)]'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  📊 분석 대시보드
+                </button>
+              )}
             </div>
           </div>
 
-          {tab === 'analyze' ? <SwingAnalyzer /> : <HistoryCalendar />}
+          {tab === 'analyze' && <SwingAnalyzer />}
+          {tab === 'calendar' && <HistoryCalendar />}
+          {tab === 'dashboard' && user.isAdmin && <AdminDashboard />}
         </div>
       )}
     </AuthGate>

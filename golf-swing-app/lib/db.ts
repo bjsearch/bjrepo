@@ -102,6 +102,59 @@ export async function getRegionalScoreStats(region: string): Promise<ScoreStats>
   return { average: count > 0 ? total / count : null, count }
 }
 
+export interface AdminDashboardStats {
+  totalUsers: number
+  totalAnalyses: number
+  averageScore: number | null
+  clubBreakdown: Record<string, number>
+  regionBreakdown: Record<string, ScoreStats>
+}
+
+/** Aggregates site-wide usage stats for the admin dashboard. */
+export async function getAdminDashboardStats(totalUsers: number): Promise<AdminDashboardStats> {
+  const store = getHistoryStore()
+  const { blobs } = await store.list({ prefix: HISTORY_KEY_PREFIX })
+
+  let total = 0
+  let count = 0
+  const clubBreakdown: Record<string, number> = {}
+  const regionTotals: Record<string, { total: number; count: number }> = {}
+
+  for (const blob of blobs) {
+    const data = await store.get(blob.key, { type: 'json' })
+    if (!Array.isArray(data)) continue
+
+    for (const entry of data as SavedAnalysis[]) {
+      total += entry.result.score
+      count += 1
+
+      const clubKey = entry.club.category
+      clubBreakdown[clubKey] = (clubBreakdown[clubKey] ?? 0) + 1
+
+      const region = entry.location?.region
+      if (region) {
+        const bucket = regionTotals[region] ?? { total: 0, count: 0 }
+        bucket.total += entry.result.score
+        bucket.count += 1
+        regionTotals[region] = bucket
+      }
+    }
+  }
+
+  const regionBreakdown: Record<string, ScoreStats> = {}
+  for (const [region, { total: regionTotal, count: regionCount }] of Object.entries(regionTotals)) {
+    regionBreakdown[region] = { average: regionCount > 0 ? regionTotal / regionCount : null, count: regionCount }
+  }
+
+  return {
+    totalUsers,
+    totalAnalyses: count,
+    averageScore: count > 0 ? total / count : null,
+    clubBreakdown,
+    regionBreakdown,
+  }
+}
+
 const PHASE_FEEDBACK_STORE = 'swing-phase-feedback'
 const PHASE_FEEDBACK_KEY = 'global-stats'
 
