@@ -241,8 +241,9 @@ export default function HistoryCalendar() {
                       <p className="text-xs text-slate-500 flex items-center gap-1.5">
                         <span>{time}</span>
                         {entry.location?.region && (
-                          <span className="text-slate-400">
+                          <span className="text-slate-400" title={entry.location.address}>
                             <span aria-hidden>📍</span> {entry.location.region}
+                            {entry.location.district ? ` ${entry.location.district}` : ''}
                           </span>
                         )}
                       </p>

@@ -46,8 +46,18 @@ export interface SwingAnalysisResult {
 export interface AnalysisLocation {
   lat: number
   lng: number
-  /** Human-readable region label (e.g. "서울특별시"), from reverse geocoding. */
+  /** Accuracy radius of the coordinates, in meters (from the browser's Geolocation API). */
+  accuracy?: number
+  /** Human-readable region label (e.g. "서울특별시"), used for grouping/regional stats. */
   region?: string
+  /** More specific sub-region (e.g. "강남구"), from reverse geocoding. */
+  district?: string
+  /** Province/state-level name (e.g. "경기도"), from reverse geocoding. */
+  state?: string
+  /** Country name, from reverse geocoding. */
+  country?: string
+  /** Full human-readable address string, for display on a map. */
+  address?: string
 }
 
 /** A persisted analysis run, keyed by the calendar date it was performed on. */

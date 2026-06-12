@@ -48,14 +48,19 @@ export async function POST(req: Request) {
   }
 }
 
+const OPTIONAL_STRING_FIELDS = ['region', 'district', 'state', 'country', 'address'] as const
+
 function isValidLocation(location: any): location is AnalysisLocation {
-  return (
-    location &&
-    typeof location === 'object' &&
-    typeof location.lat === 'number' &&
-    typeof location.lng === 'number' &&
-    (location.region === undefined || typeof location.region === 'string')
-  )
+  if (
+    !location ||
+    typeof location !== 'object' ||
+    typeof location.lat !== 'number' ||
+    typeof location.lng !== 'number' ||
+    (location.accuracy !== undefined && typeof location.accuracy !== 'number')
+  ) {
+    return false
+  }
+  return OPTIONAL_STRING_FIELDS.every((field) => location[field] === undefined || typeof location[field] === 'string')
 }
 
 function isValidClub(club: any): club is { category: ClubCategory; number: number | null } {

@@ -19,7 +19,7 @@ export async function GET(req: Request) {
 
   try {
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10&accept-language=ko`,
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=14&addressdetails=1&accept-language=ko`,
       { headers: { 'User-Agent': 'golf-swing-analyzer/1.0' } },
     )
     if (!res.ok) return NextResponse.json({ region: null })
@@ -27,7 +27,11 @@ export async function GET(req: Request) {
     const data = await res.json()
     const addr = data?.address ?? {}
     const region = addr.city ?? addr.county ?? addr.state ?? addr.region ?? null
-    return NextResponse.json({ region })
+    const district = addr.borough ?? addr.city_district ?? addr.district ?? addr.suburb ?? null
+    const state = addr.state ?? null
+    const country = addr.country ?? null
+    const address = typeof data?.display_name === 'string' ? data.display_name : null
+    return NextResponse.json({ region, district, state, country, address })
   } catch {
     return NextResponse.json({ region: null })
   }
