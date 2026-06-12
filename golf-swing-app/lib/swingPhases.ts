@@ -74,9 +74,9 @@ export const PHASE_SETS: Record<PhaseCount, PhaseDef[]> = {
   6: [ADDRESS, TAKEAWAY, BACKSWING_TOP, IMPACT, FOLLOW_THROUGH, FINISH],
 }
 
-/** Gemini gets the more granular 6-phase breakdown; Claude keeps the original 4-phase pipeline. */
+/** Both providers now use the more granular 6-phase breakdown. */
 export function phaseCountForProvider(provider: AIProvider): PhaseCount {
-  return provider === 'gemini' ? 6 : 4
+  return 6
 }
 
 export function isPhaseCount(value: unknown): value is PhaseCount {
