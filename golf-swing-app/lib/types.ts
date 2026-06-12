@@ -42,6 +42,14 @@ export interface SwingAnalysisResult {
   recommendedPlayers: RecommendedPlayer[]
 }
 
+/** Where an analysis was performed, captured via the browser's geolocation API. */
+export interface AnalysisLocation {
+  lat: number
+  lng: number
+  /** Human-readable region label (e.g. "서울특별시"), from reverse geocoding. */
+  region?: string
+}
+
 /** A persisted analysis run, keyed by the calendar date it was performed on. */
 export interface SavedAnalysis {
   id: string
@@ -50,6 +58,7 @@ export interface SavedAnalysis {
   createdAt: string
   club: ClubSelection
   result: SwingAnalysisResult
+  location?: AnalysisLocation
 }
 
 export const CLUB_LABELS: Record<ClubCategory, string> = {

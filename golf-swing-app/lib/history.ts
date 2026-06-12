@@ -1,4 +1,4 @@
-import { SavedAnalysis, SwingAnalysisResult, ClubSelection } from './types'
+import { AnalysisLocation, SavedAnalysis, SwingAnalysisResult, ClubSelection } from './types'
 
 async function readJson(res: Response): Promise<any> {
   const raw = await res.text()
@@ -26,6 +26,19 @@ export async function fetchGlobalStats(): Promise<GlobalScoreStats> {
   }
 }
 
+/** Fetches the average swing score across every user's analyses recorded in the given region. */
+export async function fetchRegionalStats(region: string): Promise<GlobalScoreStats> {
+  const res = await fetch(`/api/stats?region=${encodeURIComponent(region)}`)
+  const data = await readJson(res)
+  if (!res.ok) {
+    throw new Error(data?.error ?? `통계를 불러오지 못했습니다. (HTTP ${res.status})`)
+  }
+  return {
+    average: typeof data?.average === 'number' ? data.average : null,
+    count: typeof data?.count === 'number' ? data.count : 0,
+  }
+}
+
 export async function fetchHistory(): Promise<SavedAnalysis[]> {
   const res = await fetch('/api/history')
   const data = await readJson(res)
@@ -35,11 +48,15 @@ export async function fetchHistory(): Promise<SavedAnalysis[]> {
   return Array.isArray(data?.entries) ? data.entries : []
 }
 
-export async function saveAnalysis(club: ClubSelection, result: SwingAnalysisResult): Promise<SavedAnalysis> {
+export async function saveAnalysis(
+  club: ClubSelection,
+  result: SwingAnalysisResult,
+  location?: AnalysisLocation | null,
+): Promise<SavedAnalysis> {
   const res = await fetch('/api/history', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ club, result }),
+    body: JSON.stringify({ club, result, ...(location ? { location } : {}) }),
   })
   const data = await readJson(res)
   if (!res.ok || !data?.entry) {

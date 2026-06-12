@@ -1,5 +1,5 @@
 import { getStore } from '@netlify/blobs'
-import { ClubSelection, SavedAnalysis, SwingAnalysisResult } from './types'
+import { AnalysisLocation, ClubSelection, SavedAnalysis, SwingAnalysisResult } from './types'
 
 const STORE_NAME = 'swing-analyses'
 const MAX_ENTRIES = 500
@@ -33,11 +33,12 @@ export async function insertAnalysis(
   userId: string,
   club: ClubSelection,
   result: SwingAnalysisResult,
+  location?: AnalysisLocation,
 ): Promise<SavedAnalysis> {
   const now = new Date()
   const id = `${now.getTime()}-${Math.random().toString(36).slice(2, 8)}`
   const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-  const entry: SavedAnalysis = { id, date: dateKey, createdAt: now.toISOString(), club, result }
+  const entry: SavedAnalysis = { id, date: dateKey, createdAt: now.toISOString(), club, result, ...(location ? { location } : {}) }
 
   const entries = await readHistory(userId)
   entries.unshift(entry)
@@ -72,6 +73,28 @@ export async function getGlobalScoreStats(): Promise<ScoreStats> {
       for (const entry of data as SavedAnalysis[]) {
         total += entry.result.score
         count += 1
+      }
+    }
+  }
+
+  return { average: count > 0 ? total / count : null, count }
+}
+
+/** Aggregates the swing score average across every user's saved analyses recorded in the given region. */
+export async function getRegionalScoreStats(region: string): Promise<ScoreStats> {
+  const store = getHistoryStore()
+  const { blobs } = await store.list({ prefix: HISTORY_KEY_PREFIX })
+
+  let total = 0
+  let count = 0
+  for (const blob of blobs) {
+    const data = await store.get(blob.key, { type: 'json' })
+    if (Array.isArray(data)) {
+      for (const entry of data as SavedAnalysis[]) {
+        if (entry.location?.region === region) {
+          total += entry.result.score
+          count += 1
+        }
       }
     }
   }

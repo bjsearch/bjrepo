@@ -72,7 +72,7 @@ function GradeBadge({ score }: { score: number }) {
   )
 }
 
-type ComparisonTheme = 'self' | 'global'
+type ComparisonTheme = 'self' | 'global' | 'region'
 
 const COMPARISON_COLORS: Record<ComparisonTheme, { higher: string; lower: string; similar: string }> = {
   self: {
@@ -83,6 +83,11 @@ const COMPARISON_COLORS: Record<ComparisonTheme, { higher: string; lower: string
   global: {
     higher: 'text-sky-300 bg-sky-400/10 border-sky-400/25',
     lower: 'text-amber-300 bg-amber-400/10 border-amber-400/25',
+    similar: 'text-slate-400 bg-white/5 border-white/10',
+  },
+  region: {
+    higher: 'text-violet-300 bg-violet-400/10 border-violet-400/25',
+    lower: 'text-orange-300 bg-orange-400/10 border-orange-400/25',
     similar: 'text-slate-400 bg-white/5 border-white/10',
   },
 }
@@ -188,6 +193,8 @@ export default function AnalysisResult({
   result,
   myAverageScore,
   globalAverageScore,
+  regionAverageScore,
+  regionLabel,
   frames,
   frameLabels,
   onFrameFeedback,
@@ -197,6 +204,10 @@ export default function AnalysisResult({
   myAverageScore?: number | null
   /** The average score across every user's analyses, for comparison. Omit/null if unavailable. */
   globalAverageScore?: number | null
+  /** The average score across analyses recorded in the user's region, for comparison. Omit/null if unavailable. */
+  regionAverageScore?: number | null
+  /** Human-readable region label (e.g. "서울특별시") matching `regionAverageScore`. */
+  regionLabel?: string | null
   /** Base64-encoded JPEG frames (no data: prefix) that were sent to the AI for this analysis. */
   frames?: string[]
   /** Korean labels (e.g. "어드레스") describing what swing phase each frame represents, in order. */
@@ -211,13 +222,21 @@ export default function AnalysisResult({
         <GradeBadge score={result.score} />
         <p className="text-xs text-lime-300/80 uppercase tracking-[0.2em] font-semibold">스윙 종합 점수</p>
         <p className="text-slate-300 max-w-md leading-relaxed">{renderEmphasis(result.scoreSummary)}</p>
-        {(myAverageScore != null || globalAverageScore != null) && (
+        {(myAverageScore != null || globalAverageScore != null || regionAverageScore != null) && (
           <div className="flex flex-wrap items-center justify-center gap-2">
             {myAverageScore != null && (
               <ScoreComparison score={result.score} average={myAverageScore} label="나의 평균" theme="self" />
             )}
             {globalAverageScore != null && (
               <ScoreComparison score={result.score} average={globalAverageScore} label="전체 유저 평균" theme="global" />
+            )}
+            {regionAverageScore != null && (
+              <ScoreComparison
+                score={result.score}
+                average={regionAverageScore}
+                label={`${regionLabel ?? '우리 지역'} 평균`}
+                theme="region"
+              />
             )}
           </div>
         )}

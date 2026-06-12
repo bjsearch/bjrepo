@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSessionUser } from '@/lib/auth'
 import { insertAnalysis, listAnalyses } from '@/lib/db'
-import type { ClubCategory } from '@/lib/types'
+import type { AnalysisLocation, ClubCategory } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,6 +28,7 @@ export async function POST(req: Request) {
     const body = await req.json()
     const club = body?.club
     const result = body?.result
+    const location = body?.location
 
     if (!isValidClub(club)) {
       return NextResponse.json({ error: '클럽 정보가 올바르지 않습니다.' }, { status: 400 })
@@ -35,13 +36,26 @@ export async function POST(req: Request) {
     if (!result || typeof result !== 'object') {
       return NextResponse.json({ error: '분석 결과가 올바르지 않습니다.' }, { status: 400 })
     }
+    if (location != null && !isValidLocation(location)) {
+      return NextResponse.json({ error: '위치 정보가 올바르지 않습니다.' }, { status: 400 })
+    }
 
-    const entry = await insertAnalysis(user.id, club, result)
+    const entry = await insertAnalysis(user.id, club, result, location ?? undefined)
     return NextResponse.json({ entry }, { status: 201 })
   } catch (err) {
     console.error('save history error', err)
     return NextResponse.json({ error: errorDetail(err, '분석 결과를 저장하지 못했습니다.') }, { status: 500 })
   }
+}
+
+function isValidLocation(location: any): location is AnalysisLocation {
+  return (
+    location &&
+    typeof location === 'object' &&
+    typeof location.lat === 'number' &&
+    typeof location.lng === 'number' &&
+    (location.region === undefined || typeof location.region === 'string')
+  )
 }
 
 function isValidClub(club: any): club is { category: ClubCategory; number: number | null } {

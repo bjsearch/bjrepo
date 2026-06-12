@@ -7,7 +7,8 @@ import { extractFrames } from '@/lib/extractFrames'
 import SwingLoaderAnimation from './SwingLoaderAnimation'
 import { PHASE_SETS, phaseCountForProvider, phaseFractions, phaseLabels } from '@/lib/swingPhases'
 import { buildPhaseFeedbackHint, recordPhaseFeedback } from '@/lib/phaseFeedback'
-import { fetchGlobalStats, fetchHistory, saveAnalysis } from '@/lib/history'
+import { fetchGlobalStats, fetchHistory, fetchRegionalStats, saveAnalysis } from '@/lib/history'
+import { detectAnalysisLocation } from '@/lib/geolocation'
 import {
   AI_PROVIDERS,
   AIProvider,
@@ -132,6 +133,8 @@ export default function SwingAnalyzer() {
   const [framePhaseCount, setFramePhaseCount] = useState<4 | 6>(4)
   const [myAverageScore, setMyAverageScore] = useState<number | null>(null)
   const [globalAverageScore, setGlobalAverageScore] = useState<number | null>(null)
+  const [regionAverageScore, setRegionAverageScore] = useState<number | null>(null)
+  const [regionLabel, setRegionLabel] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -143,6 +146,8 @@ export default function SwingAnalyzer() {
     setFrames([])
     setMyAverageScore(null)
     setGlobalAverageScore(null)
+    setRegionAverageScore(null)
+    setRegionLabel(null)
     setError(null)
     setStatus('idle')
     setProgress(0)
@@ -295,8 +300,22 @@ export default function SwingAnalyzer() {
         setGlobalAverageScore(null)
       }
 
+      const location = await detectAnalysisLocation()
+      if (location?.region) {
+        setRegionLabel(location.region)
+        try {
+          const stats = await fetchRegionalStats(location.region)
+          setRegionAverageScore(stats.average)
+        } catch {
+          setRegionAverageScore(null)
+        }
+      } else {
+        setRegionLabel(null)
+        setRegionAverageScore(null)
+      }
+
       try {
-        await saveAnalysis(club, analysisResult)
+        await saveAnalysis(club, analysisResult, location)
         setSaveError(null)
       } catch (saveErr) {
         setSaveError(saveErr instanceof Error ? saveErr.message : '분석 결과를 캘린더에 저장하지 못했습니다.')
@@ -516,6 +535,8 @@ export default function SwingAnalyzer() {
             result={result}
             myAverageScore={myAverageScore}
             globalAverageScore={globalAverageScore}
+            regionAverageScore={regionAverageScore}
+            regionLabel={regionLabel}
             frames={frames}
             frameLabels={phaseLabels(framePhaseCount)}
             onFrameFeedback={handleFrameFeedback}

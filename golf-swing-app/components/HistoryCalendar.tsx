@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import AnalysisResult from './AnalysisResult'
-import { countByDate, deleteAnalysis, fetchGlobalStats, fetchHistory, getAnalysesByDate } from '@/lib/history'
+import { countByDate, deleteAnalysis, fetchGlobalStats, fetchHistory, fetchRegionalStats, getAnalysesByDate } from '@/lib/history'
 import { SavedAnalysis, describeClub } from '@/lib/types'
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
@@ -28,6 +28,7 @@ export default function HistoryCalendar() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [globalAverageScore, setGlobalAverageScore] = useState<number | null>(null)
+  const [regionStats, setRegionStats] = useState<Record<string, number | null>>({})
 
   async function reload() {
     setLoading(true)
@@ -76,6 +77,21 @@ export default function HistoryCalendar() {
     })
     setSelectedDate(null)
     setExpandedId(null)
+  }
+
+  async function handleExpand(entry: SavedAnalysis) {
+    const next = expandedId === entry.id ? null : entry.id
+    setExpandedId(next)
+
+    const region = entry.location?.region
+    if (next && region && !(region in regionStats)) {
+      try {
+        const stats = await fetchRegionalStats(region)
+        setRegionStats((cur) => ({ ...cur, [region]: stats.average }))
+      } catch {
+        setRegionStats((cur) => ({ ...cur, [region]: null }))
+      }
+    }
   }
 
   async function handleDelete(id: string) {
@@ -213,7 +229,7 @@ export default function HistoryCalendar() {
               >
                 <button
                   type="button"
-                  onClick={() => setExpandedId(isExpanded ? null : entry.id)}
+                  onClick={() => handleExpand(entry)}
                   className="w-full flex items-center justify-between gap-3 p-4 text-left hover:bg-white/[0.03] transition"
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -222,7 +238,14 @@ export default function HistoryCalendar() {
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-slate-200 truncate">{describeClub(entry.club)} 스윙 분석</p>
-                      <p className="text-xs text-slate-500">{time}</p>
+                      <p className="text-xs text-slate-500 flex items-center gap-1.5">
+                        <span>{time}</span>
+                        {entry.location?.region && (
+                          <span className="text-slate-400">
+                            <span aria-hidden>📍</span> {entry.location.region}
+                          </span>
+                        )}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -247,6 +270,8 @@ export default function HistoryCalendar() {
                       result={entry.result}
                       myAverageScore={myAverageScore}
                       globalAverageScore={globalAverageScore}
+                      regionAverageScore={entry.location?.region ? regionStats[entry.location.region] ?? null : null}
+                      regionLabel={entry.location?.region}
                     />
                   </div>
                 )}
