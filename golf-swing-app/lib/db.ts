@@ -78,3 +78,36 @@ export async function getGlobalScoreStats(): Promise<ScoreStats> {
 
   return { average: count > 0 ? total / count : null, count }
 }
+
+const PHASE_FEEDBACK_STORE = 'swing-phase-feedback'
+const PHASE_FEEDBACK_KEY = 'global-stats'
+
+export interface PhaseFeedbackTally {
+  correct: number
+  incorrect: number
+}
+
+export type PhaseFeedbackStats = Record<string, PhaseFeedbackTally>
+
+function getPhaseFeedbackStore() {
+  return getStore(PHASE_FEEDBACK_STORE)
+}
+
+/** Reads the site-wide tally of "정확"/"부정확" votes per swing phase. */
+export async function getPhaseFeedbackStats(): Promise<PhaseFeedbackStats> {
+  const store = getPhaseFeedbackStore()
+  const data = await store.get(PHASE_FEEDBACK_KEY, { type: 'json' })
+  return data && typeof data === 'object' ? (data as PhaseFeedbackStats) : {}
+}
+
+/** Records a single accuracy vote for `phaseKey` into the site-wide tally. */
+export async function recordPhaseFeedback(phaseKey: string, accurate: boolean): Promise<PhaseFeedbackStats> {
+  const store = getPhaseFeedbackStore()
+  const stats = await getPhaseFeedbackStats()
+  const tally = stats[phaseKey] ?? { correct: 0, incorrect: 0 }
+  if (accurate) tally.correct += 1
+  else tally.incorrect += 1
+  stats[phaseKey] = tally
+  await store.setJSON(PHASE_FEEDBACK_KEY, stats)
+  return stats
+}

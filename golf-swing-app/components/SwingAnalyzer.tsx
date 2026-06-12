@@ -218,7 +218,7 @@ export default function SwingAnalyzer() {
 
       const activePhases = PHASE_SETS[phaseCount]
       const phaseLabelByKey = Object.fromEntries(activePhases.map((p) => [p.key, p.label]))
-      const feedbackHint = buildPhaseFeedbackHint(
+      const feedbackHint = await buildPhaseFeedbackHint(
         activePhases.map((p) => p.key),
         phaseLabelByKey,
       )
