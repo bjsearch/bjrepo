@@ -13,7 +13,7 @@ export const GEMINI_MODELS: { id: string; label: string; description: string }[]
 
 export const DEFAULT_GEMINI_MODEL = GEMINI_MODELS[0].id
 
-export type ClubCategory = 'driver' | 'iron' | 'wedge'
+export type ClubCategory = 'driver' | 'wood' | 'utility' | 'iron' | 'wedge'
 
 export interface ClubSelection {
   category: ClubCategory
@@ -54,6 +54,8 @@ export interface SavedAnalysis {
 
 export const CLUB_LABELS: Record<ClubCategory, string> = {
   driver: '드라이버',
+  wood: '우드',
+  utility: '유틸리티',
   iron: '아이언',
   wedge: '웻지',
 }

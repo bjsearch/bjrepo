@@ -48,7 +48,7 @@ function isValidClub(club: any): club is { category: ClubCategory; number: numbe
   return (
     club &&
     typeof club === 'object' &&
-    ['driver', 'iron', 'wedge'].includes(club.category) &&
+    ['driver', 'wood', 'utility', 'iron', 'wedge'].includes(club.category) &&
     (club.number === null || typeof club.number === 'number')
   )
 }
