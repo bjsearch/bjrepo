@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  # Pulls the RTSP stream from the IP camera and re-encodes it to HLS (.m3u8 + .ts segments)
+  ffmpeg:
+    image: jrottenberg/ffmpeg:4.4-alpine
+    restart: unless-stopped
+    entrypoint: ["sh", "-c"]
+    command: >
+      "ffmpeg -rtsp_transport tcp -i \"$$RTSP_URL\"
+      -c:v libx264 -preset veryfast -tune zerolatency -g 30 -sc_threshold 0
+      -c:a aac -ar 44100 -b:a 64k
+      -f hls -hls_time 2 -hls_list_size 6
+      -hls_flags delete_segments+independent_segments+append_list
+      -hls_segment_filename /hls/segment_%05d.ts
+      /hls/stream.m3u8"
+    environment:
+      - RTSP_URL=${RTSP_URL}
+    volumes:
+      - hls-data:/hls
+
+  # Serves the HLS files over plain HTTP on the local network
+  web:
+    image: nginx:alpine
+    restart: unless-stopped
+    depends_on:
+      - ffmpeg
+    volumes:
+      - hls-data:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "8080:80"
+
+  # Exposes the local HTTP server to the internet via a free Cloudflare Tunnel
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --url http://web:80
+    depends_on:
+      - web
+
+volumes:
+  hls-data:

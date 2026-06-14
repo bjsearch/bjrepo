@@ -9,6 +9,7 @@ import DiaryCalendar from '@/components/DiaryCalendar'
 import Dictionary from '@/components/Dictionary'
 import LoginPage from '@/components/LoginPage'
 import AdminView from '@/components/AdminView'
+import CCTVViewer from '@/components/CCTVViewer'
 import { DiaryEntry, AnalysisResult, YouTubeVideo } from '@/lib/types'
 import { SessionUser } from '@/lib/auth'
 
@@ -49,7 +50,7 @@ async function removeEntry(id: string) {
   })
 }
 
-type View = 'editor' | 'calendar'
+type View = 'editor' | 'calendar' | 'cctv'
 
 export default function Home() {
   const [user, setUser] = useState<SessionUser | null>(null)
@@ -294,6 +295,17 @@ export default function Home() {
                   </span>
                 )}
               </button>
+              <button
+                onClick={() => setView('cctv')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  view === 'cctv' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                CCTV
+              </button>
             </div>
 
             {/* User info + logout */}
@@ -349,6 +361,13 @@ export default function Home() {
                   <CalendarStats entries={entries} />
                   <RecentEntries entries={entries} onSelect={handleSelectEntry} onToday={handleTodayEntry} onDelete={handleDeleteEntry} />
                 </div>
+              </div>
+            )}
+
+            {/* CCTV View */}
+            {view === 'cctv' && (
+              <div className="max-w-3xl mx-auto animate-fadeIn">
+                <CCTVViewer />
               </div>
             )}
 
