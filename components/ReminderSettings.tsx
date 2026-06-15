@@ -15,6 +15,26 @@ const TIME_OPTIONS = Array.from({ length: 24 * 4 }, (_, i) => {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
 })
 
+function getCountdownMs(time: string, nowMs: number): number {
+  const kstNow = nowMs + 9 * 60 * 60 * 1000
+  const [h, m] = time.split(':').map(Number)
+  const kstTarget = new Date(kstNow)
+  kstTarget.setUTCHours(h, m, 0, 0)
+  let diff = kstTarget.getTime() - kstNow
+  if (diff <= 0) diff += 24 * 60 * 60 * 1000
+  return diff
+}
+
+function formatCountdown(ms: number): string {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000))
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+  if (hours > 0) return `${hours}시간 ${minutes}분`
+  if (minutes > 0) return `${minutes}분 ${seconds}초`
+  return `${seconds}초`
+}
+
 export default function ReminderSettings({ onClose, initialMessage, onEnabledChange }: Props) {
   const [enabled, setEnabled] = useState(false)
   const [time, setTime] = useState('21:00')
@@ -25,6 +45,13 @@ export default function ReminderSettings({ onClose, initialMessage, onEnabledCha
   const [kakaoConnected, setKakaoConnected] = useState(false)
   const [testSending, setTestSending] = useState(false)
   const [testResult, setTestResult] = useState<{ ok: boolean; text: string } | null>(null)
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    if (!enabled) return
+    const interval = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(interval)
+  }, [enabled])
 
   useEffect(() => {
     fetch('/api/reminder').then(r => r.json())
@@ -154,6 +181,13 @@ export default function ReminderSettings({ onClose, initialMessage, onEnabledCha
                 ))}
               </select>
             </div>
+
+            {enabled && (
+              <div className="mb-5 text-xs bg-amber-50 text-amber-700 border border-amber-100 rounded-lg px-3 py-2 flex items-center gap-1.5">
+                <span>⏰</span>
+                <span>다음 알림까지 약 {formatCountdown(getCountdownMs(time, now))} 남았어요</span>
+              </div>
+            )}
 
             <div className="mb-5">
               <p className="text-sm font-medium text-slate-700 mb-2">독려 메시지 스타일</p>
