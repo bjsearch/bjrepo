@@ -111,12 +111,6 @@ export default function LoginPage({ onLogin }: Props) {
               {loading ? '처리 중...' : mode === 'login' ? '로그인' : '회원가입'}
             </button>
           </form>
-
-          {mode === 'login' && (
-            <p className="text-xs text-slate-400 text-center mt-4">
-              기본 관리자: <span className="font-mono font-medium text-slate-500">admin / admin123</span>
-            </p>
-          )}
         </div>
       </div>
     </div>

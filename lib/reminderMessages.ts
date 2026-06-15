@@ -50,3 +50,15 @@ export function getReminderMessage(tone: string | null | undefined): string {
   const messages = MESSAGES[isValidReminderTone(tone) ? tone : DEFAULT_REMINDER_TONE]
   return messages[Math.floor(Math.random() * messages.length)]
 }
+
+const BUDDY_MESSAGES = [
+  '{username}님이 아직 오늘 영어 일기를 안 썼대요. 응원 한마디 보내주세요! 😊',
+  '{username}님 오늘 일기 썼는지 살짝 물어봐주실래요? 깜빡한 것 같아요 ㅎㅎ',
+  '{username}님이 영어 공부를 빼먹을 것 같아요. 응원의 한마디 부탁해요!',
+  '{username}님 일기 쓰는 거 잊은 듯해요. 옆에서 챙겨주면 좋아할 거예요 :)',
+]
+
+export function getBuddyReminderMessage(username: string): string {
+  const template = BUDDY_MESSAGES[Math.floor(Math.random() * BUDDY_MESSAGES.length)]
+  return template.replace('{username}', username)
+}

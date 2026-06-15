@@ -53,6 +53,9 @@ async function ensureUsersTable() {
   // Migration: pre-answered profile questions for AI voice chat
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_answers JSONB`
 
+  // Migration: accountability buddy for reminder notifications
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS buddy_user_id TEXT`
+
   // Create default admin if none exists
   const { rows } = await sql`SELECT id FROM users WHERE role = 'admin' LIMIT 1`
   if (rows.length === 0) {
@@ -247,12 +250,54 @@ export async function getUsageStats() {
 
 export async function getReminderSettings(userId: string) {
   await ensureUsersTable()
-  const { rows } = await sql`SELECT reminder_enabled, reminder_time, reminder_tone, kakao_access_token FROM users WHERE id = ${userId}`
+  const { rows } = await sql`
+    SELECT u.reminder_enabled, u.reminder_time, u.reminder_tone, u.kakao_access_token,
+           b.username AS buddy_username, b.kakao_access_token AS buddy_kakao_access_token
+    FROM users u
+    LEFT JOIN users b ON b.id = u.buddy_user_id
+    WHERE u.id = ${userId}
+  `
   if (rows.length === 0) return null
   return {
     enabled: rows[0].reminder_enabled as boolean,
     time: rows[0].reminder_time as string,
     tone: rows[0].reminder_tone as string,
+    kakaoConnected: !!rows[0].kakao_access_token,
+    buddyUsername: (rows[0].buddy_username as string) ?? null,
+    buddyKakaoConnected: !!rows[0].buddy_kakao_access_token,
+  }
+}
+
+export async function setBuddy(userId: string, buddyUsername: string): Promise<{ ok: boolean; error?: string }> {
+  await ensureUsersTable()
+  const trimmed = buddyUsername.trim()
+  if (!trimmed) {
+    await sql`UPDATE users SET buddy_user_id = NULL WHERE id = ${userId}`
+    return { ok: true }
+  }
+
+  const { rows } = await sql`SELECT id FROM users WHERE username = ${trimmed}`
+  if (rows.length === 0) return { ok: false, error: '존재하지 않는 아이디예요' }
+
+  const buddyId = rows[0].id as string
+  if (buddyId === userId) return { ok: false, error: '자기 자신은 등록할 수 없어요' }
+
+  await sql`UPDATE users SET buddy_user_id = ${buddyId} WHERE id = ${userId}`
+  return { ok: true }
+}
+
+export async function getBuddyInfo(userId: string) {
+  await ensureUsersTable()
+  const { rows } = await sql`
+    SELECT b.id, b.username, b.kakao_access_token
+    FROM users u
+    JOIN users b ON b.id = u.buddy_user_id
+    WHERE u.id = ${userId}
+  `
+  if (rows.length === 0) return null
+  return {
+    userId: rows[0].id as string,
+    username: rows[0].username as string,
     kakaoConnected: !!rows[0].kakao_access_token,
   }
 }

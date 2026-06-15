@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import {
   getUsersDueForReminder,
   markReminderSent,
+  getBuddyInfo,
 } from '@/lib/db'
-import { getReminderMessage } from '@/lib/reminderMessages'
+import { getReminderMessage, getBuddyReminderMessage } from '@/lib/reminderMessages'
 import { getAppUrl } from '@/lib/appUrl'
 import { sendKakaoReminder } from '@/lib/sendReminder'
 
@@ -36,6 +37,13 @@ export async function GET(req: NextRequest) {
     const result = await sendKakaoReminder(user.id, appUrl, text)
     if (result.ok) sent++
     else console.error(`Kakao reminder failed for user ${user.id}: ${result.error}`)
+
+    const buddy = await getBuddyInfo(user.id)
+    if (buddy?.kakaoConnected) {
+      const buddyText = getBuddyReminderMessage(user.username)
+      const buddyResult = await sendKakaoReminder(buddy.userId, appUrl, buddyText)
+      if (!buddyResult.ok) console.error(`Kakao buddy reminder failed for user ${buddy.userId}: ${buddyResult.error}`)
+    }
 
     await markReminderSent(user.id, date)
   }

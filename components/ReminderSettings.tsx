@@ -46,6 +46,12 @@ export default function ReminderSettings({ onClose, initialMessage, onEnabledCha
   const [testSending, setTestSending] = useState(false)
   const [testResult, setTestResult] = useState<{ ok: boolean; text: string } | null>(null)
   const [now, setNow] = useState(() => Date.now())
+  const [buddyUsername, setBuddyUsername] = useState<string | null>(null)
+  const [buddyKakaoConnected, setBuddyKakaoConnected] = useState(false)
+  const [buddyInput, setBuddyInput] = useState('')
+  const [buddySaving, setBuddySaving] = useState(false)
+  const [buddyError, setBuddyError] = useState<string | null>(null)
+  const [buddySaved, setBuddySaved] = useState(false)
 
   useEffect(() => {
     if (!enabled) return
@@ -61,6 +67,9 @@ export default function ReminderSettings({ onClose, initialMessage, onEnabledCha
           setTime(settings.time)
           if (settings.tone) setTone(settings.tone)
           setKakaoConnected(!!settings.kakaoConnected)
+          setBuddyUsername(settings.buddyUsername || null)
+          setBuddyInput(settings.buddyUsername || '')
+          setBuddyKakaoConnected(!!settings.buddyKakaoConnected)
         }
         setLoading(false)
       })
@@ -98,6 +107,33 @@ export default function ReminderSettings({ onClose, initialMessage, onEnabledCha
     await fetch('/api/kakao/disconnect', { method: 'POST' })
     setKakaoConnected(false)
     setSaving(false)
+  }
+
+  const handleSaveBuddy = async () => {
+    setBuddySaving(true)
+    setBuddyError(null)
+    setBuddySaved(false)
+    try {
+      const trimmed = buddyInput.trim()
+      const res = await fetch('/api/reminder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled, time, tone, buddyUsername: trimmed }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setBuddyError(data.error || '저장에 실패했어요')
+        return
+      }
+      setBuddyUsername(trimmed || null)
+      setBuddySaved(true)
+      const settings = await fetch('/api/reminder').then(r => r.json())
+      setBuddyKakaoConnected(!!settings?.buddyKakaoConnected)
+    } catch {
+      setBuddyError('저장에 실패했어요')
+    } finally {
+      setBuddySaving(false)
+    }
   }
 
   const handleSendTest = async () => {
@@ -256,6 +292,40 @@ export default function ReminderSettings({ onClose, initialMessage, onEnabledCha
                     </p>
                   )}
                 </div>
+              )}
+            </div>
+
+            <div className="border-t border-slate-100 pt-4 space-y-2">
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">응원 친구</p>
+              <p className="text-xs text-slate-500">
+                알림을 보낼 때 등록한 친구에게도 카카오톡으로 응원 메시지를 보내요. (친구도 카카오 연동이 필요해요)
+              </p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={buddyInput}
+                  onChange={e => { setBuddyInput(e.target.value); setBuddySaved(false) }}
+                  placeholder="친구의 아이디"
+                  className="flex-1 text-sm border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                />
+                <button
+                  onClick={handleSaveBuddy}
+                  disabled={buddySaving}
+                  className="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-60"
+                >
+                  {buddySaving ? '저장 중...' : '저장'}
+                </button>
+              </div>
+              {buddyError && <p className="text-xs text-red-500">{buddyError}</p>}
+              {buddySaved && !buddyError && (
+                <p className="text-xs text-emerald-600">
+                  {buddyInput.trim() ? '저장됐어요!' : '친구 등록이 해제됐어요'}
+                </p>
+              )}
+              {buddyUsername && !buddyError && (
+                <p className="text-xs text-slate-400">
+                  등록된 친구: {buddyUsername} {buddyKakaoConnected ? '(카카오 연동됨)' : '(카카오 연동 필요)'}
+                </p>
               )}
             </div>
           </>
