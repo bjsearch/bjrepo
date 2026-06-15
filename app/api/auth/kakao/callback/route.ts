@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { exchangeKakaoCode } from '@/lib/kakaoAuth'
 import { saveKakaoTokens } from '@/lib/db'
+import { getAppUrl } from '@/lib/appUrl'
 
 export async function GET(req: NextRequest) {
   const session = await getSession()
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const redirectUri = new URL('/api/auth/kakao/callback', req.url).toString()
+    const redirectUri = `${getAppUrl(req)}/api/auth/kakao/callback`
     const tokens = await exchangeKakaoCode(code, redirectUri)
     await saveKakaoTokens(session.userId, tokens.accessToken, tokens.refreshToken, tokens.expiresIn)
     redirectTo.searchParams.set('kakao', 'connected')

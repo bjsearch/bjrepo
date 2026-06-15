@@ -8,6 +8,7 @@ import {
 } from '@/lib/db'
 import { sendKakaoMemo, refreshKakaoToken } from '@/lib/kakaoAuth'
 import { getReminderMessage } from '@/lib/reminderMessages'
+import { getAppUrl } from '@/lib/appUrl'
 
 export const dynamic = 'force-dynamic'
 
@@ -53,7 +54,7 @@ export async function GET(req: NextRequest) {
   }
 
   const { time, date } = getKstTime()
-  const appUrl = new URL('/', req.url).toString()
+  const appUrl = `${getAppUrl(req)}/`
   const users = await getUsersDueForReminder(time, date)
 
   let sent = 0
