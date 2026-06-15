@@ -11,6 +11,7 @@ import LoginPage from '@/components/LoginPage'
 import AdminView from '@/components/AdminView'
 import ReminderSettings from '@/components/ReminderSettings'
 import VoiceChat from '@/components/VoiceChat'
+import ProfileQuestions from '@/components/ProfileQuestions'
 import { DiaryEntry, AnalysisResult, YouTubeVideo } from '@/lib/types'
 import { SessionUser } from '@/lib/auth'
 
@@ -59,6 +60,7 @@ export default function Home() {
   const [showAdmin, setShowAdmin] = useState(false)
   const [showReminder, setShowReminder] = useState(false)
   const [showVoiceChat, setShowVoiceChat] = useState(false)
+  const [showProfileQuestions, setShowProfileQuestions] = useState(false)
   const [reminderMessage, setReminderMessage] = useState<string | null>(null)
   const [reminderEnabled, setReminderEnabled] = useState(false)
 
@@ -273,6 +275,8 @@ export default function Home() {
   // Not logged in
   if (!user) return <LoginPage onLogin={setUser} />
 
+  const voiceChatUnlocked = writtenCount >= VOICE_CHAT_MIN_ENTRIES || user.role === 'admin'
+
   // Admin view
   if (showAdmin) return <AdminView onClose={() => setShowAdmin(false)} />
 
@@ -331,16 +335,27 @@ export default function Home() {
 
             {/* User info + logout */}
             <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200">
-              {writtenCount >= VOICE_CHAT_MIN_ENTRIES ? (
-                <button
-                  onClick={() => setShowVoiceChat(true)}
-                  className="p-1.5 rounded-lg text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-                  title="AI와 대화하기"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-14 0m7 7v3m-4 0h8M12 1a3 3 0 00-3 3v6a3 3 0 006 0V4a3 3 0 00-3-3z" />
-                  </svg>
-                </button>
+              {voiceChatUnlocked ? (
+                <>
+                  <button
+                    onClick={() => setShowVoiceChat(true)}
+                    className="p-1.5 rounded-lg text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                    title="AI와 대화하기"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-14 0m7 7v3m-4 0h8M12 1a3 3 0 00-3 3v6a3 3 0 006 0V4a3 3 0 00-3-3z" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => setShowProfileQuestions(true)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                    title="AI에게 나를 소개하기"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                </>
               ) : (
                 <div
                   className="hidden sm:flex items-center gap-1 text-xs text-slate-400 px-2 py-1.5"
@@ -476,6 +491,8 @@ export default function Home() {
       )}
 
       {showVoiceChat && <VoiceChat onClose={() => setShowVoiceChat(false)} />}
+
+      {showProfileQuestions && <ProfileQuestions onClose={() => setShowProfileQuestions(false)} />}
     </div>
   )
 }

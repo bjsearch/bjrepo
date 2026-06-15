@@ -50,6 +50,9 @@ async function ensureUsersTable() {
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS kakao_refresh_token TEXT`
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS kakao_token_expires_at TEXT`
 
+  // Migration: pre-answered profile questions for AI voice chat
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_answers JSONB`
+
   // Create default admin if none exists
   const { rows } = await sql`SELECT id FROM users WHERE role = 'admin' LIMIT 1`
   if (rows.length === 0) {
@@ -323,6 +326,20 @@ export async function disconnectKakao(userId: string): Promise<void> {
     UPDATE users SET kakao_access_token = NULL, kakao_refresh_token = NULL, kakao_token_expires_at = NULL
     WHERE id = ${userId}
   `
+}
+
+// --- Voice chat profile (pre-answered questions) ---
+
+export async function getProfileAnswers(userId: string): Promise<string[]> {
+  await ensureUsersTable()
+  const { rows } = await sql`SELECT profile_answers FROM users WHERE id = ${userId}`
+  if (rows.length === 0 || !rows[0].profile_answers) return []
+  return rows[0].profile_answers as string[]
+}
+
+export async function setProfileAnswers(userId: string, answers: string[]): Promise<void> {
+  await ensureUsersTable()
+  await sql`UPDATE users SET profile_answers = ${JSON.stringify(answers)}::jsonb WHERE id = ${userId}`
 }
 
 function rowToEntry(row: Record<string, unknown>): DiaryEntry {
