@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { REMINDER_TONES, DEFAULT_REMINDER_TONE, ReminderTone } from '@/lib/reminderMessages'
+import { shareTextToKakao, isKakaoReady } from '@/lib/kakao'
 
 interface Props {
   onClose: () => void
@@ -52,6 +53,7 @@ export default function ReminderSettings({ onClose, initialMessage, onEnabledCha
   const [buddySaving, setBuddySaving] = useState(false)
   const [buddyError, setBuddyError] = useState<string | null>(null)
   const [buddySaved, setBuddySaved] = useState(false)
+  const [shareStatus, setShareStatus] = useState<'idle' | 'copied'>('idle')
 
   useEffect(() => {
     if (!enabled) return
@@ -134,6 +136,16 @@ export default function ReminderSettings({ onClose, initialMessage, onEnabledCha
     } finally {
       setBuddySaving(false)
     }
+  }
+
+  const handleShareToFriend = () => {
+    const text = '저 매일 영어 일기 쓰기에 도전하고 있어요! 제가 깜빡하고 안 쓰는 것 같으면 살짝 알려주실 수 있나요? 같이 응원해주세요 😊'
+    const url = typeof window !== 'undefined' ? window.location.origin : ''
+    if (isKakaoReady() && shareTextToKakao(text, url)) return
+    navigator.clipboard?.writeText(`${text}\n${url}`).then(() => {
+      setShareStatus('copied')
+      setTimeout(() => setShareStatus('idle'), 2000)
+    })
   }
 
   const handleSendTest = async () => {
@@ -326,6 +338,23 @@ export default function ReminderSettings({ onClose, initialMessage, onEnabledCha
                 <p className="text-xs text-slate-400">
                   등록된 친구: {buddyUsername} {buddyKakaoConnected ? '(카카오 연동됨)' : '(카카오 연동 필요)'}
                 </p>
+              )}
+            </div>
+
+            <div className="border-t border-slate-100 pt-4 space-y-2">
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">지인에게 부탁하기</p>
+              <p className="text-xs text-slate-500">
+                앱을 사용하지 않는 지인에게도 카카오톡 친구 목록에서 골라 응원을 부탁할 수 있어요.
+              </p>
+              <button
+                onClick={handleShareToFriend}
+                className="w-full text-xs font-medium px-3 py-2 rounded-lg border transition-colors"
+                style={{ backgroundColor: '#FEE500', borderColor: '#FEE500', color: '#3C1E1E' }}
+              >
+                카카오톡 친구에게 공유하기
+              </button>
+              {shareStatus === 'copied' && (
+                <p className="text-xs text-emerald-600">공유 메시지를 클립보드에 복사했어요!</p>
               )}
             </div>
           </>
