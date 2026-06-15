@@ -6,6 +6,7 @@ import { REMINDER_TONES, DEFAULT_REMINDER_TONE, ReminderTone } from '@/lib/remin
 interface Props {
   onClose: () => void
   initialMessage?: string | null
+  onEnabledChange?: (enabled: boolean) => void
 }
 
 const TIME_OPTIONS = Array.from({ length: 24 * 4 }, (_, i) => {
@@ -14,7 +15,7 @@ const TIME_OPTIONS = Array.from({ length: 24 * 4 }, (_, i) => {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
 })
 
-export default function ReminderSettings({ onClose, initialMessage }: Props) {
+export default function ReminderSettings({ onClose, initialMessage, onEnabledChange }: Props) {
   const [enabled, setEnabled] = useState(false)
   const [time, setTime] = useState('21:00')
   const [tone, setTone] = useState<ReminderTone>(DEFAULT_REMINDER_TONE)
@@ -45,6 +46,7 @@ export default function ReminderSettings({ onClose, initialMessage }: Props) {
       body: JSON.stringify({ enabled: nextEnabled, time: nextTime, tone: nextTone }),
     })
     setEnabled(nextEnabled)
+    onEnabledChange?.(nextEnabled)
     setSaving(false)
   }
 
