@@ -84,10 +84,12 @@ export interface KakaoMemoResult {
 }
 
 export async function sendKakaoMemo(accessToken: string, text: string, linkUrl: string): Promise<KakaoMemoResult> {
+  const buttonUrl = `${linkUrl}${linkUrl.includes('?') ? '&' : '?'}from=kakao`
+
   const templateObject = {
     object_type: 'text',
     text: `${text}\n\n${linkUrl}`,
-    link: { web_url: linkUrl, mobile_web_url: linkUrl },
+    link: { web_url: buttonUrl, mobile_web_url: buttonUrl },
     button_title: '일기 쓰러 가기',
   }
 
