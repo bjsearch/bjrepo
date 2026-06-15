@@ -1,13 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import {
-  subscribeToPush,
-  unsubscribeFromPush,
-  getPushPermissionState,
-  isPushSupported,
-  hasPushSubscription,
-} from '@/lib/pushClient'
 import { REMINDER_TONES, DEFAULT_REMINDER_TONE, ReminderTone } from '@/lib/reminderMessages'
 
 interface Props {
@@ -27,26 +20,18 @@ export default function ReminderSettings({ onClose, initialMessage }: Props) {
   const [tone, setTone] = useState<ReminderTone>(DEFAULT_REMINDER_TONE)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(initialMessage ?? null)
-  const [pushSupportedState, setPushSupportedState] = useState(true)
-  const [pushConnected, setPushConnected] = useState(false)
   const [kakaoConnected, setKakaoConnected] = useState(false)
 
   useEffect(() => {
-    setPushSupportedState(isPushSupported())
-    Promise.all([
-      fetch('/api/reminder').then(r => r.json()),
-      hasPushSubscription(),
-    ])
-      .then(([settings, pushSub]) => {
+    fetch('/api/reminder').then(r => r.json())
+      .then(settings => {
         if (settings) {
           setEnabled(settings.enabled)
           setTime(settings.time)
           if (settings.tone) setTone(settings.tone)
           setKakaoConnected(!!settings.kakaoConnected)
         }
-        setPushConnected(pushSub)
         setLoading(false)
       })
       .catch(() => setLoading(false))
@@ -75,28 +60,6 @@ export default function ReminderSettings({ onClose, initialMessage }: Props) {
   const handleToneChange = async (newTone: ReminderTone) => {
     setTone(newTone)
     await saveSettings(enabled, time, newTone)
-  }
-
-  const handlePushToggle = async () => {
-    setError(null)
-    if (pushConnected) {
-      await unsubscribeFromPush()
-      setPushConnected(false)
-      return
-    }
-
-    const perm = await getPushPermissionState()
-    if (perm === 'unsupported') {
-      setError('이 브라우저는 알림을 지원하지 않아요')
-      return
-    }
-    const ok = await subscribeToPush()
-    if (!ok) {
-      setError('알림 권한을 허용해주셔야 알려드릴 수 있어요')
-      return
-    }
-    setPushConnected(true)
-    if (!enabled) await saveSettings(true, time, tone)
   }
 
   const handleKakaoDisconnect = async () => {
@@ -199,27 +162,6 @@ export default function ReminderSettings({ onClose, initialMessage }: Props) {
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">받는 방법</p>
 
               <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-medium text-slate-700">브라우저 푸시</div>
-                  {!pushSupportedState && (
-                    <div className="text-xs text-slate-400">이 브라우저는 지원하지 않아요</div>
-                  )}
-                </div>
-                {pushSupportedState && (
-                  <button
-                    onClick={handlePushToggle}
-                    className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
-                      pushConnected
-                        ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
-                        : 'bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100'
-                    }`}
-                  >
-                    {pushConnected ? '연결됨 ✓' : '연결하기'}
-                  </button>
-                )}
-              </div>
-
-              <div className="flex items-center justify-between">
                 <div className="text-sm font-medium text-slate-700">카카오톡 (나에게 보내기)</div>
                 {kakaoConnected ? (
                   <button
@@ -240,8 +182,6 @@ export default function ReminderSettings({ onClose, initialMessage }: Props) {
                 )}
               </div>
             </div>
-
-            {error && <p className="text-xs text-red-500 mt-3">{error}</p>}
           </>
         )}
       </div>

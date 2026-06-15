@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import {
   getUsersDueForReminder,
-  getPushSubscriptions,
   markReminderSent,
-  removePushSubscription,
   getKakaoTokens,
   updateKakaoAccessToken,
   disconnectKakao,
 } from '@/lib/db'
-import { sendPushNotification } from '@/lib/push'
 import { sendKakaoMemo, refreshKakaoToken } from '@/lib/kakaoAuth'
 import { getReminderMessage } from '@/lib/reminderMessages'
 
@@ -62,22 +59,6 @@ export async function GET(req: NextRequest) {
   let sent = 0
   for (const user of users) {
     const text = getReminderMessage(user.tone)
-    const subs = await getPushSubscriptions(user.id)
-    for (const sub of subs) {
-      try {
-        await sendPushNotification(sub, {
-          title: '영어 일기 작성 알림',
-          body: text,
-          url: '/',
-        })
-        sent++
-      } catch (error) {
-        const statusCode = (error as { statusCode?: number })?.statusCode
-        if (statusCode === 404 || statusCode === 410) {
-          await removePushSubscription(sub.endpoint)
-        }
-      }
-    }
 
     if (await sendKakaoReminder(user.id, appUrl, text)) sent++
 

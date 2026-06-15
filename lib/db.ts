@@ -1,5 +1,5 @@
 import { sql } from '@vercel/postgres'
-import { DiaryEntry, PushSubscriptionJSON } from './types'
+import { DiaryEntry } from './types'
 import { hashPassword, generateSalt } from './auth'
 import { GeoInfo } from './geo'
 
@@ -79,19 +79,6 @@ async function ensureLoginLogsTable() {
       city        TEXT,
       latitude    TEXT,
       longitude   TEXT
-    )
-  `
-}
-
-async function ensurePushSubscriptionsTable() {
-  await sql`
-    CREATE TABLE IF NOT EXISTS push_subscriptions (
-      id          TEXT PRIMARY KEY,
-      user_id     TEXT NOT NULL,
-      endpoint    TEXT UNIQUE NOT NULL,
-      p256dh      TEXT NOT NULL,
-      auth        TEXT NOT NULL,
-      created_at  TEXT NOT NULL
     )
   `
 }
@@ -253,7 +240,7 @@ export async function getUsageStats() {
   }
 }
 
-// --- Reminder & push subscription functions ---
+// --- Reminder functions ---
 
 export async function getReminderSettings(userId: string) {
   await ensureUsersTable()
@@ -272,44 +259,15 @@ export async function setReminderSettings(userId: string, enabled: boolean, time
   await sql`UPDATE users SET reminder_enabled = ${enabled}, reminder_time = ${time}, reminder_tone = ${tone} WHERE id = ${userId}`
 }
 
-export async function savePushSubscription(userId: string, sub: PushSubscriptionJSON): Promise<void> {
-  await ensurePushSubscriptionsTable()
-  const id = `${userId}-${Buffer.from(sub.endpoint).toString('base64').slice(-32)}`
-  await sql`
-    INSERT INTO push_subscriptions (id, user_id, endpoint, p256dh, auth, created_at)
-    VALUES (${id}, ${userId}, ${sub.endpoint}, ${sub.keys.p256dh}, ${sub.keys.auth}, ${new Date().toISOString()})
-    ON CONFLICT (endpoint) DO UPDATE SET
-      user_id = EXCLUDED.user_id,
-      p256dh  = EXCLUDED.p256dh,
-      auth    = EXCLUDED.auth
-  `
-}
-
-export async function removePushSubscription(endpoint: string): Promise<void> {
-  await ensurePushSubscriptionsTable()
-  await sql`DELETE FROM push_subscriptions WHERE endpoint = ${endpoint}`
-}
-
-export async function getPushSubscriptions(userId: string) {
-  await ensurePushSubscriptionsTable()
-  const { rows } = await sql`SELECT * FROM push_subscriptions WHERE user_id = ${userId}`
-  return rows.map(r => ({
-    endpoint: r.endpoint as string,
-    keys: { p256dh: r.p256dh as string, auth: r.auth as string },
-  }))
-}
-
 export async function getUsersDueForReminder(currentTime: string, today: string) {
   await ensureUsersTable()
-  await ensurePushSubscriptionsTable()
   const { rows } = await sql`
-    SELECT DISTINCT u.id, u.username, u.reminder_tone
+    SELECT u.id, u.username, u.reminder_tone
     FROM users u
-    LEFT JOIN push_subscriptions p ON p.user_id = u.id
     WHERE u.reminder_enabled = TRUE
       AND u.reminder_time = ${currentTime}
       AND (u.last_reminder_sent_date IS NULL OR u.last_reminder_sent_date != ${today})
-      AND (p.id IS NOT NULL OR u.kakao_access_token IS NOT NULL)
+      AND u.kakao_access_token IS NOT NULL
   `
   return rows.map(r => ({ id: r.id as string, username: r.username as string, tone: r.reminder_tone as string }))
 }
