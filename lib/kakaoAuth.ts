@@ -78,7 +78,12 @@ export async function refreshKakaoToken(refreshToken: string): Promise<KakaoRefr
   }
 }
 
-export async function sendKakaoMemo(accessToken: string, text: string, linkUrl: string): Promise<boolean> {
+export interface KakaoMemoResult {
+  ok: boolean
+  error?: string
+}
+
+export async function sendKakaoMemo(accessToken: string, text: string, linkUrl: string): Promise<KakaoMemoResult> {
   const templateObject = {
     object_type: 'text',
     text,
@@ -94,7 +99,16 @@ export async function sendKakaoMemo(accessToken: string, text: string, linkUrl: 
     },
     body: new URLSearchParams({ template_object: JSON.stringify(templateObject) }).toString(),
   })
-  return res.ok
+
+  const data = await res.json().catch(() => null)
+
+  if (!res.ok) {
+    return { ok: false, error: data?.msg || `HTTP ${res.status}` }
+  }
+  if (data && typeof data.result_code === 'number' && data.result_code !== 0) {
+    return { ok: false, error: data.msg || `result_code ${data.result_code}` }
+  }
+  return { ok: true }
 }
 
 export async function unlinkKakao(accessToken: string): Promise<void> {

@@ -33,7 +33,9 @@ export async function GET(req: NextRequest) {
   for (const user of users) {
     const text = getReminderMessage(user.tone)
 
-    if (await sendKakaoReminder(user.id, appUrl, text)) sent++
+    const result = await sendKakaoReminder(user.id, appUrl, text)
+    if (result.ok) sent++
+    else console.error(`Kakao reminder failed for user ${user.id}: ${result.error}`)
 
     await markReminderSent(user.id, date)
   }

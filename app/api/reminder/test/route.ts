@@ -16,10 +16,10 @@ export async function POST(req: NextRequest) {
 
   const appUrl = `${getAppUrl(req)}/`
   const text = getReminderMessage(settings.tone)
-  const sent = await sendKakaoReminder(session.userId, appUrl, text)
+  const result = await sendKakaoReminder(session.userId, appUrl, text)
 
-  if (!sent) {
-    return NextResponse.json({ error: '카카오톡 전송에 실패했어요' }, { status: 502 })
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error || '카카오톡 전송에 실패했어요' }, { status: 502 })
   }
   return NextResponse.json({ ok: true })
 }
