@@ -1,5 +1,5 @@
 import { sql } from '@vercel/postgres'
-import { DiaryEntry } from './types'
+import { DiaryEntry, PushSubscriptionJSON } from './types'
 import { hashPassword, generateSalt } from './auth'
 import { GeoInfo } from './geo'
 
@@ -39,6 +39,11 @@ async function ensureUsersTable() {
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_region TEXT`
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_city TEXT`
 
+  // Migration: daily diary reminder settings
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS reminder_enabled BOOLEAN NOT NULL DEFAULT FALSE`
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS reminder_time TEXT NOT NULL DEFAULT '21:00'`
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_reminder_sent_date TEXT`
+
   // Create default admin if none exists
   const { rows } = await sql`SELECT id FROM users WHERE role = 'admin' LIMIT 1`
   if (rows.length === 0) {
@@ -68,6 +73,19 @@ async function ensureLoginLogsTable() {
       city        TEXT,
       latitude    TEXT,
       longitude   TEXT
+    )
+  `
+}
+
+async function ensurePushSubscriptionsTable() {
+  await sql`
+    CREATE TABLE IF NOT EXISTS push_subscriptions (
+      id          TEXT PRIMARY KEY,
+      user_id     TEXT NOT NULL,
+      endpoint    TEXT UNIQUE NOT NULL,
+      p256dh      TEXT NOT NULL,
+      auth        TEXT NOT NULL,
+      created_at  TEXT NOT NULL
     )
   `
 }
@@ -139,13 +157,15 @@ export async function getAllUsers() {
   const { rows } = await sql`
     SELECT u.id, u.username, u.role, u.created_at,
            u.last_login_at, u.last_login_ip, u.last_login_country, u.last_login_region, u.last_login_city,
+           u.reminder_enabled, u.reminder_time,
            COUNT(e.id)::int AS entry_count,
            COUNT(e.analysis)::int AS analyzed_count,
            COALESCE(AVG((e.analysis->>'score')::numeric), 0) AS avg_score
     FROM users u
     LEFT JOIN diary_entries e ON e.user_id = u.id AND e.content != ''
     GROUP BY u.id, u.username, u.role, u.created_at,
-             u.last_login_at, u.last_login_ip, u.last_login_country, u.last_login_region, u.last_login_city
+             u.last_login_at, u.last_login_ip, u.last_login_country, u.last_login_region, u.last_login_city,
+             u.reminder_enabled, u.reminder_time
     ORDER BY u.created_at ASC
   `
   return rows.map(r => ({
@@ -161,6 +181,8 @@ export async function getAllUsers() {
     lastLoginCountry: (r.last_login_country as string) ?? undefined,
     lastLoginRegion: (r.last_login_region as string) ?? undefined,
     lastLoginCity: (r.last_login_city as string) ?? undefined,
+    reminderEnabled: r.reminder_enabled as boolean,
+    reminderTime: r.reminder_time as string,
   }))
 }
 
@@ -221,6 +243,68 @@ export async function getUsageStats() {
     analyzedEntries: r.analyzed_entries as number,
     avgScore: Math.round(Number(r.avg_score) * 10) / 10,
   }
+}
+
+// --- Reminder & push subscription functions ---
+
+export async function getReminderSettings(userId: string) {
+  await ensureUsersTable()
+  const { rows } = await sql`SELECT reminder_enabled, reminder_time FROM users WHERE id = ${userId}`
+  if (rows.length === 0) return null
+  return {
+    enabled: rows[0].reminder_enabled as boolean,
+    time: rows[0].reminder_time as string,
+  }
+}
+
+export async function setReminderSettings(userId: string, enabled: boolean, time: string): Promise<void> {
+  await ensureUsersTable()
+  await sql`UPDATE users SET reminder_enabled = ${enabled}, reminder_time = ${time} WHERE id = ${userId}`
+}
+
+export async function savePushSubscription(userId: string, sub: PushSubscriptionJSON): Promise<void> {
+  await ensurePushSubscriptionsTable()
+  const id = `${userId}-${Buffer.from(sub.endpoint).toString('base64').slice(-32)}`
+  await sql`
+    INSERT INTO push_subscriptions (id, user_id, endpoint, p256dh, auth, created_at)
+    VALUES (${id}, ${userId}, ${sub.endpoint}, ${sub.keys.p256dh}, ${sub.keys.auth}, ${new Date().toISOString()})
+    ON CONFLICT (endpoint) DO UPDATE SET
+      user_id = EXCLUDED.user_id,
+      p256dh  = EXCLUDED.p256dh,
+      auth    = EXCLUDED.auth
+  `
+}
+
+export async function removePushSubscription(endpoint: string): Promise<void> {
+  await ensurePushSubscriptionsTable()
+  await sql`DELETE FROM push_subscriptions WHERE endpoint = ${endpoint}`
+}
+
+export async function getPushSubscriptions(userId: string) {
+  await ensurePushSubscriptionsTable()
+  const { rows } = await sql`SELECT * FROM push_subscriptions WHERE user_id = ${userId}`
+  return rows.map(r => ({
+    endpoint: r.endpoint as string,
+    keys: { p256dh: r.p256dh as string, auth: r.auth as string },
+  }))
+}
+
+export async function getUsersDueForReminder(currentTime: string, today: string) {
+  await ensureUsersTable()
+  await ensurePushSubscriptionsTable()
+  const { rows } = await sql`
+    SELECT DISTINCT u.id, u.username
+    FROM users u
+    JOIN push_subscriptions p ON p.user_id = u.id
+    WHERE u.reminder_enabled = TRUE
+      AND u.reminder_time = ${currentTime}
+      AND (u.last_reminder_sent_date IS NULL OR u.last_reminder_sent_date != ${today})
+  `
+  return rows.map(r => ({ id: r.id as string, username: r.username as string }))
+}
+
+export async function markReminderSent(userId: string, today: string): Promise<void> {
+  await sql`UPDATE users SET last_reminder_sent_date = ${today} WHERE id = ${userId}`
 }
 
 function rowToEntry(row: Record<string, unknown>): DiaryEntry {

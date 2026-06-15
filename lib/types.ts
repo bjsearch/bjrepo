@@ -21,6 +21,16 @@ export interface User {
   lastLoginCountry?: string
   lastLoginRegion?: string
   lastLoginCity?: string
+  reminderEnabled?: boolean
+  reminderTime?: string
+}
+
+export interface PushSubscriptionJSON {
+  endpoint: string
+  keys: {
+    p256dh: string
+    auth: string
+  }
 }
 
 export interface LoginLog {
