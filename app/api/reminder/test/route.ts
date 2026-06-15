@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
-import { getReminderSettings, getBuddyInfo } from '@/lib/db'
-import { getReminderMessage, getBuddyReminderMessage } from '@/lib/reminderMessages'
+import { getReminderSettings } from '@/lib/db'
+import { getReminderMessage } from '@/lib/reminderMessages'
 import { getAppUrl } from '@/lib/appUrl'
 import { sendKakaoReminder } from '@/lib/sendReminder'
 
@@ -20,12 +20,6 @@ export async function POST(req: NextRequest) {
 
   if (!result.ok) {
     return NextResponse.json({ error: result.error || '카카오톡 전송에 실패했어요' }, { status: 502 })
-  }
-
-  const buddy = await getBuddyInfo(session.userId)
-  if (buddy?.kakaoConnected) {
-    const buddyText = getBuddyReminderMessage(session.username)
-    await sendKakaoReminder(buddy.userId, appUrl, buddyText)
   }
 
   return NextResponse.json({ ok: true })
