@@ -26,12 +26,13 @@ export function isKakaoReady(): boolean {
 
 export function shareTextToKakao(text: string, linkUrl: string) {
   if (!initKakao() || !window.Kakao) return false
+  const buttonUrl = `${linkUrl}${linkUrl.includes('?') ? '&' : '?'}from=kakao`
   window.Kakao.Share.sendDefault({
     objectType: 'text',
-    text,
+    text: `${text}\n\n${linkUrl}`,
     link: {
-      mobileWebUrl: linkUrl,
-      webUrl: linkUrl,
+      mobileWebUrl: buttonUrl,
+      webUrl: buttonUrl,
     },
   })
   return true
