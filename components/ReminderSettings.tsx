@@ -154,7 +154,11 @@ export default function ReminderSettings({ onClose, initialMessage, onEnabledCha
                     <span className="text-2xl leading-none" role="img" aria-label={opt.label}>
                       {opt.emoji}
                     </span>
-                    <span className="text-[11px] text-slate-600 leading-tight text-center">{opt.label}</span>
+                    <span className="text-[11px] text-slate-600 leading-tight text-center">
+                      {opt.label.split(' ').map((word, i) => (
+                        <span key={i} className="block whitespace-nowrap">{word}</span>
+                      ))}
+                    </span>
                   </button>
                 ))}
               </div>
