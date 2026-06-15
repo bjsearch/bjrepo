@@ -2,11 +2,13 @@
 
 import { useState } from 'react'
 import { AnalysisResult } from '@/lib/types'
+import { shareTextToKakao, isKakaoReady } from '@/lib/kakao'
 
 interface Props {
   analysis: AnalysisResult | null
   isLoading: boolean
   error: string | null
+  date?: string
 }
 
 type Tab = 'grammar' | 'sentences' | 'expressions' | 'vocabulary' | 'feedback'
@@ -17,9 +19,10 @@ const levelColors: Record<string, string> = {
   advanced: 'bg-purple-100 text-purple-700',
 }
 
-export default function WritingAnalysis({ analysis, isLoading, error }: Props) {
+export default function WritingAnalysis({ analysis, isLoading, error, date }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('grammar')
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set())
+  const [shareStatus, setShareStatus] = useState<'idle' | 'copied'>('idle')
 
   const toggleExpanded = (index: number) => {
     setExpandedItems((prev) => {
@@ -27,6 +30,37 @@ export default function WritingAnalysis({ analysis, isLoading, error }: Props) {
       if (next.has(index)) next.delete(index)
       else next.add(index)
       return next
+    })
+  }
+
+  const buildShareMessage = (a: AnalysisResult): string => {
+    const lines: string[] = [`📝 ${date || ''} 영어 학습 노트`.trim()]
+
+    if (a.vocabulary?.length) {
+      lines.push('', '📚 단어')
+      a.vocabulary.slice(0, 6).forEach((v) => lines.push(`• ${v.word} - ${v.meaning_ko}`))
+    }
+    if (a.idioms?.length) {
+      lines.push('', '💡 숙어')
+      a.idioms.slice(0, 4).forEach((i) => lines.push(`• ${i.idiom} - ${i.meaning_ko}`))
+    }
+    if (a.better_sentences?.length) {
+      lines.push('', '💬 더 나은 표현')
+      a.better_sentences.slice(0, 2).forEach((s) => lines.push(`• ${s.improved}`))
+    }
+    return lines.join('\n')
+  }
+
+  const handleShare = () => {
+    if (!analysis) return
+    const message = buildShareMessage(analysis)
+    const url = typeof window !== 'undefined' ? window.location.href : ''
+
+    if (isKakaoReady() && shareTextToKakao(message, url)) return
+
+    navigator.clipboard?.writeText(message).then(() => {
+      setShareStatus('copied')
+      setTimeout(() => setShareStatus('idle'), 2000)
     })
   }
 
@@ -138,13 +172,23 @@ export default function WritingAnalysis({ analysis, isLoading, error }: Props) {
               <span className="text-indigo-200 text-sm">/100</span>
             </div>
           </div>
-          <div className="text-right">
+          <div className="text-right flex flex-col items-end gap-2">
             <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
               analysis.level === 'advanced' ? 'bg-white/20' :
               analysis.level === 'intermediate' ? 'bg-white/15' : 'bg-white/10'
             }`}>
               {analysis.level.charAt(0).toUpperCase() + analysis.level.slice(1)}
             </span>
+            <button
+              onClick={handleShare}
+              className="flex items-center gap-1.5 text-xs bg-[#FEE500] text-[#3C1E1E] px-2.5 py-1.5 rounded-lg font-medium hover:brightness-95 transition-all"
+              title="주요 단어와 문장을 카카오톡으로 공유"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 3C6.5 3 2 6.6 2 11c0 2.9 2 5.5 5 7l-1 3.6c-.1.4.3.7.7.5l4.2-2.5c.4 0 .7.1 1.1.1 5.5 0 10-3.6 10-8S17.5 3 12 3z"/>
+              </svg>
+              {shareStatus === 'copied' ? '복사됨!' : '카카오톡 공유'}
+            </button>
           </div>
         </div>
         <div className="mt-3 bg-white/20 rounded-full h-2">

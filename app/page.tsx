@@ -365,7 +365,7 @@ export default function Home() {
                   />
                 </div>
                 <div className="space-y-4">
-                  <WritingAnalysis analysis={analysis} isLoading={isAnalyzing} error={analysisError} />
+                  <WritingAnalysis analysis={analysis} isLoading={isAnalyzing} error={analysisError} date={currentEntry.date} />
                   <Dictionary />
                   {showVideos && (
                     <VideoRecommendations videos={videos} isLoading={isLoadingVideos} topics={analysis?.topics || []} />
