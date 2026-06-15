@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   const session = await getSession()
   if (!session) return NextResponse.redirect(new URL('/', req.url))
 
-  const redirectUri = `${getAppUrl(req)}/api/auth/kakao/callback`
+  const redirectUri = `${getAppUrl()}/api/auth/kakao/callback`
   const state = crypto.randomBytes(16).toString('hex')
 
   const res = NextResponse.redirect(getKakaoAuthorizeUrl(redirectUri, state))

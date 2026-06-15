@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '카카오톡이 연동되어 있지 않아요' }, { status: 400 })
   }
 
-  const appUrl = `${getAppUrl(req)}/`
+  const appUrl = `${getAppUrl()}/`
   const text = getReminderMessage(settings.tone)
   const result = await sendKakaoReminder(session.userId, appUrl, text)
 

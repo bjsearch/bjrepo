@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const redirectUri = `${getAppUrl(req)}/api/auth/kakao/callback`
+    const redirectUri = `${getAppUrl()}/api/auth/kakao/callback`
     const tokens = await exchangeKakaoCode(code, redirectUri)
     await saveKakaoTokens(session.userId, tokens.accessToken, tokens.refreshToken, tokens.expiresIn)
     redirectTo.searchParams.set('kakao', 'connected')

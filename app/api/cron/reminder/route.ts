@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
   }
 
   const { time, date } = getKstTime()
-  const appUrl = `${getAppUrl(req)}/`
+  const appUrl = `${getAppUrl()}/`
   const users = await getUsersDueForReminder(time, date)
 
   let sent = 0
