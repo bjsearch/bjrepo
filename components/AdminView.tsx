@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { format, parseISO } from 'date-fns'
 import { User, DiaryEntry, UsageStats, LoginLog } from '@/lib/types'
+import UserProgressChart from './UserProgressChart'
 
 interface Props {
   onClose: () => void
@@ -205,6 +206,21 @@ export default function AdminView({ onClose }: Props) {
               </div>
             ) : (
               <div className="space-y-4">
+                {/* Progress chart */}
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden p-5">
+                  <h2 className="font-semibold text-slate-700 flex items-center gap-2 mb-3">
+                    <span>📈</span>
+                    <span>{selectedUser.username}의 성취도 그래프</span>
+                  </h2>
+                  {loadingEntries ? (
+                    <div className="flex items-center justify-center py-10">
+                      <div className="w-6 h-6 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  ) : (
+                    <UserProgressChart entries={entries} />
+                  )}
+                </div>
+
                 {/* Entry list */}
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                   <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
