@@ -10,11 +10,13 @@ interface Props {
   onEnabledChange?: (enabled: boolean) => void
 }
 
-const TIME_OPTIONS = Array.from({ length: 24 * 4 }, (_, i) => {
-  const hours = Math.floor(i / 4)
-  const minutes = (i % 4) * 15
+const TIME_OPTIONS = Array.from({ length: 24 * 2 }, (_, i) => {
+  const hours = Math.floor(i / 2)
+  const minutes = (i % 2) * 30
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
 })
+
+const HIGHLIGHTED_TIMES = new Set(['00:00', '09:00', '12:00', '15:00', '18:00', '21:00'])
 
 function getCountdownMs(time: string, nowMs: number): number {
   const kstNow = nowMs + 9 * 60 * 60 * 1000
@@ -189,7 +191,9 @@ export default function ReminderSettings({ onClose, initialMessage, onEnabledCha
                 className="text-sm border border-slate-200 rounded-lg px-2 py-1.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200"
               >
                 {TIME_OPTIONS.map(t => (
-                  <option key={t} value={t}>{t}</option>
+                  <option key={t} value={t} style={HIGHLIGHTED_TIMES.has(t) ? { fontWeight: 'bold' } : undefined}>
+                    {t}
+                  </option>
                 ))}
               </select>
             </div>
