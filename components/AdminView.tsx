@@ -2,14 +2,21 @@
 
 import { useState, useEffect } from 'react'
 import { format, parseISO } from 'date-fns'
-import { User, DiaryEntry } from '@/lib/types'
+import { User, DiaryEntry, UsageStats, LoginLog } from '@/lib/types'
 
 interface Props {
   onClose: () => void
 }
 
+function formatLocation(country?: string, region?: string, city?: string) {
+  const parts = [country, region, city].filter(Boolean)
+  return parts.length > 0 ? parts.join(' / ') : '-'
+}
+
 export default function AdminView({ onClose }: Props) {
   const [users, setUsers] = useState<User[]>([])
+  const [stats, setStats] = useState<UsageStats | null>(null)
+  const [recentLogins, setRecentLogins] = useState<LoginLog[]>([])
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [entries, setEntries] = useState<DiaryEntry[]>([])
   const [loadingUsers, setLoadingUsers] = useState(true)
@@ -19,7 +26,12 @@ export default function AdminView({ onClose }: Props) {
   useEffect(() => {
     fetch('/api/admin/users')
       .then(r => r.json())
-      .then(data => { setUsers(data); setLoadingUsers(false) })
+      .then(data => {
+        setUsers(data.users ?? [])
+        setStats(data.stats ?? null)
+        setRecentLogins(data.recentLogins ?? [])
+        setLoadingUsers(false)
+      })
       .catch(() => setLoadingUsers(false))
   }, [])
 
@@ -60,6 +72,28 @@ export default function AdminView({ onClose }: Props) {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Overview stats */}
+        {stats && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">
+              <div className="text-2xl font-bold text-indigo-600">{stats.totalUsers}</div>
+              <div className="text-xs text-slate-400 mt-0.5">총 사용자</div>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">
+              <div className="text-2xl font-bold text-emerald-600">{stats.totalEntries}</div>
+              <div className="text-xs text-slate-400 mt-0.5">총 일기 수</div>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">
+              <div className="text-2xl font-bold text-purple-600">{stats.analyzedEntries}</div>
+              <div className="text-xs text-slate-400 mt-0.5">분석 완료</div>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">
+              <div className="text-2xl font-bold text-amber-600">{stats.avgScore}</div>
+              <div className="text-xs text-slate-400 mt-0.5">평균 점수</div>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* User List */}
           <div className="lg:col-span-1">
@@ -112,30 +146,52 @@ export default function AdminView({ onClose }: Props) {
                         </div>
                         <div className="text-right">
                           <div className="text-sm font-bold text-indigo-600">{user.entryCount ?? 0}</div>
-                          <div className="text-xs text-slate-400">entries</div>
+                          <div className="text-xs text-slate-400">
+                            {user.analyzedCount ?? 0}건 분석 · 평균 {user.avgScore ?? 0}점
+                          </div>
                         </div>
                       </div>
+                      {user.lastLoginAt && (
+                        <div className="mt-1.5 flex items-center gap-1.5 text-xs text-slate-400">
+                          <span>🕒 {format(parseISO(user.lastLoginAt), 'yyyy.MM.dd HH:mm')}</span>
+                          <span>·</span>
+                          <span>📍 {formatLocation(user.lastLoginCountry, user.lastLoginRegion, user.lastLoginCity)}</span>
+                          {user.lastLoginIp && <span className="text-slate-300">({user.lastLoginIp})</span>}
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>
               )}
             </div>
 
-            {/* Summary stats */}
-            {users.length > 0 && (
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">
-                  <div className="text-2xl font-bold text-indigo-600">{users.length}</div>
-                  <div className="text-xs text-slate-400 mt-0.5">총 사용자</div>
-                </div>
-                <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">
-                  <div className="text-2xl font-bold text-emerald-600">
-                    {users.reduce((acc, u) => acc + (u.entryCount ?? 0), 0)}
-                  </div>
-                  <div className="text-xs text-slate-400 mt-0.5">총 일기 수</div>
-                </div>
+            {/* Recent login activity */}
+            <div className="mt-4 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="px-5 py-4 border-b border-slate-100">
+                <h2 className="font-semibold text-slate-700 flex items-center gap-2">
+                  <span>📍</span>
+                  <span>최근 로그인 활동</span>
+                </h2>
               </div>
-            )}
+              {recentLogins.length === 0 ? (
+                <div className="py-8 text-center text-sm text-slate-400">로그인 기록이 없어요</div>
+              ) : (
+                <div className="divide-y divide-slate-50 max-h-72 overflow-y-auto">
+                  {recentLogins.map(log => (
+                    <div key={log.id} className="px-5 py-3 text-xs">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="font-semibold text-slate-700">{log.username}</span>
+                        <span className="text-slate-400">{format(parseISO(log.loginAt), 'yyyy.MM.dd HH:mm')}</span>
+                      </div>
+                      <div className="text-slate-400">
+                        📍 {formatLocation(log.country, log.region, log.city)}
+                        {log.ip && <span className="text-slate-300"> · {log.ip}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* User's Entries */}

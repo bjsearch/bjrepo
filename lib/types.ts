@@ -14,6 +14,33 @@ export interface User {
   role: 'user' | 'admin'
   createdAt: string
   entryCount?: number
+  analyzedCount?: number
+  avgScore?: number
+  lastLoginAt?: string
+  lastLoginIp?: string
+  lastLoginCountry?: string
+  lastLoginRegion?: string
+  lastLoginCity?: string
+}
+
+export interface LoginLog {
+  id: string
+  userId: string
+  username: string
+  loginAt: string
+  ip?: string
+  country?: string
+  region?: string
+  city?: string
+  latitude?: string
+  longitude?: string
+}
+
+export interface UsageStats {
+  totalUsers: number
+  totalEntries: number
+  analyzedEntries: number
+  avgScore: number
 }
 
 export interface GrammarCorrection {

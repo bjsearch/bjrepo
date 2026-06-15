@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
-import { getAllUsers, getAllEntries } from '@/lib/db'
+import { getAllUsers, getAllEntries, getUsageStats, getRecentLogins } from '@/lib/db'
 
 export async function GET(req: NextRequest) {
   const session = await getSession()
@@ -16,6 +16,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(entries)
   }
 
-  const users = await getAllUsers()
-  return NextResponse.json(users)
+  const [users, stats, recentLogins] = await Promise.all([
+    getAllUsers(),
+    getUsageStats(),
+    getRecentLogins(20),
+  ])
+  return NextResponse.json({ users, stats, recentLogins })
 }

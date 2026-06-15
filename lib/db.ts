@@ -1,6 +1,9 @@
 import { sql } from '@vercel/postgres'
 import { DiaryEntry } from './types'
 import { hashPassword, generateSalt } from './auth'
+import { GeoInfo } from './geo'
+
+export const ADMIN_USERNAME = 'psyche8310'
 
 async function ensureTable() {
   await sql`
@@ -29,6 +32,13 @@ async function ensureUsersTable() {
       created_at   TEXT NOT NULL
     )
   `
+  // Migration: track last login info
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TEXT`
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_ip TEXT`
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_country TEXT`
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_region TEXT`
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_city TEXT`
+
   // Create default admin if none exists
   const { rows } = await sql`SELECT id FROM users WHERE role = 'admin' LIMIT 1`
   if (rows.length === 0) {
@@ -40,6 +50,26 @@ async function ensureUsersTable() {
       ON CONFLICT (username) DO NOTHING
     `
   }
+
+  // Designated admin account: always promote to admin role
+  await sql`UPDATE users SET role = 'admin' WHERE username = ${ADMIN_USERNAME} AND role != 'admin'`
+}
+
+async function ensureLoginLogsTable() {
+  await sql`
+    CREATE TABLE IF NOT EXISTS login_logs (
+      id          TEXT PRIMARY KEY,
+      user_id     TEXT NOT NULL,
+      username    TEXT NOT NULL,
+      login_at    TEXT NOT NULL,
+      ip          TEXT,
+      country     TEXT,
+      region      TEXT,
+      city        TEXT,
+      latitude    TEXT,
+      longitude   TEXT
+    )
+  `
 }
 
 export async function getAllEntries(userId: string): Promise<DiaryEntry[]> {
@@ -85,9 +115,10 @@ export async function createUser(username: string, password: string): Promise<{ 
   const salt = generateSalt()
   const hash = hashPassword(password, salt)
   const id = Date.now().toString()
+  const role = username === ADMIN_USERNAME ? 'admin' : 'user'
   await sql`
     INSERT INTO users (id, username, password_hash, salt, role, created_at)
-    VALUES (${id}, ${username}, ${hash}, ${salt}, 'user', ${new Date().toISOString()})
+    VALUES (${id}, ${username}, ${hash}, ${salt}, ${role}, ${new Date().toISOString()})
   `
   return { ok: true }
 }
@@ -104,12 +135,17 @@ export async function verifyUser(username: string, password: string) {
 
 export async function getAllUsers() {
   await ensureUsersTable()
+  await ensureTable()
   const { rows } = await sql`
     SELECT u.id, u.username, u.role, u.created_at,
-           COUNT(e.id)::int AS entry_count
+           u.last_login_at, u.last_login_ip, u.last_login_country, u.last_login_region, u.last_login_city,
+           COUNT(e.id)::int AS entry_count,
+           COUNT(e.analysis)::int AS analyzed_count,
+           COALESCE(AVG((e.analysis->>'score')::numeric), 0) AS avg_score
     FROM users u
     LEFT JOIN diary_entries e ON e.user_id = u.id AND e.content != ''
-    GROUP BY u.id, u.username, u.role, u.created_at
+    GROUP BY u.id, u.username, u.role, u.created_at,
+             u.last_login_at, u.last_login_ip, u.last_login_country, u.last_login_region, u.last_login_city
     ORDER BY u.created_at ASC
   `
   return rows.map(r => ({
@@ -118,7 +154,73 @@ export async function getAllUsers() {
     role: r.role as 'user' | 'admin',
     createdAt: r.created_at as string,
     entryCount: r.entry_count as number,
+    analyzedCount: r.analyzed_count as number,
+    avgScore: Math.round(Number(r.avg_score) * 10) / 10,
+    lastLoginAt: (r.last_login_at as string) ?? undefined,
+    lastLoginIp: (r.last_login_ip as string) ?? undefined,
+    lastLoginCountry: (r.last_login_country as string) ?? undefined,
+    lastLoginRegion: (r.last_login_region as string) ?? undefined,
+    lastLoginCity: (r.last_login_city as string) ?? undefined,
   }))
+}
+
+export async function recordLogin(userId: string, username: string, geo: GeoInfo): Promise<void> {
+  await ensureUsersTable()
+  await ensureLoginLogsTable()
+  const now = new Date().toISOString()
+
+  await sql`
+    UPDATE users SET
+      last_login_at = ${now},
+      last_login_ip = ${geo.ip ?? null},
+      last_login_country = ${geo.country ?? null},
+      last_login_region = ${geo.region ?? null},
+      last_login_city = ${geo.city ?? null}
+    WHERE id = ${userId}
+  `
+
+  await sql`
+    INSERT INTO login_logs (id, user_id, username, login_at, ip, country, region, city, latitude, longitude)
+    VALUES (${`${userId}-${now}`}, ${userId}, ${username}, ${now}, ${geo.ip ?? null}, ${geo.country ?? null}, ${geo.region ?? null}, ${geo.city ?? null}, ${geo.latitude ?? null}, ${geo.longitude ?? null})
+  `
+}
+
+export async function getRecentLogins(limit = 20) {
+  await ensureLoginLogsTable()
+  const { rows } = await sql`
+    SELECT * FROM login_logs ORDER BY login_at DESC LIMIT ${limit}
+  `
+  return rows.map(r => ({
+    id: r.id as string,
+    userId: r.user_id as string,
+    username: r.username as string,
+    loginAt: r.login_at as string,
+    ip: (r.ip as string) ?? undefined,
+    country: (r.country as string) ?? undefined,
+    region: (r.region as string) ?? undefined,
+    city: (r.city as string) ?? undefined,
+    latitude: (r.latitude as string) ?? undefined,
+    longitude: (r.longitude as string) ?? undefined,
+  }))
+}
+
+export async function getUsageStats() {
+  await ensureUsersTable()
+  await ensureTable()
+  const { rows } = await sql`
+    SELECT
+      (SELECT COUNT(*)::int FROM users) AS total_users,
+      (SELECT COUNT(*)::int FROM diary_entries WHERE content != '') AS total_entries,
+      (SELECT COUNT(*)::int FROM diary_entries WHERE analysis IS NOT NULL) AS analyzed_entries,
+      (SELECT COALESCE(AVG((analysis->>'score')::numeric), 0) FROM diary_entries WHERE analysis IS NOT NULL) AS avg_score
+  `
+  const r = rows[0]
+  return {
+    totalUsers: r.total_users as number,
+    totalEntries: r.total_entries as number,
+    analyzedEntries: r.analyzed_entries as number,
+    avgScore: Math.round(Number(r.avg_score) * 10) / 10,
+  }
 }
 
 function rowToEntry(row: Record<string, unknown>): DiaryEntry {

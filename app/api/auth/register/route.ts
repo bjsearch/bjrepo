@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createUser, verifyUser } from '@/lib/db'
+import { createUser, verifyUser, recordLogin } from '@/lib/db'
 import { signToken } from '@/lib/auth'
+import { getGeoFromRequest } from '@/lib/geo'
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,6 +23,8 @@ export async function POST(req: NextRequest) {
 
     const user = await verifyUser(username.trim(), password)
     if (!user) throw new Error('User created but could not log in')
+
+    await recordLogin(user.userId, user.username, getGeoFromRequest(req))
 
     const token = await signToken(user)
     const res = NextResponse.json({ ok: true, user: { userId: user.userId, username: user.username, role: user.role } })
