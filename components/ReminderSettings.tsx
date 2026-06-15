@@ -1,10 +1,17 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { subscribeToPush, unsubscribeFromPush, getPushPermissionState, isPushSupported } from '@/lib/pushClient'
+import {
+  subscribeToPush,
+  unsubscribeFromPush,
+  getPushPermissionState,
+  isPushSupported,
+  hasPushSubscription,
+} from '@/lib/pushClient'
 
 interface Props {
   onClose: () => void
+  initialMessage?: string | null
 }
 
 const TIME_OPTIONS = Array.from({ length: 24 * 4 }, (_, i) => {
@@ -13,23 +20,30 @@ const TIME_OPTIONS = Array.from({ length: 24 * 4 }, (_, i) => {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
 })
 
-export default function ReminderSettings({ onClose }: Props) {
+export default function ReminderSettings({ onClose, initialMessage }: Props) {
   const [enabled, setEnabled] = useState(false)
   const [time, setTime] = useState('21:00')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [supported, setSupported] = useState(true)
+  const [message, setMessage] = useState<string | null>(initialMessage ?? null)
+  const [pushSupportedState, setPushSupportedState] = useState(true)
+  const [pushConnected, setPushConnected] = useState(false)
+  const [kakaoConnected, setKakaoConnected] = useState(false)
 
   useEffect(() => {
-    setSupported(isPushSupported())
-    fetch('/api/reminder')
-      .then(r => r.json())
-      .then(settings => {
+    setPushSupportedState(isPushSupported())
+    Promise.all([
+      fetch('/api/reminder').then(r => r.json()),
+      hasPushSubscription(),
+    ])
+      .then(([settings, pushSub]) => {
         if (settings) {
           setEnabled(settings.enabled)
           setTime(settings.time)
+          setKakaoConnected(!!settings.kakaoConnected)
         }
+        setPushConnected(pushSub)
         setLoading(false)
       })
       .catch(() => setLoading(false))
@@ -42,35 +56,46 @@ export default function ReminderSettings({ onClose }: Props) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ enabled: nextEnabled, time: nextTime }),
     })
+    setEnabled(nextEnabled)
     setSaving(false)
   }
 
-  const handleToggle = async () => {
-    setError(null)
-    const next = !enabled
-
-    if (next) {
-      const perm = await getPushPermissionState()
-      if (perm === 'unsupported') {
-        setError('이 브라우저는 알림을 지원하지 않아요')
-        return
-      }
-      const ok = await subscribeToPush()
-      if (!ok) {
-        setError('알림 권한을 허용해주셔야 알려드릴 수 있어요')
-        return
-      }
-    } else {
-      await unsubscribeFromPush()
-    }
-
-    setEnabled(next)
-    await saveSettings(next, time)
+  const handleMasterToggle = async () => {
+    await saveSettings(!enabled, time)
   }
 
   const handleTimeChange = async (newTime: string) => {
     setTime(newTime)
-    if (enabled) await saveSettings(true, newTime)
+    await saveSettings(enabled, newTime)
+  }
+
+  const handlePushToggle = async () => {
+    setError(null)
+    if (pushConnected) {
+      await unsubscribeFromPush()
+      setPushConnected(false)
+      return
+    }
+
+    const perm = await getPushPermissionState()
+    if (perm === 'unsupported') {
+      setError('이 브라우저는 알림을 지원하지 않아요')
+      return
+    }
+    const ok = await subscribeToPush()
+    if (!ok) {
+      setError('알림 권한을 허용해주셔야 알려드릴 수 있어요')
+      return
+    }
+    setPushConnected(true)
+    if (!enabled) await saveSettings(true, time)
+  }
+
+  const handleKakaoDisconnect = async () => {
+    setSaving(true)
+    await fetch('/api/kakao/disconnect', { method: 'POST' })
+    setKakaoConnected(false)
+    setSaving(false)
   }
 
   return (
@@ -95,10 +120,14 @@ export default function ReminderSettings({ onClose }: Props) {
           <div className="flex items-center justify-center py-8">
             <div className="w-6 h-6 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
           </div>
-        ) : !supported ? (
-          <p className="text-sm text-slate-500">이 브라우저는 푸시 알림을 지원하지 않아요.</p>
         ) : (
           <>
+            {message && (
+              <div className="mb-4 text-xs bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-lg px-3 py-2">
+                {message}
+              </div>
+            )}
+
             <p className="text-sm text-slate-500 mb-4">
               매일 정해진 시간에 &quot;어제의 기억을 정리할 시간입니다!&quot; 알림을 보내드려요.
             </p>
@@ -106,7 +135,7 @@ export default function ReminderSettings({ onClose }: Props) {
             <div className="flex items-center justify-between mb-4">
               <span className="text-sm font-medium text-slate-700">알림 받기</span>
               <button
-                onClick={handleToggle}
+                onClick={handleMasterToggle}
                 disabled={saving}
                 className={`relative w-11 h-6 rounded-full transition-colors ${
                   enabled ? 'bg-indigo-500' : 'bg-slate-200'
@@ -120,7 +149,7 @@ export default function ReminderSettings({ onClose }: Props) {
               </button>
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-5">
               <span className="text-sm font-medium text-slate-700">알림 시간</span>
               <select
                 value={time}
@@ -132,6 +161,52 @@ export default function ReminderSettings({ onClose }: Props) {
                   <option key={t} value={t}>{t}</option>
                 ))}
               </select>
+            </div>
+
+            <div className="border-t border-slate-100 pt-4 space-y-3">
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">받는 방법</p>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium text-slate-700">브라우저 푸시</div>
+                  {!pushSupportedState && (
+                    <div className="text-xs text-slate-400">이 브라우저는 지원하지 않아요</div>
+                  )}
+                </div>
+                {pushSupportedState && (
+                  <button
+                    onClick={handlePushToggle}
+                    className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+                      pushConnected
+                        ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                        : 'bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100'
+                    }`}
+                  >
+                    {pushConnected ? '연결됨 ✓' : '연결하기'}
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-medium text-slate-700">카카오톡 (나에게 보내기)</div>
+                {kakaoConnected ? (
+                  <button
+                    onClick={handleKakaoDisconnect}
+                    disabled={saving}
+                    className="text-xs font-medium px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200"
+                  >
+                    연결됨 · 해제
+                  </button>
+                ) : (
+                  <a
+                    href="/api/auth/kakao/login"
+                    className="text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors"
+                    style={{ backgroundColor: '#FEE500', borderColor: '#FEE500', color: '#3C1E1E' }}
+                  >
+                    카카오 연동
+                  </a>
+                )}
+              </div>
             </div>
 
             {error && <p className="text-xs text-red-500 mt-3">{error}</p>}

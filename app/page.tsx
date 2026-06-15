@@ -57,6 +57,7 @@ export default function Home() {
   const [authLoading, setAuthLoading] = useState(true)
   const [showAdmin, setShowAdmin] = useState(false)
   const [showReminder, setShowReminder] = useState(false)
+  const [reminderMessage, setReminderMessage] = useState<string | null>(null)
 
   const [entries, setEntries] = useState<DiaryEntry[]>([])
   const [currentEntry, setCurrentEntry] = useState<DiaryEntry>(createEntryForDate(new Date()))
@@ -78,6 +79,22 @@ export default function Home() {
         setAuthLoading(false)
       })
       .catch(() => setAuthLoading(false))
+  }, [])
+
+  // Handle Kakao OAuth redirect result
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const kakao = params.get('kakao')
+    if (!kakao) return
+    setReminderMessage(
+      kakao === 'connected'
+        ? '카카오톡 계정이 연동되었어요!'
+        : '카카오톡 연동에 실패했어요. 다시 시도해주세요.'
+    )
+    setShowReminder(true)
+    params.delete('kakao')
+    const newSearch = params.toString()
+    window.history.replaceState({}, '', window.location.pathname + (newSearch ? `?${newSearch}` : ''))
   }, [])
 
   // Load entries when user is set
@@ -411,7 +428,12 @@ export default function Home() {
         )}
       </main>
 
-      {showReminder && <ReminderSettings onClose={() => setShowReminder(false)} />}
+      {showReminder && (
+        <ReminderSettings
+          onClose={() => { setShowReminder(false); setReminderMessage(null) }}
+          initialMessage={reminderMessage}
+        />
+      )}
     </div>
   )
 }

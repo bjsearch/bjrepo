@@ -59,3 +59,11 @@ export async function getPushPermissionState(): Promise<NotificationPermission |
   if (typeof window === 'undefined' || !('Notification' in window)) return 'unsupported'
   return Notification.permission
 }
+
+export async function hasPushSubscription(): Promise<boolean> {
+  if (!isPushSupported()) return false
+  const registration = await navigator.serviceWorker.getRegistration()
+  if (!registration) return false
+  const subscription = await registration.pushManager.getSubscription()
+  return !!subscription
+}

@@ -1,8 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getUsersDueForReminder, getPushSubscriptions, markReminderSent, removePushSubscription } from '@/lib/db'
+import {
+  getUsersDueForReminder,
+  getPushSubscriptions,
+  markReminderSent,
+  removePushSubscription,
+  getKakaoTokens,
+  updateKakaoAccessToken,
+  disconnectKakao,
+} from '@/lib/db'
 import { sendPushNotification } from '@/lib/push'
+import { sendKakaoMemo, refreshKakaoToken } from '@/lib/kakaoAuth'
 
 export const dynamic = 'force-dynamic'
+
+const REMINDER_TEXT = '어제의 기억을 정리할 시간입니다!'
 
 function getKstTime() {
   const now = new Date()
@@ -14,6 +25,31 @@ function getKstTime() {
   return { time, date }
 }
 
+async function sendKakaoReminder(userId: string, appUrl: string): Promise<boolean> {
+  const tokens = await getKakaoTokens(userId)
+  if (!tokens) return false
+
+  let accessToken = tokens.accessToken
+  if (new Date(tokens.expiresAt).getTime() < Date.now() + 60_000) {
+    try {
+      const refreshed = await refreshKakaoToken(tokens.refreshToken)
+      accessToken = refreshed.accessToken
+      await updateKakaoAccessToken(userId, refreshed.accessToken, refreshed.expiresIn, refreshed.refreshToken)
+    } catch (err) {
+      console.error('Kakao token refresh failed:', err)
+      await disconnectKakao(userId)
+      return false
+    }
+  }
+
+  try {
+    return await sendKakaoMemo(accessToken, REMINDER_TEXT, appUrl)
+  } catch (err) {
+    console.error('Kakao memo send failed:', err)
+    return false
+  }
+}
+
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get('authorization')
   if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -21,6 +57,7 @@ export async function GET(req: NextRequest) {
   }
 
   const { time, date } = getKstTime()
+  const appUrl = new URL('/', req.url).toString()
   const users = await getUsersDueForReminder(time, date)
 
   let sent = 0
@@ -30,7 +67,7 @@ export async function GET(req: NextRequest) {
       try {
         await sendPushNotification(sub, {
           title: '영어 일기 작성 알림',
-          body: '어제의 기억을 정리할 시간입니다!',
+          body: REMINDER_TEXT,
           url: '/',
         })
         sent++
@@ -41,6 +78,9 @@ export async function GET(req: NextRequest) {
         }
       }
     }
+
+    if (await sendKakaoReminder(user.id, appUrl)) sent++
+
     await markReminderSent(user.id, date)
   }
 
