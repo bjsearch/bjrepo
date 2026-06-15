@@ -23,6 +23,8 @@ export default function ReminderSettings({ onClose, initialMessage, onEnabledCha
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(initialMessage ?? null)
   const [kakaoConnected, setKakaoConnected] = useState(false)
+  const [testSending, setTestSending] = useState(false)
+  const [testResult, setTestResult] = useState<{ ok: boolean; text: string } | null>(null)
 
   useEffect(() => {
     fetch('/api/reminder').then(r => r.json())
@@ -69,6 +71,23 @@ export default function ReminderSettings({ onClose, initialMessage, onEnabledCha
     await fetch('/api/kakao/disconnect', { method: 'POST' })
     setKakaoConnected(false)
     setSaving(false)
+  }
+
+  const handleSendTest = async () => {
+    setTestSending(true)
+    setTestResult(null)
+    try {
+      const res = await fetch('/api/reminder/test', { method: 'POST' })
+      const data = await res.json()
+      setTestResult({
+        ok: res.ok,
+        text: res.ok ? '카카오톡으로 알림을 보냈어요!' : (data.error || '전송에 실패했어요'),
+      })
+    } catch {
+      setTestResult({ ok: false, text: '전송에 실패했어요' })
+    } finally {
+      setTestSending(false)
+    }
   }
 
   return (
@@ -187,6 +206,23 @@ export default function ReminderSettings({ onClose, initialMessage, onEnabledCha
                   </a>
                 )}
               </div>
+
+              {kakaoConnected && (
+                <div>
+                  <button
+                    onClick={handleSendTest}
+                    disabled={testSending}
+                    className="w-full text-xs font-medium px-3 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-60"
+                  >
+                    {testSending ? '보내는 중...' : '지금 알림 보내기'}
+                  </button>
+                  {testResult && (
+                    <p className={`text-xs mt-1.5 ${testResult.ok ? 'text-emerald-600' : 'text-red-500'}`}>
+                      {testResult.text}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </>
         )}
