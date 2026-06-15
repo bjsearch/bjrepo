@@ -8,6 +8,7 @@ import {
   isPushSupported,
   hasPushSubscription,
 } from '@/lib/pushClient'
+import { REMINDER_TONES, DEFAULT_REMINDER_TONE, ReminderTone } from '@/lib/reminderMessages'
 
 interface Props {
   onClose: () => void
@@ -23,6 +24,7 @@ const TIME_OPTIONS = Array.from({ length: 24 * 4 }, (_, i) => {
 export default function ReminderSettings({ onClose, initialMessage }: Props) {
   const [enabled, setEnabled] = useState(false)
   const [time, setTime] = useState('21:00')
+  const [tone, setTone] = useState<ReminderTone>(DEFAULT_REMINDER_TONE)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -41,6 +43,7 @@ export default function ReminderSettings({ onClose, initialMessage }: Props) {
         if (settings) {
           setEnabled(settings.enabled)
           setTime(settings.time)
+          if (settings.tone) setTone(settings.tone)
           setKakaoConnected(!!settings.kakaoConnected)
         }
         setPushConnected(pushSub)
@@ -49,24 +52,29 @@ export default function ReminderSettings({ onClose, initialMessage }: Props) {
       .catch(() => setLoading(false))
   }, [])
 
-  const saveSettings = async (nextEnabled: boolean, nextTime: string) => {
+  const saveSettings = async (nextEnabled: boolean, nextTime: string, nextTone: ReminderTone) => {
     setSaving(true)
     await fetch('/api/reminder', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ enabled: nextEnabled, time: nextTime }),
+      body: JSON.stringify({ enabled: nextEnabled, time: nextTime, tone: nextTone }),
     })
     setEnabled(nextEnabled)
     setSaving(false)
   }
 
   const handleMasterToggle = async () => {
-    await saveSettings(!enabled, time)
+    await saveSettings(!enabled, time, tone)
   }
 
   const handleTimeChange = async (newTime: string) => {
     setTime(newTime)
-    await saveSettings(enabled, newTime)
+    await saveSettings(enabled, newTime, tone)
+  }
+
+  const handleToneChange = async (newTone: ReminderTone) => {
+    setTone(newTone)
+    await saveSettings(enabled, time, newTone)
   }
 
   const handlePushToggle = async () => {
@@ -88,7 +96,7 @@ export default function ReminderSettings({ onClose, initialMessage }: Props) {
       return
     }
     setPushConnected(true)
-    if (!enabled) await saveSettings(true, time)
+    if (!enabled) await saveSettings(true, time, tone)
   }
 
   const handleKakaoDisconnect = async () => {
@@ -129,7 +137,7 @@ export default function ReminderSettings({ onClose, initialMessage }: Props) {
             )}
 
             <p className="text-sm text-slate-500 mb-4">
-              매일 정해진 시간에 &quot;어제의 기억을 정리할 시간입니다!&quot; 알림을 보내드려요.
+              매일 정해진 시간에 선택한 스타일의 메시지로 일기 작성을 알려드려요.
             </p>
 
             <div className="flex items-center justify-between mb-4">
@@ -161,6 +169,30 @@ export default function ReminderSettings({ onClose, initialMessage }: Props) {
                   <option key={t} value={t}>{t}</option>
                 ))}
               </select>
+            </div>
+
+            <div className="mb-5">
+              <p className="text-sm font-medium text-slate-700 mb-2">독려 메시지 스타일</p>
+              <div className="grid grid-cols-4 gap-2">
+                {REMINDER_TONES.map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => handleToneChange(opt.value)}
+                    disabled={saving}
+                    title={opt.description}
+                    className={`flex flex-col items-center gap-1 rounded-xl border p-2 transition-colors ${
+                      tone === opt.value
+                        ? 'border-indigo-400 bg-indigo-50 ring-2 ring-indigo-200'
+                        : 'border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span className="text-2xl leading-none" role="img" aria-label={opt.label}>
+                      {opt.emoji}
+                    </span>
+                    <span className="text-[11px] text-slate-600 leading-tight text-center">{opt.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="border-t border-slate-100 pt-4 space-y-3">

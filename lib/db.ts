@@ -42,6 +42,7 @@ async function ensureUsersTable() {
   // Migration: daily diary reminder settings
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS reminder_enabled BOOLEAN NOT NULL DEFAULT FALSE`
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS reminder_time TEXT NOT NULL DEFAULT '21:00'`
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS reminder_tone TEXT NOT NULL DEFAULT 'friend'`
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_reminder_sent_date TEXT`
 
   // Migration: Kakao account link for "나에게 보내기" reminders
@@ -162,7 +163,7 @@ export async function getAllUsers() {
   const { rows } = await sql`
     SELECT u.id, u.username, u.role, u.created_at,
            u.last_login_at, u.last_login_ip, u.last_login_country, u.last_login_region, u.last_login_city,
-           u.reminder_enabled, u.reminder_time, u.kakao_access_token,
+           u.reminder_enabled, u.reminder_time, u.reminder_tone, u.kakao_access_token,
            COUNT(e.id)::int AS entry_count,
            COUNT(e.analysis)::int AS analyzed_count,
            COALESCE(AVG((e.analysis->>'score')::numeric), 0) AS avg_score
@@ -170,7 +171,7 @@ export async function getAllUsers() {
     LEFT JOIN diary_entries e ON e.user_id = u.id AND e.content != ''
     GROUP BY u.id, u.username, u.role, u.created_at,
              u.last_login_at, u.last_login_ip, u.last_login_country, u.last_login_region, u.last_login_city,
-             u.reminder_enabled, u.reminder_time, u.kakao_access_token
+             u.reminder_enabled, u.reminder_time, u.reminder_tone, u.kakao_access_token
     ORDER BY u.created_at ASC
   `
   return rows.map(r => ({
@@ -188,6 +189,7 @@ export async function getAllUsers() {
     lastLoginCity: (r.last_login_city as string) ?? undefined,
     reminderEnabled: r.reminder_enabled as boolean,
     reminderTime: r.reminder_time as string,
+    reminderTone: r.reminder_tone as string,
     kakaoConnected: !!r.kakao_access_token,
   }))
 }
@@ -255,18 +257,19 @@ export async function getUsageStats() {
 
 export async function getReminderSettings(userId: string) {
   await ensureUsersTable()
-  const { rows } = await sql`SELECT reminder_enabled, reminder_time, kakao_access_token FROM users WHERE id = ${userId}`
+  const { rows } = await sql`SELECT reminder_enabled, reminder_time, reminder_tone, kakao_access_token FROM users WHERE id = ${userId}`
   if (rows.length === 0) return null
   return {
     enabled: rows[0].reminder_enabled as boolean,
     time: rows[0].reminder_time as string,
+    tone: rows[0].reminder_tone as string,
     kakaoConnected: !!rows[0].kakao_access_token,
   }
 }
 
-export async function setReminderSettings(userId: string, enabled: boolean, time: string): Promise<void> {
+export async function setReminderSettings(userId: string, enabled: boolean, time: string, tone: string): Promise<void> {
   await ensureUsersTable()
-  await sql`UPDATE users SET reminder_enabled = ${enabled}, reminder_time = ${time} WHERE id = ${userId}`
+  await sql`UPDATE users SET reminder_enabled = ${enabled}, reminder_time = ${time}, reminder_tone = ${tone} WHERE id = ${userId}`
 }
 
 export async function savePushSubscription(userId: string, sub: PushSubscriptionJSON): Promise<void> {
@@ -300,7 +303,7 @@ export async function getUsersDueForReminder(currentTime: string, today: string)
   await ensureUsersTable()
   await ensurePushSubscriptionsTable()
   const { rows } = await sql`
-    SELECT DISTINCT u.id, u.username
+    SELECT DISTINCT u.id, u.username, u.reminder_tone
     FROM users u
     LEFT JOIN push_subscriptions p ON p.user_id = u.id
     WHERE u.reminder_enabled = TRUE
@@ -308,7 +311,7 @@ export async function getUsersDueForReminder(currentTime: string, today: string)
       AND (u.last_reminder_sent_date IS NULL OR u.last_reminder_sent_date != ${today})
       AND (p.id IS NOT NULL OR u.kakao_access_token IS NOT NULL)
   `
-  return rows.map(r => ({ id: r.id as string, username: r.username as string }))
+  return rows.map(r => ({ id: r.id as string, username: r.username as string, tone: r.reminder_tone as string }))
 }
 
 export async function markReminderSent(userId: string, today: string): Promise<void> {

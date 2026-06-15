@@ -10,10 +10,9 @@ import {
 } from '@/lib/db'
 import { sendPushNotification } from '@/lib/push'
 import { sendKakaoMemo, refreshKakaoToken } from '@/lib/kakaoAuth'
+import { getReminderMessage } from '@/lib/reminderMessages'
 
 export const dynamic = 'force-dynamic'
-
-const REMINDER_TEXT = '어제의 기억을 정리할 시간입니다!'
 
 function getKstTime() {
   const now = new Date()
@@ -25,7 +24,7 @@ function getKstTime() {
   return { time, date }
 }
 
-async function sendKakaoReminder(userId: string, appUrl: string): Promise<boolean> {
+async function sendKakaoReminder(userId: string, appUrl: string, text: string): Promise<boolean> {
   const tokens = await getKakaoTokens(userId)
   if (!tokens) return false
 
@@ -43,7 +42,7 @@ async function sendKakaoReminder(userId: string, appUrl: string): Promise<boolea
   }
 
   try {
-    return await sendKakaoMemo(accessToken, REMINDER_TEXT, appUrl)
+    return await sendKakaoMemo(accessToken, text, appUrl)
   } catch (err) {
     console.error('Kakao memo send failed:', err)
     return false
@@ -62,12 +61,13 @@ export async function GET(req: NextRequest) {
 
   let sent = 0
   for (const user of users) {
+    const text = getReminderMessage(user.tone)
     const subs = await getPushSubscriptions(user.id)
     for (const sub of subs) {
       try {
         await sendPushNotification(sub, {
           title: '영어 일기 작성 알림',
-          body: REMINDER_TEXT,
+          body: text,
           url: '/',
         })
         sent++
@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    if (await sendKakaoReminder(user.id, appUrl)) sent++
+    if (await sendKakaoReminder(user.id, appUrl, text)) sent++
 
     await markReminderSent(user.id, date)
   }

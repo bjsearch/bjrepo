@@ -23,6 +23,7 @@ export interface User {
   lastLoginCity?: string
   reminderEnabled?: boolean
   reminderTime?: string
+  reminderTone?: string
   kakaoConnected?: boolean
 }
 
