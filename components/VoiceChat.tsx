@@ -12,9 +12,18 @@ interface Props {
 }
 
 type Status = 'idle' | 'listening' | 'thinking' | 'speaking'
+type ChatType = 'free' | 'tutor' | 'interview' | 'travel'
+
+const CHAT_TYPES: { value: ChatType; emoji: string; label: string; desc: string }[] = [
+  { value: 'free',      emoji: '🙂', label: '자유 대화',    desc: '일기를 읽은 AI 친구와 편하게' },
+  { value: 'tutor',     emoji: '🧑‍🏫', label: '영어 교정',    desc: '말하면서 표현을 교정받아요' },
+  { value: 'interview', emoji: '💼', label: '인터뷰 연습',   desc: '영어 면접 질문을 연습해요' },
+  { value: 'travel',    emoji: '✈️', label: '여행 영어',     desc: '공항·호텔·식당 롤플레이' },
+]
 
 export default function VoiceChat({ onClose }: Props) {
   const [started, setStarted] = useState(false)
+  const [chatType, setChatType] = useState<ChatType>('free')
   const [messages, setMessages] = useState<Message[]>([])
   const [status, setStatus] = useState<Status>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -63,7 +72,7 @@ export default function VoiceChat({ onClose }: Props) {
       const res = await fetch('/api/voice-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ history }),
+        body: JSON.stringify({ history, chatType }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -141,6 +150,11 @@ export default function VoiceChat({ onClose }: Props) {
           <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
             <span>🎙️</span>
             <span>AI와 대화하기</span>
+            {started && (
+              <span className="text-xs font-normal text-slate-400 border border-slate-200 rounded-full px-2 py-0.5">
+                {CHAT_TYPES.find(t => t.value === chatType)?.label}
+              </span>
+            )}
           </h2>
           <button onClick={handleClose} className="text-slate-400 hover:text-slate-600">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -150,13 +164,28 @@ export default function VoiceChat({ onClose }: Props) {
         </div>
 
         {!started ? (
-          <div className="flex flex-col items-center text-center py-6">
-            <div className="text-4xl mb-3">🎙️</div>
-            <p className="text-sm text-slate-600 mb-1 font-medium">내 일기를 읽은 AI와 영어로 대화해보세요</p>
-            <p className="text-xs text-slate-400 mb-5">지금까지 쓴 일기를 바탕으로 나에 대해 이야기해줘요</p>
+          <div className="flex flex-col py-4">
+            <p className="text-sm font-medium text-slate-700 mb-3">대화 유형 선택</p>
+            <div className="grid grid-cols-2 gap-2 mb-5">
+              {CHAT_TYPES.map(t => (
+                <button
+                  key={t.value}
+                  onClick={() => setChatType(t.value)}
+                  className={`flex flex-col items-center gap-1 rounded-xl border p-3 text-left transition-colors ${
+                    chatType === t.value
+                      ? 'border-indigo-400 bg-indigo-50 ring-2 ring-indigo-200'
+                      : 'border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  <span className="text-2xl leading-none">{t.emoji}</span>
+                  <span className="text-sm font-semibold text-slate-700">{t.label}</span>
+                  <span className="text-[11px] text-slate-400 text-center leading-tight">{t.desc}</span>
+                </button>
+              ))}
+            </div>
             <button
               onClick={handleStart}
-              className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-colors"
+              className="w-full py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-colors"
             >
               대화 시작하기
             </button>
