@@ -284,18 +284,18 @@ export default function Home() {
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
-              <span className="text-white text-lg">✍️</span>
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-base sm:text-lg">✍️</span>
             </div>
-            <div>
+            <div className="hidden sm:block">
               <h1 className="text-lg font-bold text-slate-800">English Writing App</h1>
               <p className="text-xs text-slate-400">AI-powered diary & writing coach</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             {streak > 0 && (
               <div className="hidden sm:flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-xl px-3 py-1.5">
                 <span className="text-sm">🔥</span>
@@ -303,28 +303,28 @@ export default function Home() {
               </div>
             )}
 
-            <div className="flex bg-slate-100 rounded-xl p-1">
+            <div className="flex bg-slate-100 rounded-xl p-0.5 sm:p-1">
               <button
                 onClick={() => setView('editor')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                   view === 'editor' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
-                Write
+                <span className="hidden sm:inline">Write</span>
               </button>
               <button
                 onClick={() => setView('calendar')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                   view === 'calendar' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                Calendar
+                <span className="hidden sm:inline">Calendar</span>
                 {entries.length > 0 && (
                   <span className="bg-indigo-100 text-indigo-600 rounded-full px-1.5 py-0.5 text-xs leading-none">
                     {entries.filter(e => e.content.trim()).length}
@@ -334,7 +334,7 @@ export default function Home() {
             </div>
 
             {/* User info + logout */}
-            <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200">
+            <div className="flex items-center gap-1 sm:gap-1.5 pl-1.5 sm:pl-2 border-l border-slate-200">
               {voiceChatUnlocked ? (
                 <>
                   <button
@@ -383,16 +383,16 @@ export default function Home() {
               {user.role === 'admin' && (
                 <button
                   onClick={() => setShowAdmin(true)}
-                  className="flex items-center gap-1.5 text-xs bg-rose-50 text-rose-600 border border-rose-200 px-2.5 py-1.5 rounded-lg hover:bg-rose-100 transition-colors font-medium"
+                  className="flex items-center gap-1 text-xs bg-rose-50 text-rose-600 border border-rose-200 px-1.5 sm:px-2.5 py-1.5 rounded-lg hover:bg-rose-100 transition-colors font-medium"
                 >
-                  🛡️ Admin
+                  🛡️ <span className="hidden sm:inline">Admin</span>
                 </button>
               )}
-              <div className="flex items-center gap-1.5 text-xs text-slate-500 px-2 py-1.5">
+              <div className="flex items-center text-xs text-slate-500 px-1 sm:px-2 py-1.5">
                 <div className="w-5 h-5 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold text-xs">
                   {user.username.charAt(0).toUpperCase()}
                 </div>
-                <span className="hidden sm:inline font-medium">{user.username}</span>
+                <span className="hidden sm:inline font-medium ml-1.5">{user.username}</span>
               </div>
               <button
                 onClick={handleLogout}
