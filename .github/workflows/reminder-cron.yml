@@ -11,5 +11,12 @@ jobs:
     steps:
       - name: Call reminder cron endpoint
         run: |
-          curl -sf -X GET "https://bjrepo.vercel.app/api/cron/reminder" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+          RESPONSE=$(curl -s -X GET "https://bjrepo.vercel.app/api/cron/reminder" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -w "\nHTTP_STATUS:%{http_code}")
+          echo "$RESPONSE"
+          HTTP_STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "::error::API returned HTTP $HTTP_STATUS"
+            exit 1
+          fi
