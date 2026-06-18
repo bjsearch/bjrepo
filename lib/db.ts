@@ -283,6 +283,22 @@ export async function markReminderSent(userId: string, today: string): Promise<v
   await sql`UPDATE users SET last_reminder_sent_date = ${today} WHERE id = ${userId}`
 }
 
+export async function getMissedDays(userId: string): Promise<number> {
+  await ensureTable()
+  const { rows } = await sql`
+    SELECT date FROM diary_entries
+    WHERE user_id = ${userId} AND content != ''
+    ORDER BY date DESC LIMIT 1
+  `
+  if (rows.length === 0) return 99
+  const lastDate = new Date(rows[0].date as string)
+  const now = new Date()
+  const kstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000)
+  const today = new Date(kstNow.toISOString().slice(0, 10))
+  const diff = Math.floor((today.getTime() - lastDate.getTime()) / (24 * 60 * 60 * 1000))
+  return Math.max(0, diff)
+}
+
 // --- Kakao account link ---
 
 export async function saveKakaoTokens(userId: string, accessToken: string, refreshToken: string, expiresIn: number): Promise<void> {

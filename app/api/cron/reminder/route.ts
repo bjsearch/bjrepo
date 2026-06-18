@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import {
   getUsersDueForReminder,
   markReminderSent,
+  getMissedDays,
 } from '@/lib/db'
 import { getReminderMessage } from '@/lib/reminderMessages'
 import { getAppUrl } from '@/lib/appUrl'
@@ -31,7 +32,8 @@ export async function GET(req: NextRequest) {
 
   let sent = 0
   for (const user of users) {
-    const text = getReminderMessage(user.tone)
+    const missed = await getMissedDays(user.id)
+    const text = getReminderMessage(user.tone, missed)
 
     const result = await sendKakaoReminder(user.id, appUrl, text)
     if (result.ok) sent++

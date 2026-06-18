@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
-import { getReminderSettings } from '@/lib/db'
+import { getReminderSettings, getMissedDays } from '@/lib/db'
 import { getReminderMessage } from '@/lib/reminderMessages'
 import { getAppUrl } from '@/lib/appUrl'
 import { sendKakaoReminder } from '@/lib/sendReminder'
@@ -15,7 +15,8 @@ export async function POST(req: NextRequest) {
   }
 
   const appUrl = `${getAppUrl()}/`
-  const text = getReminderMessage(settings.tone)
+  const missed = await getMissedDays(session.userId)
+  const text = getReminderMessage(settings.tone, missed)
   const result = await sendKakaoReminder(session.userId, appUrl, text)
 
   if (!result.ok) {
