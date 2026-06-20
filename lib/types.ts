@@ -51,6 +51,7 @@ export interface GrammarCorrection {
   original: string
   corrected: string
   explanation: string
+  explanation_ko?: string
   type: 'grammar' | 'spelling' | 'punctuation' | 'style'
 }
 
@@ -58,6 +59,7 @@ export interface BetterSentence {
   original: string
   improved: string
   explanation: string
+  explanation_ko?: string
 }
 
 export interface ModernExpression {

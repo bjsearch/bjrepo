@@ -261,6 +261,12 @@ export default function WritingAnalysis({ analysis, isLoading, error, date }: Pr
                         <span className="text-xs text-slate-400 font-medium w-16 flex-shrink-0 mt-0.5">Why:</span>
                         <span className="text-sm text-slate-600">{item.explanation}</span>
                       </div>
+                      {item.explanation_ko && (
+                        <div className="flex items-start gap-2">
+                          <span className="text-xs text-slate-400 font-medium w-16 flex-shrink-0 mt-0.5">설명:</span>
+                          <span className="text-sm text-slate-500">{item.explanation_ko}</span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -300,6 +306,9 @@ export default function WritingAnalysis({ analysis, isLoading, error, date }: Pr
                       </p>
                     </div>
                     <p className="text-xs text-slate-500 italic">{item.explanation}</p>
+                    {item.explanation_ko && (
+                      <p className="text-xs text-slate-400 mt-1">{item.explanation_ko}</p>
+                    )}
                   </div>
                 </div>
               ))

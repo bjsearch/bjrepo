@@ -14,6 +14,7 @@ Your analysis must be returned as valid JSON with this exact structure:
       "original": "exact text from the entry with error",
       "corrected": "corrected version",
       "explanation": "brief, clear explanation of the error and why the correction is better",
+      "explanation_ko": "왜 이렇게 고쳤는지 한국어로 쉽게 설명",
       "type": "grammar|spelling|punctuation|style"
     }
   ],
@@ -21,7 +22,8 @@ Your analysis must be returned as valid JSON with this exact structure:
     {
       "original": "original sentence from the entry",
       "improved": "more natural, fluent version",
-      "explanation": "why this version sounds more native"
+      "explanation": "why this version sounds more native",
+      "explanation_ko": "왜 이 표현이 더 자연스러운지 한국어로 쉽게 설명"
     }
   ],
   "modern_expressions": [
