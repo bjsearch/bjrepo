@@ -1,9 +1,9 @@
 import { sql } from '@vercel/postgres'
 import { DiaryEntry } from './types'
-import { hashPassword, generateSalt } from './auth'
+import { hashPassword, hashPasswordLegacy, verifyPassword, generateSalt } from './auth'
 import { GeoInfo } from './geo'
 
-export const ADMIN_USERNAME = 'psyche8310'
+export const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'psyche8310'
 
 async function ensureTable() {
   await sql`
@@ -53,19 +53,7 @@ async function ensureUsersTable() {
   // Migration: pre-answered profile questions for AI voice chat
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_answers JSONB`
 
-  // Create default admin if none exists
-  const { rows } = await sql`SELECT id FROM users WHERE role = 'admin' LIMIT 1`
-  if (rows.length === 0) {
-    const salt = generateSalt()
-    const hash = hashPassword('admin123', salt)
-    await sql`
-      INSERT INTO users (id, username, password_hash, salt, role, created_at)
-      VALUES ('admin', 'admin', ${hash}, ${salt}, 'admin', ${new Date().toISOString()})
-      ON CONFLICT (username) DO NOTHING
-    `
-  }
-
-  // Designated admin account: always promote to admin role
+  // Designated admin account: promote to admin role
   await sql`UPDATE users SET role = 'admin' WHERE username = ${ADMIN_USERNAME} AND role != 'admin'`
 }
 
@@ -114,9 +102,9 @@ export async function upsertEntry(entry: DiaryEntry): Promise<void> {
   `
 }
 
-export async function deleteEntry(id: string): Promise<void> {
+export async function deleteEntry(id: string, userId: string): Promise<void> {
   await ensureTable()
-  await sql`DELETE FROM diary_entries WHERE id = ${id}`
+  await sql`DELETE FROM diary_entries WHERE id = ${id} AND user_id = ${userId}`
 }
 
 // --- User functions ---
@@ -126,13 +114,12 @@ export async function createUser(username: string, password: string): Promise<{ 
   const existing = await sql`SELECT id FROM users WHERE username = ${username}`
   if (existing.rows.length > 0) return { ok: false, error: '이미 사용 중인 아이디예요' }
 
-  const salt = generateSalt()
-  const hash = hashPassword(password, salt)
+  const hash = await hashPassword(password)
   const id = Date.now().toString()
   const role = username === ADMIN_USERNAME ? 'admin' : 'user'
   await sql`
     INSERT INTO users (id, username, password_hash, salt, role, created_at)
-    VALUES (${id}, ${username}, ${hash}, ${salt}, ${role}, ${new Date().toISOString()})
+    VALUES (${id}, ${username}, ${hash}, ${'bcrypt'}, ${role}, ${new Date().toISOString()})
   `
   return { ok: true }
 }
@@ -142,8 +129,18 @@ export async function verifyUser(username: string, password: string) {
   const { rows } = await sql`SELECT * FROM users WHERE username = ${username}`
   if (rows.length === 0) return null
   const user = rows[0]
-  const hash = hashPassword(password, user.salt)
-  if (hash !== user.password_hash) return null
+
+  if (user.salt === 'bcrypt') {
+    const valid = await verifyPassword(password, user.password_hash)
+    if (!valid) return null
+  } else {
+    // Legacy SHA-256: verify then migrate to bcrypt
+    const legacyHash = hashPasswordLegacy(password, user.salt)
+    if (legacyHash !== user.password_hash) return null
+    const bcryptHash = await hashPassword(password)
+    await sql`UPDATE users SET password_hash = ${bcryptHash}, salt = 'bcrypt' WHERE id = ${user.id}`
+  }
+
   return { userId: user.id as string, username: user.username as string, role: user.role as 'user' | 'admin' }
 }
 

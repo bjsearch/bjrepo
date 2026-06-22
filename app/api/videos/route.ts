@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { YouTubeVideo } from '@/lib/types'
+import { getSession } from '@/lib/auth'
 
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY
 
@@ -23,6 +24,9 @@ function buildSearchQuery(topic: string): string {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { topics } = await request.json()
 
     if (!topics || !Array.isArray(topics) || topics.length === 0) {

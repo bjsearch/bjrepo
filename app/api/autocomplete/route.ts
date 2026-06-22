@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { getSession } from '@/lib/auth'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getSession()
+    if (!session) return NextResponse.json({ suggestion: '' }, { status: 401 })
     const { content } = await request.json()
 
     const wordCount = content?.trim().split(/\s+/).length ?? 0
