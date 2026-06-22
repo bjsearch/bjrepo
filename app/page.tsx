@@ -138,7 +138,7 @@ export default function Home() {
 
   const updateEntry = useCallback(
     (content: string) => {
-      const updated: DiaryEntry = { ...currentEntry, content, updatedAt: new Date().toISOString() }
+      const updated: DiaryEntry = { ...currentEntry, content, updatedAt: new Date().toISOString(), aiHelpCount: acceptedSuggestions.length }
       setCurrentEntry(updated)
       setEntries((prev) => {
         const exists = prev.find((e) => e.id === updated.id)

@@ -19,6 +19,7 @@ async function ensureTable() {
   `
   // Migration: add user_id if not exists
   await sql`ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS user_id TEXT`
+  await sql`ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS ai_help_count INTEGER NOT NULL DEFAULT 0`
 }
 
 async function ensureUsersTable() {
@@ -92,13 +93,15 @@ export async function getAllEntriesForAdmin(): Promise<DiaryEntry[]> {
 export async function upsertEntry(entry: DiaryEntry): Promise<void> {
   await ensureTable()
   const analysis = entry.analysis ? JSON.stringify(entry.analysis) : null
+  const aiHelpCount = entry.aiHelpCount ?? 0
   await sql`
-    INSERT INTO diary_entries (id, date, content, analysis, created_at, updated_at, user_id)
-    VALUES (${entry.id}, ${entry.date}, ${entry.content}, ${analysis}::jsonb, ${entry.createdAt}, ${entry.updatedAt}, ${entry.userId ?? null})
+    INSERT INTO diary_entries (id, date, content, analysis, created_at, updated_at, user_id, ai_help_count)
+    VALUES (${entry.id}, ${entry.date}, ${entry.content}, ${analysis}::jsonb, ${entry.createdAt}, ${entry.updatedAt}, ${entry.userId ?? null}, ${aiHelpCount})
     ON CONFLICT (id) DO UPDATE SET
       content    = EXCLUDED.content,
       analysis   = EXCLUDED.analysis,
-      updated_at = EXCLUDED.updated_at
+      updated_at = EXCLUDED.updated_at,
+      ai_help_count = GREATEST(diary_entries.ai_help_count, EXCLUDED.ai_help_count)
   `
 }
 
@@ -368,5 +371,6 @@ function rowToEntry(row: Record<string, unknown>): DiaryEntry {
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
     userId:    row.user_id as string | undefined,
+    aiHelpCount: (row.ai_help_count as number) ?? 0,
   }
 }

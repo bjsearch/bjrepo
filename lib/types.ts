@@ -6,6 +6,7 @@ export interface DiaryEntry {
   createdAt: string
   updatedAt: string
   userId?: string
+  aiHelpCount?: number
 }
 
 export interface User {
