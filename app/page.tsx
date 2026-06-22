@@ -438,12 +438,19 @@ export default function Home() {
             {/* Calendar View */}
             {view === 'calendar' && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fadeIn">
-                <div className="lg:col-span-1">
+                <div className="lg:col-span-1 flex flex-col gap-4">
                   <DiaryCalendar entries={entries} currentEntry={currentEntry} onSelectDate={handleSelectDate} />
+                  <div className="hidden lg:block flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                    <h3 className="font-semibold text-slate-700 flex items-center gap-2 mb-3">
+                      <span>📈</span>
+                      <span>성취도 그래프</span>
+                    </h3>
+                    <UserProgressChart entries={entries} />
+                  </div>
                 </div>
                 <div className="lg:col-span-2 space-y-4">
                   <CalendarStats entries={entries} />
-                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                  <div className="lg:hidden bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
                     <h3 className="font-semibold text-slate-700 flex items-center gap-2 mb-3">
                       <span>📈</span>
                       <span>성취도 그래프</span>
