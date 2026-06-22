@@ -12,6 +12,7 @@ import AdminView from '@/components/AdminView'
 import ReminderSettings from '@/components/ReminderSettings'
 import VoiceChat from '@/components/VoiceChat'
 import ProfileQuestions from '@/components/ProfileQuestions'
+import UserProgressChart from '@/components/UserProgressChart'
 import { DiaryEntry, AnalysisResult, YouTubeVideo } from '@/lib/types'
 import { SessionUser } from '@/lib/auth'
 
@@ -442,6 +443,13 @@ export default function Home() {
                 </div>
                 <div className="lg:col-span-2 space-y-4">
                   <CalendarStats entries={entries} />
+                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                    <h3 className="font-semibold text-slate-700 flex items-center gap-2 mb-3">
+                      <span>📈</span>
+                      <span>성취도 그래프</span>
+                    </h3>
+                    <UserProgressChart entries={entries} />
+                  </div>
                   <RecentEntries entries={entries} onSelect={handleSelectEntry} onToday={handleTodayEntry} onDelete={handleDeleteEntry} />
                 </div>
               </div>
