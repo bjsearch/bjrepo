@@ -438,7 +438,7 @@ export default function Home() {
             {/* Editor View */}
             {view === 'editor' && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div>
+                <div className="space-y-4">
                   <DiaryEditor
                     entry={currentEntry}
                     onUpdate={updateEntry}
@@ -447,16 +447,16 @@ export default function Home() {
                     isAnalyzing={isAnalyzing}
                     onAcceptedSuggestionsChange={setAcceptedSuggestions}
                   />
-                </div>
-                <div className="space-y-4">
-                  <WritingAnalysis analysis={analysis} isLoading={isAnalyzing} error={analysisError} date={currentEntry.date} />
-                  <Dictionary />
                   {showVideos && (
                     <VideoRecommendations videos={videos} isLoading={isLoadingVideos} topics={analysis?.topics || []} />
                   )}
                   {analysis && !showVideos && analysis.topics.length > 0 && (
                     <VideoRecommendations videos={[]} isLoading={false} topics={analysis.topics} />
                   )}
+                </div>
+                <div className="space-y-4">
+                  <WritingAnalysis analysis={analysis} isLoading={isAnalyzing} error={analysisError} date={currentEntry.date} />
+                  <Dictionary />
                 </div>
               </div>
             )}
