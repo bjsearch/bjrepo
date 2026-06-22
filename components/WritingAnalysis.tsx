@@ -33,6 +33,41 @@ export default function WritingAnalysis({ analysis, isLoading, error, date }: Pr
     })
   }
 
+  const getExpandableIndices = (): number[] => {
+    if (!analysis) return []
+    if (activeTab === 'grammar') {
+      return analysis.grammar_corrections.map((_, i) => i)
+    }
+    if (activeTab === 'vocabulary') {
+      const vocabIndices = (analysis.vocabulary || []).map((_, i) => i + 100)
+      const idiomIndices = (analysis.idioms || []).map((_, i) => i + 200)
+      return [...vocabIndices, ...idiomIndices]
+    }
+    return []
+  }
+
+  const allExpanded = (() => {
+    const indices = getExpandableIndices()
+    return indices.length > 0 && indices.every(i => expandedItems.has(i))
+  })()
+
+  const toggleAll = () => {
+    const indices = getExpandableIndices()
+    if (allExpanded) {
+      setExpandedItems(prev => {
+        const next = new Set(prev)
+        indices.forEach(i => next.delete(i))
+        return next
+      })
+    } else {
+      setExpandedItems(prev => {
+        const next = new Set(prev)
+        indices.forEach(i => next.add(i))
+        return next
+      })
+    }
+  }
+
   const buildShareMessage = (a: AnalysisResult): string => {
     const lines: string[] = [`📝 ${date || ''} 영어 학습 노트`.trim()]
 
@@ -225,6 +260,20 @@ export default function WritingAnalysis({ analysis, isLoading, error, date }: Pr
       </div>
 
       <div className="p-5 max-h-96 overflow-y-auto scrollbar-thin">
+        {(activeTab === 'grammar' || activeTab === 'vocabulary') && getExpandableIndices().length > 0 && (
+          <div className="flex justify-end mb-3">
+            <button
+              onClick={toggleAll}
+              className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              <svg className={`w-3.5 h-3.5 transition-transform ${allExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+              {allExpanded ? '모두 접기' : '모두 펼치기'}
+            </button>
+          </div>
+        )}
+
         {/* Grammar Tab */}
         {activeTab === 'grammar' && (
           <div className="space-y-3">
