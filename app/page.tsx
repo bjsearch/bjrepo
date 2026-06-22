@@ -447,16 +447,16 @@ export default function Home() {
                     isAnalyzing={isAnalyzing}
                     onAcceptedSuggestionsChange={setAcceptedSuggestions}
                   />
+                  <Dictionary />
+                </div>
+                <div className="space-y-4">
+                  <WritingAnalysis analysis={analysis} isLoading={isAnalyzing} error={analysisError} date={currentEntry.date} />
                   {showVideos && (
                     <VideoRecommendations videos={videos} isLoading={isLoadingVideos} topics={analysis?.topics || []} />
                   )}
                   {analysis && !showVideos && analysis.topics.length > 0 && (
                     <VideoRecommendations videos={[]} isLoading={false} topics={analysis.topics} />
                   )}
-                </div>
-                <div className="space-y-4">
-                  <WritingAnalysis analysis={analysis} isLoading={isAnalyzing} error={analysisError} date={currentEntry.date} />
-                  <Dictionary />
                 </div>
               </div>
             )}
