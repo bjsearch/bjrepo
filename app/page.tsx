@@ -63,6 +63,7 @@ export default function Home() {
   const [showProfileQuestions, setShowProfileQuestions] = useState(false)
   const [reminderMessage, setReminderMessage] = useState<string | null>(null)
   const [reminderEnabled, setReminderEnabled] = useState(false)
+  const [hasProfileAnswers, setHasProfileAnswers] = useState(false)
 
   const [entries, setEntries] = useState<DiaryEntry[]>([])
   const [currentEntry, setCurrentEntry] = useState<DiaryEntry>(createEntryForDate(new Date()))
@@ -103,12 +104,19 @@ export default function Home() {
     window.history.replaceState({}, '', window.location.pathname + (newSearch ? `?${newSearch}` : ''))
   }, [])
 
-  // Load reminder settings when user is set
+  // Load reminder settings and profile status when user is set
   useEffect(() => {
     if (!user) return
     fetch('/api/reminder')
       .then(r => r.ok ? r.json() : null)
       .then(settings => setReminderEnabled(!!settings?.enabled))
+      .catch(() => {})
+    fetch('/api/profile-questions')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const answers: string[] = data?.answers || []
+        setHasProfileAnswers(answers.some(a => a?.trim()))
+      })
       .catch(() => {})
   }, [user])
 
@@ -349,7 +357,11 @@ export default function Home() {
                   </button>
                   <button
                     onClick={() => setShowProfileQuestions(true)}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                    className={`p-1.5 rounded-lg transition-colors ${
+                      hasProfileAnswers
+                        ? 'text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50'
+                        : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
+                    }`}
                     title="AI에게 나를 소개하기"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -494,7 +506,7 @@ export default function Home() {
 
       {showVoiceChat && <VoiceChat onClose={() => setShowVoiceChat(false)} />}
 
-      {showProfileQuestions && <ProfileQuestions onClose={() => setShowProfileQuestions(false)} />}
+      {showProfileQuestions && <ProfileQuestions onClose={() => setShowProfileQuestions(false)} onSaved={setHasProfileAnswers} />}
     </div>
   )
 }

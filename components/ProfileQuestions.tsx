@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react'
 
 interface Props {
   onClose: () => void
+  onSaved?: (hasAnswers: boolean) => void
 }
 
-export default function ProfileQuestions({ onClose }: Props) {
+export default function ProfileQuestions({ onClose, onSaved }: Props) {
   const [questions, setQuestions] = useState<string[]>([])
   const [answers, setAnswers] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
@@ -45,8 +46,10 @@ export default function ProfileQuestions({ onClose }: Props) {
         body: JSON.stringify({ answers }),
       })
       setSaved(true)
-      setHasSavedAnswers(answers.some(a => a.trim()))
+      const hasAny = answers.some(a => a.trim())
+      setHasSavedAnswers(hasAny)
       setEditing(false)
+      onSaved?.(hasAny)
     } finally {
       setSaving(false)
     }
