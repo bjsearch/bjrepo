@@ -73,6 +73,7 @@ export default function Home() {
   const [analysisError, setAnalysisError] = useState<string | null>(null)
   const [view, setView] = useState<View>('editor')
   const [isLoadingEntries, setIsLoadingEntries] = useState(false)
+  const [acceptedSuggestions, setAcceptedSuggestions] = useState<string[]>([])
   const saveDebounceRef = useRef<ReturnType<typeof setTimeout>>()
 
   // Auth check on mount
@@ -154,7 +155,7 @@ export default function Home() {
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: currentEntry.content }),
+        body: JSON.stringify({ content: currentEntry.content, acceptedSuggestions }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Analysis failed')
@@ -444,6 +445,7 @@ export default function Home() {
                     onAnalyze={handleAnalyze}
                     onDelete={entries.some(e => e.id === currentEntry.id) ? () => handleDeleteEntry(currentEntry) : undefined}
                     isAnalyzing={isAnalyzing}
+                    onAcceptedSuggestionsChange={setAcceptedSuggestions}
                   />
                 </div>
                 <div className="space-y-4">

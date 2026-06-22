@@ -76,13 +76,18 @@ Rules:
 
 export async function POST(request: NextRequest) {
   try {
-    const { content } = await request.json()
+    const { content, acceptedSuggestions } = await request.json()
 
     if (!content || content.trim().length < 10) {
       return NextResponse.json(
         { error: 'Please write at least a few sentences before analyzing.' },
         { status: 400 }
       )
+    }
+
+    let userMessage = `Please analyze this English diary entry and provide feedback:\n\n${content}`
+    if (Array.isArray(acceptedSuggestions) && acceptedSuggestions.length > 0) {
+      userMessage += `\n\n[NOTE: The following phrases were suggested by our AI autocomplete and accepted by the user. Do NOT mark these as grammar errors, do NOT include them in grammar_corrections, and do NOT suggest corrections for them in better_sentences. These are phrases our own system recommended, so criticizing them would be inconsistent:\n${acceptedSuggestions.map(s => `- "${s}"`).join('\n')}\n]`
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -94,7 +99,7 @@ export async function POST(request: NextRequest) {
       messages: [
         {
           role: 'user',
-          content: `Please analyze this English diary entry and provide feedback:\n\n${content}`,
+          content: userMessage,
         },
       ],
     }
