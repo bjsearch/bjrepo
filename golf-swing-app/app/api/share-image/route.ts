@@ -16,7 +16,9 @@ export async function POST(req: Request) {
     const store = getStore('share-images')
     await store.set(id, new Blob([uint8], { type: 'image/png' }), { metadata: { contentType: 'image/png', createdAt: new Date().toISOString() } })
 
-    const origin = new URL(req.url).origin
+    const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || new URL(req.url).host
+    const proto = req.headers.get('x-forwarded-proto') || 'https'
+    const origin = `${proto}://${host}`
     const url = `${origin}/api/share-image/${id}`
 
     return NextResponse.json({ url })

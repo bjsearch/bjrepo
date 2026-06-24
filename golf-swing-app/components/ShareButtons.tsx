@@ -299,17 +299,14 @@ export default function ShareButtons({ title, description, captureTargetRef, sha
 
       let imageUrl = 'https://carry-coach.netlify.app/og-image.png'
       if (blob) {
-        const serverUrl = await uploadImageToServer(blob)
-        if (serverUrl) {
-          imageUrl = serverUrl
-        } else {
-          try {
-            const file = new File([blob], 'carry-coach-report.png', { type: 'image/png' })
-            const uploaded = await window.Kakao!.Share.uploadImage({ file: [file] })
-            imageUrl = uploaded.infos.original.url
-          } catch (e) {
-            console.warn('Kakao image upload also failed', e)
-          }
+        try {
+          const file = new File([blob], 'carry-coach-report.png', { type: 'image/png' })
+          const uploaded = await window.Kakao!.Share.uploadImage({ file: [file] })
+          imageUrl = uploaded.infos.original.url
+        } catch (e) {
+          console.warn('Kakao image upload failed, trying server', e)
+          const serverUrl = await uploadImageToServer(blob)
+          if (serverUrl) imageUrl = serverUrl
         }
       }
 
