@@ -279,12 +279,19 @@ export default function ShareButtons({ title, description, captureTargetRef, sha
 
   const handleKakao = useCallback(async () => {
     setKakaoLoading(true)
+    const fallbackCopy = async (toastKey: 'share.kakaoError' | 'share.kakaoNotReady' | 'share.copied') => {
+      try {
+        await navigator.clipboard.writeText(`${title}\n${plainDesc}\n${pageUrl}`)
+        showToast(t(toastKey))
+      } catch {
+        showToast(t('share.copyFailed'))
+      }
+    }
     try {
       const sdkReady = await loadKakaoSdk()
 
       if (!sdkReady || !window.Kakao?.isInitialized()) {
-        await navigator.clipboard.writeText(`${title}\n${plainDesc}\n${pageUrl}`)
-        showToast(t('share.kakaoNotReady'))
+        await fallbackCopy('share.kakaoNotReady')
         return
       }
 
@@ -306,28 +313,30 @@ export default function ShareButtons({ title, description, captureTargetRef, sha
         }
       }
 
-      window.Kakao!.Share.sendDefault({
-        objectType: 'feed',
-        content: {
-          title,
-          description: plainDesc.slice(0, 200),
-          imageUrl,
-          imageWidth: 800,
-          imageHeight: 600,
-          link: { mobileWebUrl: pageUrl, webUrl: pageUrl },
-        },
-        buttons: [
-          { title: t('share.kakaoViewResult'), link: { mobileWebUrl: pageUrl, webUrl: pageUrl } },
-        ],
-      })
+      try {
+        window.Kakao!.Share.sendDefault({
+          objectType: 'feed',
+          content: {
+            title,
+            description: plainDesc.slice(0, 200),
+            imageUrl,
+            imageWidth: 800,
+            imageHeight: 600,
+            link: { mobileWebUrl: pageUrl, webUrl: pageUrl },
+          },
+          buttons: [
+            { title: t('share.kakaoViewResult'), link: { mobileWebUrl: pageUrl, webUrl: pageUrl } },
+          ],
+          serverCallbackArgs: {},
+          installTalk: true,
+        })
+      } catch (sdkErr) {
+        console.error('Kakao sendDefault error', sdkErr)
+        await fallbackCopy('share.kakaoError')
+      }
     } catch (e) {
       console.error('Kakao share failed', e)
-      try {
-        await navigator.clipboard.writeText(`${title}\n${plainDesc}\n${pageUrl}`)
-        showToast(t('share.copied'))
-      } catch {
-        showToast(t('share.copyFailed'))
-      }
+      await fallbackCopy('share.kakaoError')
     } finally {
       setKakaoLoading(false)
     }
@@ -369,11 +378,14 @@ export default function ShareButtons({ title, description, captureTargetRef, sha
       if (!blob) { showToast(t('share.imageFailed')); return }
 
       const file = new File([blob], 'carry-coach-story.png', { type: 'image/png' })
+
+      // Mobile: use Web Share API to share directly to Instagram
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({ title, files: [file] })
         return
       }
 
+      // Desktop: download image and open Instagram
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -381,6 +393,9 @@ export default function ShareButtons({ title, description, captureTargetRef, sha
       a.click()
       URL.revokeObjectURL(url)
       showToast(t('share.instagramCopied'))
+      setTimeout(() => {
+        window.open('https://www.instagram.com/', '_blank', 'noopener,noreferrer')
+      }, 500)
     } catch {
       showToast(t('share.imageFailed'))
     }

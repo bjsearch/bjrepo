@@ -235,6 +235,10 @@ const translations = {
     ko: '카카오톡 공유가 준비되지 않았습니다. 클립보드에 복사합니다.',
     en: 'KakaoTalk sharing not ready. Copying to clipboard instead.',
   },
+  'share.kakaoError': {
+    ko: '카카오톡 공유 실패. 카카오 개발자 콘솔에서 도메인을 등록해주세요. 링크가 클립보드에 복사되었습니다.',
+    en: 'KakaoTalk share failed. Please register your domain in Kakao Developer Console. Link copied to clipboard.',
+  },
   'share.copied': { ko: '📋 클립보드에 복사되었습니다!', en: '📋 Copied to clipboard!' },
   'share.copyFailed': { ko: '공유 정보를 복사하지 못했습니다.', en: 'Failed to copy share info.' },
   'share.kakaoTitle': { ko: '⛳ Carry Coach 스윙 분석 결과', en: '⛳ Carry Coach Swing Analysis' },
