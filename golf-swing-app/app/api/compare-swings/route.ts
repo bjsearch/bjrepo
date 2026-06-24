@@ -2,37 +2,57 @@ import { NextResponse } from 'next/server'
 import { AIConfigError, generateVisionText, isGeminiModel, isProvider } from '@/lib/ai'
 import { isPhaseCount, PHASE_SETS, PhaseCount } from '@/lib/swingPhases'
 
-export async function POST(req: Request) {
-  try {
-    const {
-      framesA,
-      framesB,
-      provider: requestedProvider,
-      geminiModel: requestedGeminiModel,
-      phaseCount: requestedPhaseCount,
-    } = await req.json()
-    const provider = isProvider(requestedProvider) ? requestedProvider : undefined
-    const geminiModel = isGeminiModel(requestedGeminiModel) ? requestedGeminiModel : undefined
-    const phaseCount: PhaseCount = isPhaseCount(requestedPhaseCount) ? requestedPhaseCount : 6
+function isLocale(v: unknown): v is 'ko' | 'en' {
+  return v === 'ko' || v === 'en'
+}
 
-    if (!Array.isArray(framesA) || framesA.length === 0 || !Array.isArray(framesB) || framesB.length === 0) {
-      return NextResponse.json({ error: '비교할 두 영상의 프레임이 모두 필요합니다.' }, { status: 400 })
-    }
+function buildCompareInstructions(
+  usedA: string[],
+  usedB: string[],
+  stageNames: string[],
+  locale: 'ko' | 'en',
+): string {
+  const stageSequence = stageNames.join(' → ')
 
-    const phases = PHASE_SETS[phaseCount]
-    const usedA: string[] = framesA.slice(0, phases.length)
-    const usedB: string[] = framesB.slice(0, phases.length)
-    const stageNames = phases.map((p) => p.label)
-    const stageSequence = stageNames.join(' → ')
-
+  if (locale === 'en') {
     const stageComparisonSchema = stageNames
-      .map(
-        (label) =>
-          `    { "stage": "${label}", "scoreA": 0-100, "scoreB": 0-100, "comparison": "두 스윙의 이 단계를 비교하는 한 문장 (한국어)" }`,
-      )
+      .map((label) => `    { "stage": "${label}", "scoreA": 0-100, "scoreB": 0-100, "comparison": "one sentence comparing the two swings at this stage (English)" }`)
       .join(',\n')
 
-    const instructions = `당신은 PGA/LPGA 투어 경험이 있는 골프 스윙 코치입니다.
+    return `You are a golf swing coach with PGA/LPGA tour experience.
+The images below are frames from **two golf swings** (two people or the same person's two swings), captured at key swing phases.
+
+Image order:
+- First ${usedA.length} images → Video A's swing (${stageSequence})
+- Next ${usedB.length} images → Video B's swing (${stageSequence})
+
+Compare the two swings at each phase (${stageNames.join(', ')}), then respond ONLY with the JSON object below.
+No other text, code blocks, or markdown — just the raw JSON object.
+
+{
+  "overallScoreA": integer 0-100 (Video A overall score),
+  "overallScoreB": integer 0-100 (Video B overall score),
+  "summary": "2-3 sentences summarizing the overall differences between the two swings (English)",
+  "stageComparisons": [
+${stageComparisonSchema}
+  ],
+  "aStrengths": ["3 things Video A does better than B (English, exactly 3, one sentence each)"],
+  "bStrengths": ["3 things Video B does better than A (English, exactly 3, one sentence each)"],
+  "commonIssues": ["common issues found in both swings (English, 1-3, one sentence each)"],
+  "recommendation": "2-3 sentences of overall advice on which swing is better and what each can learn from the other (English)"
+}
+
+Emphasis: In summary, comparison, aStrengths, bStrengths, commonIssues, and recommendation, wrap key phrases with \`**bold**\` and use \`__underline__\` for the single most important action item.
+Since exact swing speed or club path cannot be measured from images, focus on visually observable posture, alignment, balance, and tempo.
+Scoring: Score for an amateur golfer. Do not demand professional perfection. If the basics are in place with no major flaws, score 70+; if overall stable, score 80+. Be encouraging but specific about improvements.
+If either swing is exceptionally good at a professional level, naturally include "Are you a pro golfer? 🏆" in the summary.`
+  }
+
+  const stageComparisonSchema = stageNames
+    .map((label) => `    { "stage": "${label}", "scoreA": 0-100, "scoreB": 0-100, "comparison": "두 스윙의 이 단계를 비교하는 한 문장 (한국어)" }`)
+    .join(',\n')
+
+  return `당신은 PGA/LPGA 투어 경험이 있는 골프 스윙 코치입니다.
 아래 이미지들은 **두 사람(또는 같은 사람의 두 번의 스윙)**의 골프 스윙을 단계별로 캡쳐한 프레임입니다.
 
 이미지 순서:
@@ -60,6 +80,37 @@ ${stageComparisonSchema}
 이미지만으로 정확한 스윙 속도나 club path를 측정할 수 없으므로, 시각적으로 관찰 가능한 자세·정렬·균형·템포 위주로 비교하세요.
 채점 기준: 아마추어 골퍼 기준으로 채점하세요. 프로 수준의 완벽함을 요구하지 마세요. 기본 자세가 잡혀 있고 큰 결함이 없으면 70점 이상, 전체적으로 안정적이면 80점 이상을 주세요. 격려하는 방향으로 너그럽게 채점하되, 개선점은 구체적으로 짚어주세요.
 만약 어느 한쪽 스윙이 매우 뛰어나서 프로 선수 수준으로 판단된다면, summary에 "혹시 프로 골퍼이신가요? 🏆"라는 문구를 자연스럽게 포함해 주세요.`
+}
+
+export async function POST(req: Request) {
+  try {
+    const {
+      framesA,
+      framesB,
+      provider: requestedProvider,
+      geminiModel: requestedGeminiModel,
+      phaseCount: requestedPhaseCount,
+      locale: requestedLocale,
+    } = await req.json()
+    const provider = isProvider(requestedProvider) ? requestedProvider : undefined
+    const geminiModel = isGeminiModel(requestedGeminiModel) ? requestedGeminiModel : undefined
+    const phaseCount: PhaseCount = isPhaseCount(requestedPhaseCount) ? requestedPhaseCount : 6
+    const locale = isLocale(requestedLocale) ? requestedLocale : 'ko'
+
+    if (!Array.isArray(framesA) || framesA.length === 0 || !Array.isArray(framesB) || framesB.length === 0) {
+      return NextResponse.json({
+        error: locale === 'en'
+          ? 'Frames from both videos are required for comparison.'
+          : '비교할 두 영상의 프레임이 모두 필요합니다.',
+      }, { status: 400 })
+    }
+
+    const phases = PHASE_SETS[phaseCount]
+    const usedA: string[] = framesA.slice(0, phases.length)
+    const usedB: string[] = framesB.slice(0, phases.length)
+    const stageNames = phases.map((p) => locale === 'en' ? p.labelEn : p.label)
+
+    const instructions = buildCompareInstructions(usedA, usedB, stageNames, locale)
 
     const imageBlocks = [
       ...usedA.map((base64) => ({ type: 'image' as const, base64 })),
@@ -84,14 +135,18 @@ ${stageComparisonSchema}
     const parsed = parseComparisonJson(responseText)
     if (!parsed) {
       console.error('swing comparison: unparseable AI response', responseText.slice(0, 500))
-      return NextResponse.json({ error: 'AI 응답을 비교 결과로 변환하지 못했습니다.' }, { status: 502 })
+      return NextResponse.json({
+        error: locale === 'en'
+          ? 'Failed to parse AI response into comparison results.'
+          : 'AI 응답을 비교 결과로 변환하지 못했습니다.',
+      }, { status: 502 })
     }
 
     return NextResponse.json(parsed)
   } catch (err) {
     console.error('swing comparison error', err)
     const detail = err instanceof Error ? err.message : String(err)
-    return NextResponse.json({ error: `스윙 비교 분석 중 오류가 발생했습니다. (${detail})` }, { status: 500 })
+    return NextResponse.json({ error: `Swing comparison error. (${detail})` }, { status: 500 })
   }
 }
 

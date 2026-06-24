@@ -3,35 +3,59 @@ import { AIConfigError, generateVisionText, isGeminiModel, isProvider } from '@/
 import { isPhaseCount, PHASE_SETS, PhaseCount } from '@/lib/swingPhases'
 import type { SwingAnalysisResult } from '@/lib/types'
 
-export async function POST(req: Request) {
-  try {
-    const {
-      frames,
-      clubDescription,
-      provider: requestedProvider,
-      geminiModel: requestedGeminiModel,
-      phaseCount: requestedPhaseCount,
-    } = await req.json()
-    const provider = isProvider(requestedProvider) ? requestedProvider : undefined
-    const geminiModel = isGeminiModel(requestedGeminiModel) ? requestedGeminiModel : undefined
-    const phaseCount: PhaseCount = isPhaseCount(requestedPhaseCount) ? requestedPhaseCount : 4
+function isLocale(v: unknown): v is 'ko' | 'en' {
+  return v === 'ko' || v === 'en'
+}
 
-    if (!Array.isArray(frames) || frames.length === 0) {
-      return NextResponse.json({ error: '분석할 프레임이 없습니다.' }, { status: 400 })
-    }
-    if (typeof clubDescription !== 'string' || !clubDescription.trim()) {
-      return NextResponse.json({ error: '클럽 정보가 필요합니다.' }, { status: 400 })
-    }
+function buildInstructions(
+  usedFrames: string[],
+  stageNames: string[],
+  clubDescription: string,
+  locale: 'ko' | 'en',
+): string {
+  const stageSequence = stageNames.join(' → ')
+  const stageScoresSchema = stageNames
+    .map((label) =>
+      locale === 'ko'
+        ? `    { "stage": "${label}", "score": 0-100 사이의 정수, "comment": "한 문장 코멘트 (한국어)" }`
+        : `    { "stage": "${label}", "score": integer 0-100, "comment": "one-sentence comment (English)" }`,
+    )
+    .join(',\n')
 
-    const phases = PHASE_SETS[phaseCount]
-    const usedFrames: string[] = frames.slice(0, phases.length)
-    const stageNames = phases.map((p) => p.label)
-    const stageSequence = stageNames.join(' → ')
-    const stageScoresSchema = stageNames
-      .map((label) => `    { "stage": "${label}", "score": 0-100 사이의 정수, "comment": "한 문장 코멘트 (한국어)" }`)
-      .join(',\n')
+  if (locale === 'en') {
+    return `You are a golf swing coach with PGA/LPGA tour experience.
+The ${usedFrames.length} images below are frames extracted from a user's golf swing video at key swing phases,
+in order: ${stageSequence}.
+Club used: ${clubDescription}
 
-    const instructions = `당신은 PGA/LPGA 투어 경험이 있는 골프 스윙 코치입니다.
+Analyze the swing by examining each phase (${stageNames.join(', ')}), then respond ONLY with the JSON object below.
+No other text, code blocks, or markdown — just the raw JSON object.
+Keep each item concise, one sentence max.
+
+{
+  "score": integer 0-100 overall score,
+  "scoreSummary": "one-sentence summary of the score (English)",
+  "stageScores": [
+${stageScoresSchema}
+  ],
+  "analysis": ["3 analysis points about the swing (English, exactly 3 strings, one sentence each)"],
+  "practiceTips": ["3 specific practice drills to improve this swing (English, exactly 3 strings, one sentence each)"],
+  "recommendedPlayers": [
+    { "name": "player name to study", "reason": "reason for recommendation (English, one sentence)" }
+  ]
+}
+
+stageScores must follow the ${stageNames.length} phases above (${stageNames.join(', ')}) in order, scoring each based on what you observe in the images.
+recommendedPlayers: recommend exactly 2 players, using their real names searchable on YouTube. Factor in the club type (${clubDescription}).
+Since exact swing speed or club path cannot be measured from images, focus on visually observable posture, alignment, balance, and tempo.
+Scoring: Score for an amateur golfer. Do not demand professional perfection. If the basics are in place with no major flaws, score 70+; if overall stable, score 80+. Be encouraging but specific about improvements.
+If the swing is exceptionally good and appears to be at a professional level, naturally include "Are you a pro golfer? 🏆" in the scoreSummary.
+
+Emphasis: In scoreSummary, stageScores[].comment, analysis, and practiceTips, wrap key phrases with \`**bold**\` for emphasis, and use \`__underline__\` for the single most important action item.
+Use emphasis selectively — not every sentence needs it.`
+  }
+
+  return `당신은 PGA/LPGA 투어 경험이 있는 골프 스윙 코치입니다.
 아래 이미지 ${usedFrames.length}장은 한 사용자의 골프 스윙 영상에서 스윙 단계를 기준으로 골라낸 프레임으로,
 순서대로 각각 ${stageSequence} 구간에 해당합니다.
 사용 클럽: ${clubDescription}
@@ -63,6 +87,35 @@ recommendedPlayers는 정확히 2명만 추천하고, 이름은 유튜브에서 
 핵심 표현은 마크다운처럼 \`**굵게**\`로 감싸 강조하고, 그중에서도 가장 중요한 행동 지침 한 가지에는
 \`__밑줄__\`을 추가로 사용하세요 (예: "**어드레스 시 무릎을 살짝 굽혀** 안정적인 자세를 만드세요" / "__임팩트 순간 머리를 고정하세요__").
 모든 문장에 강조가 필요한 것은 아니므로, 정말 핵심적인 부분에만 선택적으로 사용하세요.`
+}
+
+export async function POST(req: Request) {
+  try {
+    const {
+      frames,
+      clubDescription,
+      provider: requestedProvider,
+      geminiModel: requestedGeminiModel,
+      phaseCount: requestedPhaseCount,
+      locale: requestedLocale,
+    } = await req.json()
+    const provider = isProvider(requestedProvider) ? requestedProvider : undefined
+    const geminiModel = isGeminiModel(requestedGeminiModel) ? requestedGeminiModel : undefined
+    const phaseCount: PhaseCount = isPhaseCount(requestedPhaseCount) ? requestedPhaseCount : 4
+    const locale = isLocale(requestedLocale) ? requestedLocale : 'ko'
+
+    if (!Array.isArray(frames) || frames.length === 0) {
+      return NextResponse.json({ error: locale === 'en' ? 'No frames to analyze.' : '분석할 프레임이 없습니다.' }, { status: 400 })
+    }
+    if (typeof clubDescription !== 'string' || !clubDescription.trim()) {
+      return NextResponse.json({ error: locale === 'en' ? 'Club information is required.' : '클럽 정보가 필요합니다.' }, { status: 400 })
+    }
+
+    const phases = PHASE_SETS[phaseCount]
+    const usedFrames: string[] = frames.slice(0, phases.length)
+    const stageNames = phases.map((p) => locale === 'en' ? p.labelEn : p.label)
+
+    const instructions = buildInstructions(usedFrames, stageNames, clubDescription, locale)
 
     let responseText: string
     try {
@@ -82,7 +135,11 @@ recommendedPlayers는 정확히 2명만 추천하고, 이름은 유튜브에서 
     const parsed = parseAnalysisJson(responseText)
     if (!parsed) {
       console.error('swing analysis: unparseable AI response', responseText.slice(0, 500))
-      return NextResponse.json({ error: 'AI 응답을 분석 결과로 변환하지 못했습니다.' }, { status: 502 })
+      return NextResponse.json({
+        error: locale === 'en'
+          ? 'Failed to parse AI response into analysis results.'
+          : 'AI 응답을 분석 결과로 변환하지 못했습니다.',
+      }, { status: 502 })
     }
 
     return NextResponse.json(parsed)
@@ -90,7 +147,7 @@ recommendedPlayers는 정확히 2명만 추천하고, 이름은 유튜브에서 
     console.error('swing analysis error', err)
     const detail = err instanceof Error ? err.message : String(err)
     return NextResponse.json(
-      { error: `스윙 분석 중 오류가 발생했습니다. (${detail})` },
+      { error: `Swing analysis error. (${detail})` },
       { status: 500 },
     )
   }

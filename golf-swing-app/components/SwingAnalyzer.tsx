@@ -111,7 +111,7 @@ async function detectPhaseFrames(
 }
 
 export default function SwingAnalyzer() {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [file, setFile] = useState<File | null>(null)
   const [videoUrl, setVideoUrl] = useState<string | null>(null)
   const [videoDuration, setVideoDuration] = useState<number | null>(null)
@@ -247,6 +247,7 @@ export default function SwingAnalyzer() {
             provider,
             geminiModel,
             phaseCount,
+            locale,
           }),
         })
       } finally {
@@ -539,7 +540,7 @@ export default function SwingAnalyzer() {
             regionAverageScore={regionAverageScore}
             regionLabel={regionLabel}
             frames={frames}
-            frameLabels={phaseLabels(framePhaseCount)}
+            frameLabels={phaseLabels(framePhaseCount, locale)}
             onFrameFeedback={handleFrameFeedback}
           />
         </>

@@ -107,7 +107,7 @@ type AnalysisStatus = 'idle' | 'extracting' | 'detecting' | 'analyzing' | 'done'
 const card = 'rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.35)]'
 
 export default function SwingCompare() {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [slots, setSlots] = useState<[VideoSlot, VideoSlot]>([emptySlot(), emptySlot()])
   const videoRefs = [useRef<HTMLVideoElement>(null), useRef<HTMLVideoElement>(null)]
   const fileInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)]
@@ -291,7 +291,7 @@ export default function SwingCompare() {
       try {
         res = await fetch('/api/compare-swings', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ framesA, framesB, provider, geminiModel, phaseCount }),
+          body: JSON.stringify({ framesA, framesB, provider, geminiModel, phaseCount, locale }),
         })
       } finally { window.clearInterval(analyzeTimer) }
 
