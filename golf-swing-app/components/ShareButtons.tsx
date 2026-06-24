@@ -17,19 +17,14 @@ declare global {
 }
 
 const KAKAO_SDK_URL = 'https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js'
+const KAKAO_JS_KEY = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || '200cb8d714463d5558c7a3454e161fcf'
 let kakaoLoadPromise: Promise<boolean> | null = null
 
 function loadKakaoSdk(): Promise<boolean> {
   if (kakaoLoadPromise) return kakaoLoadPromise
 
-  const key = process.env.NEXT_PUBLIC_KAKAO_JS_KEY
-  if (!key) {
-    kakaoLoadPromise = Promise.resolve(false)
-    return kakaoLoadPromise
-  }
-
   if (window.Kakao) {
-    if (!window.Kakao.isInitialized()) window.Kakao.init(key)
+    if (!window.Kakao.isInitialized()) window.Kakao.init(KAKAO_JS_KEY)
     kakaoLoadPromise = Promise.resolve(true)
     return kakaoLoadPromise
   }
@@ -39,8 +34,12 @@ function loadKakaoSdk(): Promise<boolean> {
     script.src = KAKAO_SDK_URL
     script.async = true
     script.onload = () => {
-      if (window.Kakao && !window.Kakao.isInitialized()) {
-        window.Kakao.init(key)
+      try {
+        if (window.Kakao && !window.Kakao.isInitialized()) {
+          window.Kakao.init(KAKAO_JS_KEY)
+        }
+      } catch (e) {
+        console.error('Kakao SDK init failed', e)
       }
       resolve(!!window.Kakao?.isInitialized())
     }
@@ -92,7 +91,7 @@ export default function ShareButtons({ title, description, captureTargetRef }: S
 
       if (!sdkReady || !window.Kakao?.isInitialized()) {
         await navigator.clipboard.writeText(`${title}\n${plainDesc}\n${pageUrl}`)
-        showToast(t('share.copied'))
+        showToast(t('share.kakaoNotReady'))
         return
       }
 
@@ -104,8 +103,8 @@ export default function ShareButtons({ title, description, captureTargetRef }: S
           const file = new File([blob], 'carry-coach-report.png', { type: 'image/png' })
           const uploaded = await window.Kakao!.Share.uploadImage({ file: [file] })
           imageUrl = uploaded.infos.original.url
-        } catch {
-          // fall back to default OG image
+        } catch (e) {
+          console.warn('Kakao image upload failed, using default image', e)
         }
       }
 
@@ -123,8 +122,14 @@ export default function ShareButtons({ title, description, captureTargetRef }: S
           { title: t('share.kakaoViewResult'), link: { mobileWebUrl: pageUrl, webUrl: pageUrl } },
         ],
       })
-    } catch {
-      showToast(t('share.copyFailed'))
+    } catch (e) {
+      console.error('Kakao share failed', e)
+      try {
+        await navigator.clipboard.writeText(`${title}\n${plainDesc}\n${pageUrl}`)
+        showToast(t('share.copied'))
+      } catch {
+        showToast(t('share.copyFailed'))
+      }
     } finally {
       setKakaoLoading(false)
     }
