@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { extractFrames } from '@/lib/extractFrames'
-import { PHASE_SETS, phaseCountForProvider, phaseLabels } from '@/lib/swingPhases'
+import { PHASE_SETS, phaseCountForProvider } from '@/lib/swingPhases'
 import { buildPhaseFeedbackHint } from '@/lib/phaseFeedback'
 import { AI_PROVIDERS, AIProvider, DEFAULT_GEMINI_MODEL, GEMINI_MODELS } from '@/lib/types'
 import SwingLoaderAnimation from './SwingLoaderAnimation'
@@ -121,8 +121,6 @@ export default function SwingCompare() {
   const [analysisProgress, setAnalysisProgress] = useState(0)
   const [analysisError, setAnalysisError] = useState<string | null>(null)
   const [comparisonResult, setComparisonResult] = useState<ComparisonResult | null>(null)
-  const [phaseFramesA, setPhaseFramesA] = useState<string[]>([])
-  const [phaseFramesB, setPhaseFramesB] = useState<string[]>([])
 
   const bothLoaded = slots[0].duration != null && slots[1].duration != null
   const isBusy = analysisStatus === 'extracting' || analysisStatus === 'detecting' || analysisStatus === 'analyzing'
@@ -143,8 +141,6 @@ export default function SwingCompare() {
     setPlaying(false)
     setCapturedImage(null)
     setComparisonResult(null)
-    setPhaseFramesA([])
-    setPhaseFramesB([])
   }
 
   function handleMetadata(idx: 0 | 1, e: React.SyntheticEvent<HTMLVideoElement>) {
@@ -260,7 +256,6 @@ export default function SwingCompare() {
   async function handleCompareAnalyze() {
     if (!slots[0].file || !slots[1].file) return
     setAnalysisError(null); setComparisonResult(null); setAnalysisProgress(0)
-    setPhaseFramesA([]); setPhaseFramesB([])
 
     try {
       const phaseCount = phaseCountForProvider(provider)
@@ -290,7 +285,6 @@ export default function SwingCompare() {
           detectPhaseFrames(candidatesB, phaseCount, feedbackHint),
         ])
       } finally { window.clearInterval(detectTimer) }
-      setPhaseFramesA(framesA); setPhaseFramesB(framesB)
       setAnalysisProgress(66)
 
       // 3. Compare analysis
@@ -325,8 +319,6 @@ export default function SwingCompare() {
   const RATES = [0.25, 0.5, 1, 1.5, 2]
   const slotLabels = ['영상 A', '영상 B'] as const
   const stageLabel = analysisStatus === 'extracting' ? '프레임 추출' : analysisStatus === 'detecting' ? '스윙 구간 탐지' : analysisStatus === 'analyzing' ? 'AI 비교 분석' : ''
-  const currentPhaseCount = phaseCountForProvider(provider)
-  const labels = phaseLabels(currentPhaseCount)
 
   return (
     <div className="space-y-6">
@@ -468,33 +460,6 @@ export default function SwingCompare() {
             </div>
           </div>
           <img src={capturedImage} alt="스윙 비교 캡쳐" className="w-full rounded-xl ring-1 ring-white/10" />
-        </section>
-      )}
-
-      {/* Phase frames side-by-side */}
-      {phaseFramesA.length > 0 && phaseFramesB.length > 0 && (
-        <section className={`${card} p-6`}>
-          <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-slate-100">
-            <span className="text-xl" aria-hidden>🖼️</span> 단계별 프레임 비교
-          </h3>
-          <div className="space-y-3">
-            {labels.map((label, i) => (
-              <div key={i} className="space-y-1">
-                <p className="text-xs font-semibold text-slate-400">{label}</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {[phaseFramesA[i], phaseFramesB[i]].map((frame, j) =>
-                    frame ? (
-                      <div key={j}>
-                        <img src={`data:image/jpeg;base64,${frame}`} alt={`${slotLabels[j]} ${label}`}
-                          className="w-full aspect-video object-cover rounded-lg ring-1 ring-white/10 bg-black/40" />
-                        <p className="text-center text-[10px] text-slate-500 mt-0.5">{slotLabels[j]}</p>
-                      </div>
-                    ) : null,
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
         </section>
       )}
 
