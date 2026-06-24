@@ -367,6 +367,9 @@ export default function AnalysisResult({
           title={shareTitle}
           description={shareDesc}
           captureTargetRef={captureRef}
+          score={result.score}
+          grade={gradeLabel}
+          summary={result.scoreSummary}
         />
       </section>
     </div>

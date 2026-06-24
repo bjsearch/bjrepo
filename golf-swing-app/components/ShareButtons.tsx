@@ -52,14 +52,181 @@ function loadKakaoSdk(): Promise<boolean> {
   return kakaoLoadPromise
 }
 
+function scoreColor(score: number): string {
+  if (score >= 80) return '#a3e635'
+  if (score >= 60) return '#fbbf24'
+  return '#fb7185'
+}
+
+function renderStoryCard(
+  score: number,
+  grade: string,
+  summary: string,
+  dateStr: string,
+): HTMLCanvasElement {
+  const W = 1080
+  const H = 1920
+  const canvas = document.createElement('canvas')
+  canvas.width = W
+  canvas.height = H
+  const ctx = canvas.getContext('2d')!
+
+  // Background gradient
+  const bg = ctx.createLinearGradient(0, 0, 0, H)
+  bg.addColorStop(0, '#0b1410')
+  bg.addColorStop(0.5, '#0f2118')
+  bg.addColorStop(1, '#0b1410')
+  ctx.fillStyle = bg
+  ctx.fillRect(0, 0, W, H)
+
+  // Ambient glow circles
+  ctx.globalAlpha = 0.15
+  const grad1 = ctx.createRadialGradient(200, 300, 0, 200, 300, 400)
+  grad1.addColorStop(0, '#10b981')
+  grad1.addColorStop(1, 'transparent')
+  ctx.fillStyle = grad1
+  ctx.fillRect(0, 0, W, H)
+
+  const grad2 = ctx.createRadialGradient(880, 1400, 0, 880, 1400, 500)
+  grad2.addColorStop(0, '#84cc16')
+  grad2.addColorStop(1, 'transparent')
+  ctx.fillStyle = grad2
+  ctx.fillRect(0, 0, W, H)
+  ctx.globalAlpha = 1
+
+  // App name
+  ctx.textAlign = 'center'
+  ctx.fillStyle = 'rgba(163,230,53,0.6)'
+  ctx.font = '600 32px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+  ctx.letterSpacing = '8px'
+  ctx.fillText('CARRY COACH', W / 2, 280)
+  ctx.letterSpacing = '0px'
+
+  // Golf emoji
+  ctx.font = '80px serif'
+  ctx.fillText('⛳', W / 2, 400)
+
+  // Score ring
+  const cx = W / 2
+  const cy = 700
+  const radius = 180
+  const lineW = 24
+  const color = scoreColor(score)
+
+  // Track
+  ctx.beginPath()
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2)
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)'
+  ctx.lineWidth = lineW
+  ctx.stroke()
+
+  // Score arc
+  const startAngle = -Math.PI / 2
+  const endAngle = startAngle + (Math.PI * 2 * score) / 100
+  ctx.beginPath()
+  ctx.arc(cx, cy, radius, startAngle, endAngle)
+  ctx.strokeStyle = color
+  ctx.lineWidth = lineW
+  ctx.lineCap = 'round'
+  ctx.shadowColor = color
+  ctx.shadowBlur = 30
+  ctx.stroke()
+  ctx.shadowBlur = 0
+
+  // Score number
+  ctx.fillStyle = color
+  ctx.font = 'bold 120px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+  ctx.fillText(`${score}`, cx, cy + 40)
+
+  // /100
+  ctx.fillStyle = 'rgba(255,255,255,0.3)'
+  ctx.font = '500 32px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+  ctx.fillText('/ 100', cx, cy + 85)
+
+  // Grade badge
+  ctx.fillStyle = 'rgba(16,185,129,0.15)'
+  const badgeW = 360
+  const badgeH = 60
+  const badgeX = cx - badgeW / 2
+  const badgeY = 960
+  roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 30)
+  ctx.fill()
+  ctx.strokeStyle = 'rgba(52,211,153,0.3)'
+  ctx.lineWidth = 1.5
+  roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 30)
+  ctx.stroke()
+
+  ctx.fillStyle = '#6ee7b7'
+  ctx.font = 'bold 28px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+  ctx.fillText(`🏅 ${grade}`, cx, badgeY + 40)
+
+  // Summary text (word wrap)
+  const plainSummary = summary.replace(/\*\*/g, '').replace(/__/g, '')
+  ctx.fillStyle = 'rgba(226,232,240,0.85)'
+  ctx.font = '400 30px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+  const lines = wrapText(ctx, plainSummary, W - 160, 30)
+  const summaryY = 1120
+  lines.slice(0, 4).forEach((line, i) => {
+    ctx.fillText(line, cx, summaryY + i * 48)
+  })
+
+  // Date
+  ctx.fillStyle = 'rgba(148,163,184,0.6)'
+  ctx.font = '400 26px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+  ctx.fillText(dateStr, cx, 1500)
+
+  // Bottom branding
+  ctx.fillStyle = 'rgba(148,163,184,0.3)'
+  ctx.font = '400 24px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+  ctx.letterSpacing = '4px'
+  ctx.fillText('carry-coach.netlify.app', cx, H - 120)
+  ctx.letterSpacing = '0px'
+
+  return canvas
+}
+
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath()
+  ctx.moveTo(x + r, y)
+  ctx.lineTo(x + w - r, y)
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r)
+  ctx.lineTo(x + w, y + h - r)
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
+  ctx.lineTo(x + r, y + h)
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r)
+  ctx.lineTo(x, y + r)
+  ctx.quadraticCurveTo(x, y, x + r, y)
+  ctx.closePath()
+}
+
+function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, _fontSize: number): string[] {
+  const words = text.split('')
+  const lines: string[] = []
+  let current = ''
+  for (const char of words) {
+    const test = current + char
+    if (ctx.measureText(test).width > maxWidth && current) {
+      lines.push(current)
+      current = char
+    } else {
+      current = test
+    }
+  }
+  if (current) lines.push(current)
+  return lines
+}
+
 interface ShareButtonsProps {
   title: string
   description: string
   captureTargetRef: React.RefObject<HTMLDivElement | null>
   shareDate?: string
+  score?: number
+  grade?: string
+  summary?: string
 }
 
-export default function ShareButtons({ title, description, captureTargetRef, shareDate }: ShareButtonsProps) {
+export default function ShareButtons({ title, description, captureTargetRef, shareDate, score, grade, summary }: ShareButtonsProps) {
   const { t } = useI18n()
   const [toast, setToast] = useState<string | null>(null)
   const [kakaoLoading, setKakaoLoading] = useState(false)
@@ -164,7 +331,7 @@ export default function ShareButtons({ title, description, captureTargetRef, sha
     } finally {
       setKakaoLoading(false)
     }
-  }, [title, plainDesc, pageUrl, t, showToast, captureToBlob])
+  }, [title, plainDesc, pageUrl, t, showToast, captureToBlob, uploadImageToServer])
 
   const handleTwitter = useCallback(() => {
     const text = encodeURIComponent(`${title}\n${plainDesc.slice(0, 200)}`)
@@ -190,26 +357,34 @@ export default function ShareButtons({ title, description, captureTargetRef, sha
 
   const handleInstagram = useCallback(async () => {
     try {
-      const blob = await captureToBlob()
+      const dateStr = shareDate ?? new Date().toISOString().slice(0, 10)
+      const storyScore = score ?? 0
+      const storyGrade = grade ?? ''
+      const storySummary = summary ?? plainDesc
+
+      const canvas = renderStoryCard(storyScore, storyGrade, storySummary, dateStr)
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob((b) => resolve(b), 'image/png'),
+      )
       if (!blob) { showToast(t('share.imageFailed')); return }
-      if (navigator.share && navigator.canShare?.({ files: [new File([blob], 'swing.png', { type: 'image/png' })] })) {
-        await navigator.share({
-          title,
-          files: [new File([blob], 'carry-coach-swing.png', { type: 'image/png' })],
-        })
+
+      const file = new File([blob], 'carry-coach-story.png', { type: 'image/png' })
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ title, files: [file] })
         return
       }
+
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `carry-coach-instagram-${Date.now()}.png`
+      a.download = `carry-coach-story-${Date.now()}.png`
       a.click()
       URL.revokeObjectURL(url)
       showToast(t('share.imageSaved'))
     } catch {
       showToast(t('share.imageFailed'))
     }
-  }, [captureToBlob, title, showToast, t])
+  }, [score, grade, summary, shareDate, plainDesc, title, showToast, t])
 
   return (
     <div className="flex flex-col items-center gap-2">
