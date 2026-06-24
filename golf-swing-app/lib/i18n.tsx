@@ -241,13 +241,25 @@ const translations = {
   'share.kakaoScoreLabel': { ko: '종합 점수', en: 'Overall Score' },
   'share.kakaoViewResult': { ko: '분석 결과 보기', en: 'View Analysis' },
   'share.twitter': { ko: 'X(트위터) 공유', en: 'Share on X (Twitter)' },
-  'share.instagram': { ko: '인스타그램용 이미지 저장', en: 'Save image for Instagram' },
+  'share.instagram': { ko: '인스타그램 스토리', en: 'Instagram Story' },
+  'share.instagramCopied': { ko: '📋 이미지가 저장되었습니다. 인스타그램에서 스토리를 올려주세요!', en: '📋 Image saved. Open Instagram to post your story!' },
   'share.saveImage': { ko: '이미지로 저장', en: 'Save as Image' },
   'share.imageSaved': { ko: '📸 이미지가 저장되었습니다!', en: '📸 Image saved!' },
   'share.imageFailed': { ko: '이미지 저장에 실패했습니다.', en: 'Failed to save image.' },
   'share.shareTitle': { ko: '공유하기', en: 'Share' },
   'share.kakaoCompareTitle': { ko: '⛳ Carry Coach 스윙 비교 결과', en: '⛳ Carry Coach Swing Comparison' },
   'share.compareScoreLabel': { ko: '비교 점수', en: 'Comparison Score' },
+
+  // Club detection
+  'clubDetect.detecting': { ko: '클럽 종류 인식 중...', en: 'Detecting club type...' },
+  'clubDetect.detected': { ko: 'AI가 인식한 클럽:', en: 'AI detected club:' },
+  'clubDetect.confidence.high': { ko: '확신도 높음', en: 'High confidence' },
+  'clubDetect.confidence.medium': { ko: '확신도 보통', en: 'Medium confidence' },
+  'clubDetect.confidence.low': { ko: '확신도 낮음', en: 'Low confidence' },
+  'clubDetect.correct': { ko: '👍 맞아요', en: '👍 Correct' },
+  'clubDetect.incorrect': { ko: '👎 아니에요', en: '👎 Wrong' },
+  'clubDetect.feedbackDone': { ko: '피드백이 저장되었습니다', en: 'Feedback saved' },
+  'clubDetect.failed': { ko: '클럽 인식 실패 — 직접 선택해 주세요', en: 'Club detection failed — please select manually' },
 } as const
 
 export type TranslationKey = keyof typeof translations

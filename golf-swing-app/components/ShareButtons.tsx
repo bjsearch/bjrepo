@@ -380,7 +380,7 @@ export default function ShareButtons({ title, description, captureTargetRef, sha
       a.download = `carry-coach-story-${Date.now()}.png`
       a.click()
       URL.revokeObjectURL(url)
-      showToast(t('share.imageSaved'))
+      showToast(t('share.instagramCopied'))
     } catch {
       showToast(t('share.imageFailed'))
     }
