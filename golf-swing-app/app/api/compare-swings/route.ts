@@ -44,7 +44,7 @@ ${stageComparisonSchema}
 
 Emphasis: In summary, comparison, aStrengths, bStrengths, commonIssues, and recommendation, wrap key phrases with \`**bold**\` and use \`__underline__\` for the single most important action item.
 Since exact swing speed or club path cannot be measured from images, focus on visually observable posture, alignment, balance, and tempo.
-Scoring: Score for an amateur golfer. Do not demand professional perfection. If the basics are in place with no major flaws, score 70+; if overall stable, score 80+. Be encouraging but specific about improvements.
+Scoring: Be strict and realistic. Use the full 0-100 range. Most amateur golfers should fall between 40-70. Reserve 80+ for genuinely advanced swings with near-flawless mechanics. 90+ is practically tour-level. A beginner should score 30-50; a mid-handicapper 50-65; a low-handicapper 65-75. Do not inflate scores — honest assessment helps improvement. Be specific about what costs points.
 If either swing is exceptionally good at a professional level, naturally include "Are you a pro golfer? 🏆" in the summary.`
   }
 
@@ -78,7 +78,7 @@ ${stageComparisonSchema}
 강조 표시: summary, comparison, aStrengths, bStrengths, commonIssues, recommendation 문장에서
 핵심 표현은 \`**굵게**\`로 감싸 강조하고, 가장 중요한 행동 지침에는 \`__밑줄__\`을 사용하세요.
 이미지만으로 정확한 스윙 속도나 club path를 측정할 수 없으므로, 시각적으로 관찰 가능한 자세·정렬·균형·템포 위주로 비교하세요.
-채점 기준: 아마추어 골퍼 기준으로 채점하세요. 프로 수준의 완벽함을 요구하지 마세요. 기본 자세가 잡혀 있고 큰 결함이 없으면 70점 이상, 전체적으로 안정적이면 80점 이상을 주세요. 격려하는 방향으로 너그럽게 채점하되, 개선점은 구체적으로 짚어주세요.
+채점 기준: 엄격하고 현실적으로 채점하세요. 0-100 전 범위를 활용하세요. 대부분의 아마추어는 40-70점 사이여야 합니다. 80점 이상은 메카닉이 거의 완벽한 상급자에게만, 90점 이상은 투어 프로 수준입니다. 초보자 30-50점, 중급자 50-65점, 로우 핸디캐퍼 65-75점이 적절합니다. 점수를 부풀리지 말고 감점 요인을 구체적으로 짚어주세요.
 만약 어느 한쪽 스윙이 매우 뛰어나서 프로 선수 수준으로 판단된다면, summary에 "혹시 프로 골퍼이신가요? 🏆"라는 문구를 자연스럽게 포함해 주세요.`
 }
 

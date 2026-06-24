@@ -48,7 +48,7 @@ ${stageScoresSchema}
 stageScores must follow the ${stageNames.length} phases above (${stageNames.join(', ')}) in order, scoring each based on what you observe in the images.
 recommendedPlayers: recommend exactly 2 players, using their real names searchable on YouTube. Factor in the club type (${clubDescription}).
 Since exact swing speed or club path cannot be measured from images, focus on visually observable posture, alignment, balance, and tempo.
-Scoring: Score for an amateur golfer. Do not demand professional perfection. If the basics are in place with no major flaws, score 70+; if overall stable, score 80+. Be encouraging but specific about improvements.
+Scoring: Be strict and realistic. Use the full 0-100 range. Most amateur golfers should fall between 40-70. Reserve 80+ for genuinely advanced swings with near-flawless mechanics. 90+ is practically tour-level — almost never appropriate for amateurs. A beginner with obvious flaws should score 30-50; a mid-handicapper with decent basics but clear issues should score 50-65; a low-handicapper with solid fundamentals should score 65-75. Do not inflate scores to be encouraging — honest assessment helps improvement. Be specific about what costs points.
 If the swing is exceptionally good and appears to be at a professional level, naturally include "Are you a pro golfer? 🏆" in the scoreSummary.
 
 Emphasis: In scoreSummary, stageScores[].comment, analysis, and practiceTips, wrap key phrases with \`**bold**\` for emphasis, and use \`__underline__\` for the single most important action item.
@@ -80,7 +80,7 @@ ${stageScoresSchema}
 stageScores는 반드시 위 ${stageNames.length}단계(${stageNames.join(', ')}) 순서로, 각 단계를 이미지에서 관찰한 내용에 근거해 개별 점수를 매기세요.
 recommendedPlayers는 정확히 2명만 추천하고, 이름은 유튜브에서 검색 가능한 실제 활동명(영문 또는 한글 정식 명칭)으로 작성하세요. 클럽 종류(${clubDescription})의 특성도 분석에 반영하세요.
 이미지만으로 정확한 스윙 속도나 club path 등을 측정할 수 없는 점을 감안해, 시각적으로 관찰 가능한 자세·정렬·균형·템포 위주로 분석하세요.
-채점 기준: 아마추어 골퍼 기준으로 채점하세요. 프로 수준의 완벽함을 요구하지 마세요. 기본 자세가 잡혀 있고 큰 결함이 없으면 70점 이상, 전체적으로 안정적이면 80점 이상을 주세요. 종합 점수와 단계별 점수 모두 격려하는 방향으로 너그럽게 채점하되, 개선점은 구체적으로 짚어주세요.
+채점 기준: 엄격하고 현실적으로 채점하세요. 0-100 전 범위를 활용하세요. 대부분의 아마추어 골퍼는 40-70점 사이여야 합니다. 80점 이상은 메카닉이 거의 완벽한 상급자에게만, 90점 이상은 투어 프로 수준으로 아마추어에게는 거의 해당되지 않습니다. 뚜렷한 결함이 있는 초보자는 30-50점, 기본기는 있지만 문제가 보이는 중급자는 50-65점, 기본기가 탄탄한 로우 핸디캐퍼는 65-75점이 적절합니다. 격려 목적으로 점수를 부풀리지 마세요 — 솔직한 평가가 실력 향상에 도움이 됩니다. 감점 요인을 구체적으로 짚어주세요.
 만약 스윙이 매우 뛰어나서 프로 선수 수준으로 판단된다면, scoreSummary에 "혹시 프로 골퍼이신가요? 🏆"라는 문구를 자연스럽게 포함해 주세요.
 
 강조 표시: scoreSummary, stageScores[].comment, analysis, practiceTips 문장에서 사용자가 꼭 기억해야 할
