@@ -494,7 +494,7 @@ export default function SwingAnalyzer() {
           <div className="rounded-xl border border-lime-400/20 bg-lime-400/5 px-3 py-2 space-y-1.5">
             <p className="text-xs text-lime-300">
               {t('clubDetect.detected')}: <span className="font-bold">{detectedClub.category}</span>
-              <span className="ml-1.5 text-slate-400">({t(`clubDetect.confidence.${detectedClub.confidence}`)})</span>
+              <span className="ml-1.5 text-slate-400">({t(detectedClub.confidence === 'high' ? 'clubDetect.confidence.high' : detectedClub.confidence === 'medium' ? 'clubDetect.confidence.medium' : 'clubDetect.confidence.low')})</span>
             </p>
             {detectedClub.reason && (
               <p className="text-[11px] text-slate-500">{detectedClub.reason}</p>
