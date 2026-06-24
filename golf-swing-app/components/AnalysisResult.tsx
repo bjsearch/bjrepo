@@ -370,6 +370,11 @@ export default function AnalysisResult({
           score={result.score}
           grade={gradeLabel}
           summary={result.scoreSummary}
+          topFrame={(() => {
+            if (!frames || !frameLabels) return undefined
+            const topIdx = frameLabels.findIndex((l) => l.includes('백스윙 탑') || l.includes('Top of Backswing'))
+            return topIdx >= 0 ? frames[topIdx] : frames[1]
+          })()}
         />
       </section>
     </div>
