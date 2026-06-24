@@ -84,6 +84,26 @@ export default function ShareButtons({ title, description, captureTargetRef }: S
     return new Promise((resolve) => canvas.toBlob((b) => resolve(b), 'image/png'))
   }, [captureTargetRef])
 
+  const uploadImageToServer = useCallback(async (blob: Blob): Promise<string | null> => {
+    try {
+      const reader = new FileReader()
+      const dataUrl = await new Promise<string>((resolve) => {
+        reader.onloadend = () => resolve(reader.result as string)
+        reader.readAsDataURL(blob)
+      })
+      const res = await fetch('/api/share-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: dataUrl }),
+      })
+      if (!res.ok) return null
+      const data = await res.json()
+      return data.url ?? null
+    } catch {
+      return null
+    }
+  }, [])
+
   const handleKakao = useCallback(async () => {
     setKakaoLoading(true)
     try {
@@ -99,12 +119,17 @@ export default function ShareButtons({ title, description, captureTargetRef }: S
 
       let imageUrl = 'https://carry-coach.netlify.app/og-image.png'
       if (blob) {
-        try {
-          const file = new File([blob], 'carry-coach-report.png', { type: 'image/png' })
-          const uploaded = await window.Kakao!.Share.uploadImage({ file: [file] })
-          imageUrl = uploaded.infos.original.url
-        } catch (e) {
-          console.warn('Kakao image upload failed, using default image', e)
+        const serverUrl = await uploadImageToServer(blob)
+        if (serverUrl) {
+          imageUrl = serverUrl
+        } else {
+          try {
+            const file = new File([blob], 'carry-coach-report.png', { type: 'image/png' })
+            const uploaded = await window.Kakao!.Share.uploadImage({ file: [file] })
+            imageUrl = uploaded.infos.original.url
+          } catch (e) {
+            console.warn('Kakao image upload also failed', e)
+          }
         }
       }
 
