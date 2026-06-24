@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { SwingAnalysisResult, swingGrade, youtubeSearchUrl } from '@/lib/types'
+import { SwingAnalysisResult, youtubeSearchUrl } from '@/lib/types'
+import { useI18n } from '@/lib/i18n'
 
-/** Renders feedback text, turning `**bold**` and `__underline__` markers into emphasis. */
 function renderEmphasis(text: string): React.ReactNode {
   const parts = text.split(/(\*\*[^*]+\*\*|__[^_]+__)/g)
   return parts.map((part, i) => {
@@ -61,7 +61,18 @@ function ScoreGauge({ score }: { score: number }) {
 }
 
 function GradeBadge({ score }: { score: number }) {
-  const grade = swingGrade(score)
+  const { t } = useI18n()
+
+  function gradeInfo(s: number): { label: string; description: string } {
+    if (s >= 90) return { label: t('grade.tourPro'), description: t('grade.tourProDesc') }
+    if (s >= 80) return { label: t('grade.advanced'), description: t('grade.advancedDesc') }
+    if (s >= 70) return { label: t('grade.upperIntermediate'), description: t('grade.upperIntermediateDesc') }
+    if (s >= 60) return { label: t('grade.intermediate'), description: t('grade.intermediateDesc') }
+    if (s >= 50) return { label: t('grade.lowerIntermediate'), description: t('grade.lowerIntermediateDesc') }
+    return { label: t('grade.beginner'), description: t('grade.beginnerDesc') }
+  }
+
+  const grade = gradeInfo(score)
   return (
     <div className="flex flex-col items-center gap-1.5">
       <span className="text-xs font-bold text-emerald-300 bg-emerald-400/10 border border-emerald-400/25 rounded-full px-3.5 py-1">
@@ -103,6 +114,7 @@ function ScoreComparison({
   label: string
   theme: ComparisonTheme
 }) {
+  const { t, locale } = useI18n()
   const diff = Math.round((score - average) * 10) / 10
   const avgLabel = average.toFixed(1)
   const colors = COMPARISON_COLORS[theme]
@@ -110,7 +122,9 @@ function ScoreComparison({
   if (Math.abs(diff) < 0.5) {
     return (
       <p className={`text-xs font-semibold rounded-full px-3.5 py-1.5 border ${colors.similar}`}>
-        ─ {label}({avgLabel}점)와 비슷해요
+        {locale === 'ko'
+          ? `─ ${label}(${avgLabel}점)와 비슷해요`
+          : `─ Similar to ${label} (${avgLabel}pts)`}
       </p>
     )
   }
@@ -118,7 +132,9 @@ function ScoreComparison({
   const isHigher = diff > 0
   return (
     <p className={`text-xs font-semibold rounded-full px-3.5 py-1.5 border ${isHigher ? colors.higher : colors.lower}`}>
-      {isHigher ? '▲' : '▼'} {label}({avgLabel}점)보다 {Math.abs(diff).toFixed(1)}점 {isHigher ? '높아요' : '낮아요'}
+      {locale === 'ko'
+        ? `${isHigher ? '▲' : '▼'} ${label}(${avgLabel}점)보다 ${Math.abs(diff).toFixed(1)}점 ${isHigher ? '높아요' : '낮아요'}`
+        : `${isHigher ? '▲' : '▼'} ${Math.abs(diff).toFixed(1)}pts ${isHigher ? 'higher' : 'lower'} than ${label} (${avgLabel}pts)`}
     </p>
   )
 }
@@ -145,6 +161,7 @@ function StageScoreBar({ stage, score, comment }: { stage: string; score: number
 type FrameRating = 'accurate' | 'inaccurate'
 
 function FrameFeedback({ onRate }: { onRate: (accurate: boolean) => void }) {
+  const { t } = useI18n()
   const [rating, setRating] = useState<FrameRating | null>(null)
 
   function handleRate(accurate: boolean) {
@@ -162,7 +179,7 @@ function FrameFeedback({ onRate }: { onRate: (accurate: boolean) => void }) {
             : 'text-rose-300 bg-rose-500/10 border-rose-400/25'
         }`}
       >
-        {rating === 'accurate' ? '✓ 정확해요로 평가했어요' : '✗ 부정확해요로 평가했어요 — 다음 분석에 반영할게요'}
+        {rating === 'accurate' ? t('result.ratedAccurate') : t('result.ratedInaccurate')}
       </p>
     )
   }
@@ -174,14 +191,14 @@ function FrameFeedback({ onRate }: { onRate: (accurate: boolean) => void }) {
         onClick={() => handleRate(true)}
         className="flex-1 text-[11px] font-semibold rounded-full px-2 py-1 border border-lime-400/25 text-lime-300 bg-lime-400/5 hover:bg-lime-400/15 transition"
       >
-        👍 정확해요
+        {t('result.feedbackAccurate')}
       </button>
       <button
         type="button"
         onClick={() => handleRate(false)}
         className="flex-1 text-[11px] font-semibold rounded-full px-2 py-1 border border-rose-400/25 text-rose-300 bg-rose-500/5 hover:bg-rose-500/15 transition"
       >
-        👎 부정확해요
+        {t('result.feedbackInaccurate')}
       </button>
     </div>
   )
@@ -200,41 +217,36 @@ export default function AnalysisResult({
   onFrameFeedback,
 }: {
   result: SwingAnalysisResult
-  /** The user's own average score across past analyses, for comparison. Omit/null if there's no history yet. */
   myAverageScore?: number | null
-  /** The average score across every user's analyses, for comparison. Omit/null if unavailable. */
   globalAverageScore?: number | null
-  /** The average score across analyses recorded in the user's region, for comparison. Omit/null if unavailable. */
   regionAverageScore?: number | null
-  /** Human-readable region label (e.g. "서울특별시") matching `regionAverageScore`. */
   regionLabel?: string | null
-  /** Base64-encoded JPEG frames (no data: prefix) that were sent to the AI for this analysis. */
   frames?: string[]
-  /** Korean labels (e.g. "어드레스") describing what swing phase each frame represents, in order. */
   frameLabels?: string[]
-  /** Called when the user rates a frame's accuracy, so it can be recorded and used to improve future detections. */
   onFrameFeedback?: (frameIndex: number, accurate: boolean) => void
 }) {
+  const { t } = useI18n()
+
   return (
     <div className="space-y-5 animate-[fadeIn_0.4s_ease-out]">
       <section className={`${card} p-8 flex flex-col items-center text-center gap-3`}>
         <ScoreGauge score={result.score} />
         <GradeBadge score={result.score} />
-        <p className="text-xs text-lime-300/80 uppercase tracking-[0.2em] font-semibold">스윙 종합 점수</p>
+        <p className="text-xs text-lime-300/80 uppercase tracking-[0.2em] font-semibold">{t('result.overallScore')}</p>
         <p className="text-slate-300 max-w-md leading-relaxed">{renderEmphasis(result.scoreSummary)}</p>
         {(myAverageScore != null || globalAverageScore != null || regionAverageScore != null) && (
           <div className="flex flex-wrap items-center justify-center gap-2">
             {myAverageScore != null && (
-              <ScoreComparison score={result.score} average={myAverageScore} label="나의 평균" theme="self" />
+              <ScoreComparison score={result.score} average={myAverageScore} label={t('result.myAvg')} theme="self" />
             )}
             {globalAverageScore != null && (
-              <ScoreComparison score={result.score} average={globalAverageScore} label="전체 유저 평균" theme="global" />
+              <ScoreComparison score={result.score} average={globalAverageScore} label={t('result.globalAvg')} theme="global" />
             )}
             {regionAverageScore != null && (
               <ScoreComparison
                 score={result.score}
                 average={regionAverageScore}
-                label={`${regionLabel ?? '우리 지역'} 평균`}
+                label={`${regionLabel ?? t('result.regionDefault')} ${t('result.regionAvg')}`}
                 theme="region"
               />
             )}
@@ -245,11 +257,11 @@ export default function AnalysisResult({
       {frames && frames.length > 0 && (
         <section className={`${card} p-6`}>
           <h3 className="font-bold text-lg mb-1 flex items-center gap-2 text-slate-100">
-            <span className="text-xl" aria-hidden>🖼️</span> 분석에 사용된 프레임
+            <span className="text-xl" aria-hidden>🖼️</span> {t('result.framesTitle')}
           </h3>
           {onFrameFeedback && (
             <p className="text-xs text-slate-500 mb-4">
-              AI가 고른 구간이 실제 스윙 단계와 맞는지 평가해 주세요. 평가 결과는 다음 분석의 정확도를 높이는 데 활용됩니다.
+              {t('result.framesDescription')}
             </p>
           )}
           <div className={`grid grid-cols-2 ${frames.length > 4 ? 'sm:grid-cols-3' : 'sm:grid-cols-4'} gap-3`}>
@@ -257,10 +269,10 @@ export default function AnalysisResult({
               <div key={i} className="space-y-1.5">
                 <img
                   src={`data:image/jpeg;base64,${frame}`}
-                  alt={`분석에 사용된 ${frameLabels?.[i] ?? `${i + 1}번째`} 프레임`}
+                  alt={`${frameLabels?.[i] ?? `Frame ${i + 1}`}`}
                   className="w-full aspect-square object-cover rounded-xl ring-1 ring-white/10 bg-black/40"
                 />
-                <p className="text-center text-[11px] text-slate-500">{frameLabels?.[i] ?? `프레임 ${i + 1}`}</p>
+                <p className="text-center text-[11px] text-slate-500">{frameLabels?.[i] ?? `Frame ${i + 1}`}</p>
                 {onFrameFeedback && <FrameFeedback onRate={(accurate) => onFrameFeedback(i, accurate)} />}
               </div>
             ))}
@@ -271,7 +283,7 @@ export default function AnalysisResult({
       {result.stageScores.length > 0 && (
         <section className={`${card} p-6`}>
           <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-slate-100">
-            <span className="text-xl" aria-hidden>📊</span> 단계별 스윙 점수
+            <span className="text-xl" aria-hidden>📊</span> {t('result.stageScores')}
           </h3>
           <div className="grid gap-4 sm:grid-cols-2">
             {result.stageScores.map((s, i) => (
@@ -283,7 +295,7 @@ export default function AnalysisResult({
 
       <section className={`${card} p-6`}>
         <h3 className="font-bold text-lg mb-3 flex items-center gap-2 text-slate-100">
-          <span className="text-xl" aria-hidden>🏌️</span> 스윙 분석
+          <span className="text-xl" aria-hidden>🏌️</span> {t('result.swingAnalysis')}
         </h3>
         <ul className="space-y-2.5">
           {result.analysis.map((point, i) => (
@@ -297,7 +309,7 @@ export default function AnalysisResult({
 
       <section className={`${card} p-6`}>
         <h3 className="font-bold text-lg mb-3 flex items-center gap-2 text-slate-100">
-          <span className="text-xl" aria-hidden>📋</span> 추천 연습 방법
+          <span className="text-xl" aria-hidden>📋</span> {t('result.practiceTips')}
         </h3>
         <ul className="space-y-2.5">
           {result.practiceTips.map((tip, i) => (
@@ -311,7 +323,7 @@ export default function AnalysisResult({
 
       <section className={`${card} p-6`}>
         <h3 className="font-bold text-lg mb-3 flex items-center gap-2 text-slate-100">
-          <span className="text-xl" aria-hidden>⭐</span> 참고하면 좋은 선수
+          <span className="text-xl" aria-hidden>⭐</span> {t('result.recommendedPlayers')}
         </h3>
         <div className="grid gap-3 sm:grid-cols-2">
           {result.recommendedPlayers.map((player, i) => (
@@ -329,7 +341,7 @@ export default function AnalysisResult({
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 self-start text-xs font-semibold text-rose-300 bg-rose-500/10 border border-rose-400/20 rounded-full px-3 py-1.5 hover:bg-rose-500/20 transition"
               >
-                <span aria-hidden>▶</span> YouTube에서 스윙 영상 보기
+                <span aria-hidden>▶</span> {t('result.watchYoutube')}
               </a>
             </div>
           ))}

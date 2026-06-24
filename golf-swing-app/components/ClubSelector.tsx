@@ -1,6 +1,7 @@
 'use client'
 
 import { ClubCategory, ClubSelection, CLUB_LABELS } from '@/lib/types'
+import { useI18n } from '@/lib/i18n'
 
 const WOOD_NUMBERS = [3, 5, 7]
 const UTILITY_NUMBERS = [2, 3, 4, 5]
@@ -15,6 +16,14 @@ const CLUB_ICONS: Record<ClubCategory, string> = {
   wedge: '⛳',
 }
 
+const CLUB_I18N_KEYS: Record<ClubCategory, 'club.driver' | 'club.wood' | 'club.utility' | 'club.iron' | 'club.wedge'> = {
+  driver: 'club.driver',
+  wood: 'club.wood',
+  utility: 'club.utility',
+  iron: 'club.iron',
+  wedge: 'club.wedge',
+}
+
 export default function ClubSelector({
   value,
   onChange,
@@ -22,6 +31,7 @@ export default function ClubSelector({
   value: ClubSelection
   onChange: (club: ClubSelection) => void
 }) {
+  const { t } = useI18n()
   const categories: ClubCategory[] = ['driver', 'wood', 'utility', 'iron', 'wedge']
 
   function handleCategoryChange(category: ClubCategory) {
@@ -54,7 +64,7 @@ export default function ClubSelector({
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-sm font-semibold text-slate-300 mb-2">사용한 골프채를 선택하세요</p>
+        <p className="text-sm font-semibold text-slate-300 mb-2">{t('club.selectPrompt')}</p>
         <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
           {categories.map((cat) => (
             <button
@@ -68,7 +78,7 @@ export default function ClubSelector({
               }`}
             >
               <span aria-hidden>{CLUB_ICONS[cat]}</span>
-              {CLUB_LABELS[cat]}
+              {t(CLUB_I18N_KEYS[cat])}
             </button>
           ))}
         </div>
@@ -78,12 +88,12 @@ export default function ClubSelector({
         <div>
           <p className="text-xs font-medium text-slate-400 mb-2">
             {value.category === 'wood'
-              ? '우드 번호'
+              ? t('club.woodNumber')
               : value.category === 'utility'
-                ? '유틸리티 번호'
+                ? t('club.utilityNumber')
                 : value.category === 'iron'
-                  ? '아이언 번호'
-                  : '웻지 로프트 각도'}
+                  ? t('club.ironNumber')
+                  : t('club.wedgeLoft')}
           </p>
           <div className="flex flex-wrap gap-2">
             {numberOptions.map((num) => (
@@ -97,7 +107,7 @@ export default function ClubSelector({
                     : 'bg-white/5 text-slate-300 border-white/10 hover:border-lime-400/40 hover:text-lime-300'
                 }`}
               >
-                {num}{value.category === 'wedge' ? '°' : '번'}
+                {num}{value.category === 'wedge' ? '°' : t('club.numberSuffix')}
               </button>
             ))}
           </div>

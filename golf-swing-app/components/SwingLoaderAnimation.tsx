@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useI18n, type TranslationKey } from '@/lib/i18n'
 
 type AnimationStyle = 'swing' | 'putt' | 'drive'
 
-const ANIMATION_LABELS: Record<AnimationStyle, string> = {
-  swing: '스윙',
-  putt: '퍼팅',
-  drive: '드라이버 샷',
+const ANIMATION_LABEL_KEYS: Record<AnimationStyle, TranslationKey> = {
+  swing: 'loader.swing',
+  putt: 'loader.putt',
+  drive: 'loader.drive',
 }
 
 function SwingAnimation() {
@@ -197,12 +198,13 @@ function DriveAnimation() {
 const STORAGE_KEY = 'carry-coach-loader-style'
 
 export default function SwingLoaderAnimation() {
+  const { t } = useI18n()
   const [style, setStyle] = useState<AnimationStyle>('swing')
   const [showPicker, setShowPicker] = useState(false)
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY) as AnimationStyle | null
-    if (saved && saved in ANIMATION_LABELS) setStyle(saved)
+    if (saved && saved in ANIMATION_LABEL_KEYS) setStyle(saved)
   }, [])
 
   function handleChange(next: AnimationStyle) {
@@ -224,12 +226,12 @@ export default function SwingLoaderAnimation() {
         onClick={() => setShowPicker((p) => !p)}
         className="text-[10px] text-slate-500 hover:text-slate-300 transition"
       >
-        {showPicker ? '닫기' : '애니메이션 변경'}
+        {showPicker ? t('loader.close') : t('loader.changeAnim')}
       </button>
 
       {showPicker && (
         <div className="flex gap-2">
-          {(Object.keys(ANIMATION_LABELS) as AnimationStyle[]).map((key) => (
+          {(Object.keys(ANIMATION_LABEL_KEYS) as AnimationStyle[]).map((key) => (
             <button
               key={key}
               type="button"
@@ -240,7 +242,7 @@ export default function SwingLoaderAnimation() {
                   : 'border-white/10 text-slate-400 hover:text-slate-200 hover:border-white/20'
               }`}
             >
-              {ANIMATION_LABELS[key]}
+              {t(ANIMATION_LABEL_KEYS[key])}
             </button>
           ))}
         </div>

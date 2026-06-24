@@ -9,6 +9,7 @@ import { PHASE_SETS, phaseCountForProvider, phaseFractions, phaseLabels } from '
 import { buildPhaseFeedbackHint, recordPhaseFeedback } from '@/lib/phaseFeedback'
 import { fetchGlobalStats, fetchHistory, fetchRegionalStats, saveAnalysis } from '@/lib/history'
 import { detectAnalysisLocation } from '@/lib/geolocation'
+import { useI18n } from '@/lib/i18n'
 import {
   AI_PROVIDERS,
   AIProvider,
@@ -21,12 +22,10 @@ import {
 
 type Status = 'idle' | 'extracting' | 'detecting' | 'analyzing' | 'done' | 'error'
 
-/** Frames sampled across the clip for the AI to pick swing-phase frames from (more candidates for finer 6-phase picks). */
 function candidateFrameCount(phaseCount: 4 | 6): number {
   return phaseCount === 6 ? 18 : 10
 }
 
-/** Smallest allowed trimmed-clip length, in seconds, so there's still enough footage to sample frames from. */
 const MIN_TRIM_SPAN = 0.5
 
 function formatTime(seconds: number): string {
@@ -36,13 +35,13 @@ function formatTime(seconds: number): string {
   return `${minutes}:${secs}`
 }
 
-const STEPS: { key: Status; label: string }[] = [
-  { key: 'extracting', label: '프레임 추출' },
-  { key: 'detecting', label: '스윙 구간 탐지' },
-  { key: 'analyzing', label: 'AI 스윙 분석' },
-]
-
 function StepIndicator({ status }: { status: Status }) {
+  const { t } = useI18n()
+  const STEPS: { key: Status; label: string }[] = [
+    { key: 'extracting', label: t('step.extracting') },
+    { key: 'detecting', label: t('step.detecting') },
+    { key: 'analyzing', label: t('step.analyzing') },
+  ]
   const activeIndex = STEPS.findIndex((s) => s.key === status)
   return (
     <div className="flex items-center">
@@ -76,11 +75,6 @@ function StepIndicator({ status }: { status: Status }) {
   )
 }
 
-/**
- * Asks the AI to pick which of the sampled candidate frames best represent
- * each swing phase (in time order). Falls back to heuristic positions if the
- * detection call fails or returns something unusable.
- */
 async function detectPhaseFrames(
   candidateFrames: string[],
   phaseCount: 4 | 6,
@@ -117,6 +111,7 @@ async function detectPhaseFrames(
 }
 
 export default function SwingAnalyzer() {
+  const { t, locale } = useI18n()
   const [file, setFile] = useState<File | null>(null)
   const [videoUrl, setVideoUrl] = useState<string | null>(null)
   const [videoDuration, setVideoDuration] = useState<number | null>(null)
@@ -203,7 +198,6 @@ export default function SwingAnalyzer() {
     try {
       const phaseCount = phaseCountForProvider(provider)
 
-      // 1단계: 영상에서 후보 프레임 추출 (0–33%)
       setStatus('extracting')
       const trimRange = isTrimmed ? { start: trimStart, end: trimEnd } : undefined
       const candidateFrames = await extractFrames(
@@ -215,7 +209,6 @@ export default function SwingAnalyzer() {
         trimRange,
       )
 
-      // 2단계: 스윙 구간 탐지 (33–66%, 애니메이션)
       setStatus('detecting')
       const detectingTimer = window.setInterval(() => {
         setProgress((p) => (p < 65 ? p + 1 : p))
@@ -238,7 +231,6 @@ export default function SwingAnalyzer() {
       setFrames(phaseFrames)
       setFramePhaseCount(phaseCount)
 
-      // 3단계: AI 스윙 분석 (66–96%, 애니메이션)
       setStatus('analyzing')
       const analyzingTimer = window.setInterval(() => {
         setProgress((p) => (p < 96 ? p + 1 : p))
@@ -266,14 +258,14 @@ export default function SwingAnalyzer() {
       try {
         data = raw ? JSON.parse(raw) : null
       } catch {
-        // Non-JSON response (e.g. function timeout/HTML error page from the host)
+        // Non-JSON response
       }
 
       if (!res.ok || !data) {
         const detail = data?.error ?? raw.slice(0, 200) ?? `HTTP ${res.status}`
         throw new Error(
           data?.error ??
-            `분석 요청이 실패했습니다. (${res.status}) ${detail ? '- ' + detail : ''}`,
+            `${locale === 'en' ? 'Analysis request failed' : '분석 요청이 실패했습니다'}. (${res.status}) ${detail ? '- ' + detail : ''}`,
         )
       }
 
@@ -318,10 +310,10 @@ export default function SwingAnalyzer() {
         await saveAnalysis(club, analysisResult, location)
         setSaveError(null)
       } catch (saveErr) {
-        setSaveError(saveErr instanceof Error ? saveErr.message : '분석 결과를 캘린더에 저장하지 못했습니다.')
+        setSaveError(saveErr instanceof Error ? saveErr.message : t('analyzer.saveError'))
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.')
+      setError(err instanceof Error ? err.message : t('analyzer.unknownError'))
       setStatus('error')
     }
   }
@@ -330,19 +322,29 @@ export default function SwingAnalyzer() {
 
   const stageLabel =
     status === 'extracting'
-      ? '프레임 추출'
+      ? t('step.extracting')
       : status === 'detecting'
-        ? '스윙 구간 탐지'
+        ? t('step.detecting')
         : status === 'analyzing'
-          ? 'AI 분석'
+          ? t('step.aiAnalysis')
           : ''
+
+  const providerDescs: Record<string, string> = {
+    anthropic: t('ai.claudeDesc'),
+    gemini: t('ai.geminiDesc'),
+  }
+
+  const geminiDescs: Record<string, string> = {
+    'gemini-2.5-flash': t('ai.geminiFlashDesc'),
+    'gemini-2.5-flash-lite': t('ai.geminiFlashLiteDesc'),
+  }
 
   return (
     <div className="space-y-6">
       <section className="rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.35)] p-6 space-y-5">
         <div>
           <p className="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-1.5">
-            <span aria-hidden>🎥</span> 스윙 영상 업로드
+            <span aria-hidden>🎥</span> {t('analyzer.upload')}
           </p>
           <input
             ref={fileInputRef}
@@ -367,7 +369,7 @@ export default function SwingAnalyzer() {
           <div className="space-y-2.5 rounded-xl border border-white/10 bg-white/[0.02] p-4">
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-slate-300 flex items-center gap-1.5">
-                <span aria-hidden>✂️</span> 분석 구간 자르기
+                <span aria-hidden>✂️</span> {t('analyzer.trimSection')}
               </p>
               {isTrimmed && (
                 <button
@@ -376,21 +378,20 @@ export default function SwingAnalyzer() {
                   disabled={isBusy}
                   className="text-[11px] text-slate-400 hover:text-lime-300 underline underline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  전체 구간으로 되돌리기
+                  {t('analyzer.trimReset')}
                 </button>
               )}
             </div>
             <p className="text-xs text-slate-500 leading-relaxed">
-              스윙 동작이 들어있는 구간만 잘라서 분석하면 더 정확한 결과를 얻을 수 있어요. 슬라이더를 옮기면 영상이 해당 지점으로 이동합니다.
+              {t('analyzer.trimDescription')}
             </p>
             <p className="text-[11px] text-amber-200/70 bg-amber-500/10 border border-amber-400/20 rounded-lg px-3 py-2 leading-relaxed">
-              💡 특정 영상에서 스윙 구간(어드레스·백스윙 탑·임팩트 등) 인식이 계속 부정확하다면, 스윙 전체 동작이 잘 보이는 구간만 잘라서
-              분석해보세요 — 불필요한 준비/정지 구간이 줄어들어 AI가 각 단계를 더 정확하게 찾아낼 수 있어요.
+              {t('analyzer.trimTip')}
             </p>
 
             <div className="space-y-1.5">
               <label className="flex items-center justify-between text-[11px] text-slate-400">
-                <span>시작 지점</span>
+                <span>{t('analyzer.trimStart')}</span>
                 <span className="font-mono text-slate-300">{formatTime(trimStart)}</span>
               </label>
               <input
@@ -407,7 +408,7 @@ export default function SwingAnalyzer() {
 
             <div className="space-y-1.5">
               <label className="flex items-center justify-between text-[11px] text-slate-400">
-                <span>끝 지점</span>
+                <span>{t('analyzer.trimEnd')}</span>
                 <span className="font-mono text-slate-300">{formatTime(trimEnd)}</span>
               </label>
               <input
@@ -423,7 +424,7 @@ export default function SwingAnalyzer() {
             </div>
 
             <p className="text-[11px] text-slate-500 text-right">
-              선택한 구간 길이: <span className="font-mono text-lime-300/80">{formatTime(trimEnd - trimStart)}</span> / 전체{' '}
+              {t('analyzer.trimLength')} <span className="font-mono text-lime-300/80">{formatTime(trimEnd - trimStart)}</span> / {t('analyzer.trimTotal')}{' '}
               <span className="font-mono">{formatTime(videoDuration)}</span>
             </p>
           </div>
@@ -433,7 +434,7 @@ export default function SwingAnalyzer() {
 
         <div>
           <p className="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-1.5">
-            <span aria-hidden>🤖</span> 분석 AI 선택
+            <span aria-hidden>🤖</span> {t('analyzer.selectAI')}
           </p>
           <div className="grid grid-cols-2 gap-2.5">
             {AI_PROVIDERS.map((p) => (
@@ -451,7 +452,7 @@ export default function SwingAnalyzer() {
                 <span className={`block text-sm font-bold ${provider === p.id ? 'text-lime-300' : 'text-slate-200'}`}>
                   {p.label}
                 </span>
-                <span className="block text-[11px] text-slate-500 mt-0.5">{p.description}</span>
+                <span className="block text-[11px] text-slate-500 mt-0.5">{providerDescs[p.id] ?? p.description}</span>
               </button>
             ))}
           </div>
@@ -460,7 +461,7 @@ export default function SwingAnalyzer() {
         {provider === 'gemini' && (
           <div>
             <p className="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-1.5">
-              <span aria-hidden>✨</span> Gemini 모델 선택
+              <span aria-hidden>✨</span> {t('analyzer.selectGeminiModel')}
             </p>
             <div className="grid sm:grid-cols-3 gap-2.5">
               {GEMINI_MODELS.map((m) => (
@@ -478,7 +479,7 @@ export default function SwingAnalyzer() {
                   <span className={`block text-sm font-bold ${geminiModel === m.id ? 'text-sky-300' : 'text-slate-200'}`}>
                     {m.label}
                   </span>
-                  <span className="block text-[11px] text-slate-500 mt-0.5">{m.description}</span>
+                  <span className="block text-[11px] text-slate-500 mt-0.5">{geminiDescs[m.id] ?? m.description}</span>
                 </button>
               ))}
             </div>
@@ -491,10 +492,10 @@ export default function SwingAnalyzer() {
           disabled={!file || isBusy}
           className="w-full rounded-full bg-gradient-to-r from-lime-400 via-emerald-400 to-teal-400 text-emerald-950 font-bold py-3.5 shadow-[0_0_24px_rgba(132,204,22,0.3)] transition hover:shadow-[0_0_36px_rgba(132,204,22,0.45)] hover:-translate-y-0.5 active:translate-y-0 disabled:bg-none disabled:bg-white/5 disabled:text-slate-500 disabled:shadow-none disabled:cursor-not-allowed disabled:translate-y-0"
         >
-          {status === 'extracting' && '영상에서 프레임 추출 중...'}
-          {status === 'detecting' && '스윙 구간(어드레스·백스윙 탑·임팩트·피니쉬) 탐지 중...'}
-          {status === 'analyzing' && 'AI가 스윙을 분석하는 중...'}
-          {(status === 'idle' || status === 'done' || status === 'error') && '⛳ 스윙 분석하기'}
+          {status === 'extracting' && t('analyzer.extracting')}
+          {status === 'detecting' && t('analyzer.detecting')}
+          {status === 'analyzing' && t('analyzer.analyzing')}
+          {(status === 'idle' || status === 'done' || status === 'error') && t('analyzer.analyzeButton')}
         </button>
 
         {isBusy && (
@@ -528,7 +529,7 @@ export default function SwingAnalyzer() {
             </p>
           ) : (
             <p className="text-xs text-center text-lime-300/70">
-              ✅ 분석 결과가 오늘 날짜의 캘린더에 저장되었습니다 — 상단 "캘린더" 탭에서 확인하세요.
+              {t('analyzer.savedToCalendar')}
             </p>
           )}
           <AnalysisResult

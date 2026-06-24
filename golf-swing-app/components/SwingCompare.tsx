@@ -5,6 +5,7 @@ import { extractFrames } from '@/lib/extractFrames'
 import { PHASE_SETS, phaseCountForProvider } from '@/lib/swingPhases'
 import { buildPhaseFeedbackHint } from '@/lib/phaseFeedback'
 import { AI_PROVIDERS, AIProvider, DEFAULT_GEMINI_MODEL, GEMINI_MODELS } from '@/lib/types'
+import { useI18n } from '@/lib/i18n'
 import SwingLoaderAnimation from './SwingLoaderAnimation'
 
 const MIN_TRIM_SPAN = 0.3
@@ -106,6 +107,7 @@ type AnalysisStatus = 'idle' | 'extracting' | 'detecting' | 'analyzing' | 'done'
 const card = 'rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.35)]'
 
 export default function SwingCompare() {
+  const { t, locale } = useI18n()
   const [slots, setSlots] = useState<[VideoSlot, VideoSlot]>([emptySlot(), emptySlot()])
   const videoRefs = [useRef<HTMLVideoElement>(null), useRef<HTMLVideoElement>(null)]
   const fileInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)]
@@ -175,7 +177,6 @@ export default function SwingCompare() {
     return s.duration != null && (s.trimStart > 0.05 || s.duration - s.trimEnd > 0.05)
   }
 
-  // --- Synced playback ---
   function handlePlayPause() {
     if (!bothLoaded) return
     const [v0, v1] = [videoRefs[0].current, videoRefs[1].current]
@@ -207,7 +208,6 @@ export default function SwingCompare() {
     for (const ref of videoRefs) { if (ref.current) ref.current.playbackRate = rate }
   }
 
-  // --- Capture ---
   function handleCapture() {
     const v0 = videoRefs[0].current; const v1 = videoRefs[1].current; const canvas = canvasRef.current
     if (!v0 || !v1 || !canvas) return
@@ -229,7 +229,6 @@ export default function SwingCompare() {
     a.download = `swing-compare-${Date.now()}.jpg`; a.click()
   }
 
-  // --- AI Comparison Analysis ---
   async function detectPhaseFrames(
     candidateFrames: string[], phaseCount: 4 | 6, feedbackHint?: string | null,
   ): Promise<string[]> {
@@ -261,16 +260,14 @@ export default function SwingCompare() {
       const phaseCount = phaseCountForProvider(provider)
       const candidateCount = phaseCount === 6 ? 18 : 10
 
-      // 1. Extract frames from both videos
       setAnalysisStatus('extracting')
       const rangeA = isTrimmed(0) ? { start: slots[0].trimStart, end: slots[0].trimEnd } : undefined
       const rangeB = isTrimmed(1) ? { start: slots[1].trimStart, end: slots[1].trimEnd } : undefined
 
-      const candidatesA = await extractFrames(slots[0].file!, candidateCount, (d, t) => setAnalysisProgress(Math.round((d / t) * 16)), rangeA)
-      const candidatesB = await extractFrames(slots[1].file!, candidateCount, (d, t) => setAnalysisProgress(16 + Math.round((d / t) * 16)), rangeB)
+      const candidatesA = await extractFrames(slots[0].file!, candidateCount, (d, tt) => setAnalysisProgress(Math.round((d / tt) * 16)), rangeA)
+      const candidatesB = await extractFrames(slots[1].file!, candidateCount, (d, tt) => setAnalysisProgress(16 + Math.round((d / tt) * 16)), rangeB)
       setAnalysisProgress(33)
 
-      // 2. Detect phase frames
       setAnalysisStatus('detecting')
       const detectTimer = window.setInterval(() => setAnalysisProgress((p) => (p < 62 ? p + 1 : p)), 300)
 
@@ -287,7 +284,6 @@ export default function SwingCompare() {
       } finally { window.clearInterval(detectTimer) }
       setAnalysisProgress(66)
 
-      // 3. Compare analysis
       setAnalysisStatus('analyzing')
       const analyzeTimer = window.setInterval(() => setAnalysisProgress((p) => (p < 96 ? p + 1 : p)), 400)
 
@@ -304,28 +300,27 @@ export default function SwingCompare() {
       try { data = raw ? JSON.parse(raw) : null } catch {}
 
       if (!res.ok || !data) {
-        throw new Error(data?.error ?? `비교 분석 요청이 실패했습니다. (${res.status})`)
+        throw new Error(data?.error ?? `${t('compare.analysisFailed')} (${res.status})`)
       }
 
       setAnalysisProgress(100)
       setComparisonResult(data as ComparisonResult)
       setAnalysisStatus('done')
     } catch (err) {
-      setAnalysisError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.')
+      setAnalysisError(err instanceof Error ? err.message : (locale === 'en' ? 'An unknown error occurred.' : '알 수 없는 오류가 발생했습니다.'))
       setAnalysisStatus('error')
     }
   }
 
   const RATES = [0.25, 0.5, 1, 1.5, 2]
-  const slotLabels = ['영상 A', '영상 B'] as const
-  const stageLabel = analysisStatus === 'extracting' ? '프레임 추출' : analysisStatus === 'detecting' ? '스윙 구간 탐지' : analysisStatus === 'analyzing' ? 'AI 비교 분석' : ''
+  const slotLabels = [t('compare.videoA'), t('compare.videoB')]
+  const stageLabel = analysisStatus === 'extracting' ? t('step.extracting') : analysisStatus === 'detecting' ? t('step.detecting') : analysisStatus === 'analyzing' ? (locale === 'en' ? 'AI Comparison' : 'AI 비교 분석') : ''
 
   return (
     <div className="space-y-6">
-      {/* Upload */}
       <section className={`${card} p-6 space-y-5`}>
         <p className="text-sm font-semibold text-slate-300 flex items-center gap-1.5">
-          <span aria-hidden>🆚</span> 두 스윙 영상을 업로드해서 비교하세요
+          <span aria-hidden>🆚</span> {t('compare.uploadPrompt')}
         </p>
 
         <div className="grid md:grid-cols-2 gap-5">
@@ -350,30 +345,30 @@ export default function SwingCompare() {
                   <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.02] p-3">
                     <div className="flex items-center justify-between">
                       <p className="text-xs font-semibold text-slate-300 flex items-center gap-1">
-                        <span aria-hidden>✂️</span> 재생 구간
+                        <span aria-hidden>✂️</span> {t('compare.trimRange')}
                       </p>
                       {isTrimmed(idx) && (
                         <button type="button" onClick={() => resetTrim(idx)}
-                          className="text-[10px] text-slate-400 hover:text-lime-300 underline underline-offset-2">전체 구간</button>
+                          className="text-[10px] text-slate-400 hover:text-lime-300 underline underline-offset-2">{t('compare.fullRange')}</button>
                       )}
                     </div>
                     <div className="space-y-1">
                       <label className="flex items-center justify-between text-[10px] text-slate-400">
-                        <span>시작</span><span className="font-mono text-slate-300">{formatTime(slot.trimStart)}</span>
+                        <span>{t('compare.start')}</span><span className="font-mono text-slate-300">{formatTime(slot.trimStart)}</span>
                       </label>
                       <input type="range" min={0} max={slot.duration} step={0.05} value={slot.trimStart}
                         onChange={(e) => handleTrimStart(idx, Number(e.target.value))} disabled={isBusy} className="w-full accent-lime-400 disabled:cursor-not-allowed disabled:opacity-60" />
                     </div>
                     <div className="space-y-1">
                       <label className="flex items-center justify-between text-[10px] text-slate-400">
-                        <span>끝</span><span className="font-mono text-slate-300">{formatTime(slot.trimEnd)}</span>
+                        <span>{t('compare.end')}</span><span className="font-mono text-slate-300">{formatTime(slot.trimEnd)}</span>
                       </label>
                       <input type="range" min={0} max={slot.duration} step={0.05} value={slot.trimEnd}
                         onChange={(e) => handleTrimEnd(idx, Number(e.target.value))} disabled={isBusy} className="w-full accent-lime-400 disabled:cursor-not-allowed disabled:opacity-60" />
                     </div>
                     <p className="text-[10px] text-slate-500 text-right">
-                      선택 구간: <span className="font-mono text-lime-300/80">{formatTime(slot.trimEnd - slot.trimStart)}</span>{' '}
-                      / 전체 <span className="font-mono">{formatTime(slot.duration)}</span>
+                      {t('compare.selectedRange')} <span className="font-mono text-lime-300/80">{formatTime(slot.trimEnd - slot.trimStart)}</span>{' '}
+                      / {t('compare.total')} <span className="font-mono">{formatTime(slot.duration)}</span>
                     </p>
                   </div>
                 )}
@@ -383,26 +378,25 @@ export default function SwingCompare() {
         </div>
       </section>
 
-      {/* Controls */}
       {bothLoaded && (
         <section className={`${card} p-5 space-y-4`}>
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-2 flex-wrap">
               <button type="button" onClick={handlePlayPause}
                 className="rounded-full bg-gradient-to-r from-lime-400 via-emerald-400 to-teal-400 text-emerald-950 font-bold px-6 py-2.5 shadow-[0_0_20px_rgba(132,204,22,0.3)] hover:shadow-[0_0_32px_rgba(132,204,22,0.45)] hover:-translate-y-0.5 active:translate-y-0 transition">
-                {playing ? '⏸ 정지' : '▶ 동시 재생'}
+                {playing ? t('compare.pause') : t('compare.syncPlay')}
               </button>
               <button type="button" onClick={handleCapture}
                 className="rounded-full bg-white/5 border border-white/10 text-slate-300 font-semibold px-5 py-2.5 hover:bg-white/10 hover:border-white/20 transition text-sm">
-                📸 캡쳐
+                {t('compare.capture')}
               </button>
               <button type="button" onClick={handleCompareAnalyze} disabled={isBusy}
                 className="rounded-full bg-gradient-to-r from-sky-400 to-indigo-500 text-white font-bold px-6 py-2.5 shadow-[0_0_20px_rgba(56,189,248,0.3)] hover:shadow-[0_0_32px_rgba(56,189,248,0.45)] hover:-translate-y-0.5 active:translate-y-0 transition disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:shadow-[0_0_20px_rgba(56,189,248,0.3)] disabled:hover:translate-y-0">
-                {isBusy ? '분석 중...' : '🤖 AI 비교 분석'}
+                {isBusy ? t('compare.aiComparing') : t('compare.aiCompare')}
               </button>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="text-[11px] text-slate-500 mr-1">배속</span>
+              <span className="text-[11px] text-slate-500 mr-1">{t('compare.speed')}</span>
               {RATES.map((r) => (
                 <button key={r} type="button" onClick={() => handleRateChange(r)}
                   className={`text-[11px] font-semibold rounded-full px-2.5 py-1 border transition ${
@@ -412,9 +406,8 @@ export default function SwingCompare() {
             </div>
           </div>
 
-          {/* AI Provider */}
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[11px] text-slate-500">분석 AI:</span>
+            <span className="text-[11px] text-slate-500">{t('compare.analysisAI')}</span>
             {AI_PROVIDERS.map((p) => (
               <button key={p.id} type="button" onClick={() => setProvider(p.id)} disabled={isBusy}
                 className={`text-[11px] font-semibold rounded-full px-3 py-1 border transition disabled:cursor-not-allowed disabled:opacity-60 ${
@@ -431,7 +424,6 @@ export default function SwingCompare() {
         </section>
       )}
 
-      {/* Progress */}
       {isBusy && (
         <section className={`${card} p-5 space-y-3`}>
           <SwingLoaderAnimation />
@@ -448,38 +440,34 @@ export default function SwingCompare() {
         <p className="text-sm text-rose-300 bg-rose-500/10 border border-rose-500/20 rounded-xl p-3">{analysisError}</p>
       )}
 
-      {/* Captured image */}
       {capturedImage && (
         <section className={`${card} p-5 space-y-3`}>
           <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-slate-300 flex items-center gap-1.5"><span aria-hidden>📸</span> 캡쳐 결과</p>
+            <p className="text-sm font-semibold text-slate-300 flex items-center gap-1.5"><span aria-hidden>📸</span> {t('compare.captureResult')}</p>
             <div className="flex items-center gap-2">
               <button type="button" onClick={downloadCapture}
-                className="text-xs font-semibold text-lime-300 bg-lime-400/10 border border-lime-400/20 rounded-full px-3.5 py-1.5 hover:bg-lime-400/20 transition">다운로드</button>
-              <button type="button" onClick={() => setCapturedImage(null)} className="text-xs text-slate-400 hover:text-slate-200 px-2 py-1">닫기</button>
+                className="text-xs font-semibold text-lime-300 bg-lime-400/10 border border-lime-400/20 rounded-full px-3.5 py-1.5 hover:bg-lime-400/20 transition">{t('compare.download')}</button>
+              <button type="button" onClick={() => setCapturedImage(null)} className="text-xs text-slate-400 hover:text-slate-200 px-2 py-1">{t('compare.close')}</button>
             </div>
           </div>
-          <img src={capturedImage} alt="스윙 비교 캡쳐" className="w-full rounded-xl ring-1 ring-white/10" />
+          <img src={capturedImage} alt="Swing comparison capture" className="w-full rounded-xl ring-1 ring-white/10" />
         </section>
       )}
 
-      {/* Comparison Result */}
       {comparisonResult && (
         <div className="space-y-5 animate-[fadeIn_0.4s_ease-out]">
-          {/* Overall Scores */}
           <section className={`${card} p-8 flex flex-col items-center text-center gap-5`}>
             <div className="flex items-center gap-8">
-              <ScoreGauge score={comparisonResult.overallScoreA} label="영상 A" color={scoreColor(comparisonResult.overallScoreA).stroke} />
+              <ScoreGauge score={comparisonResult.overallScoreA} label={t('compare.videoA')} color={scoreColor(comparisonResult.overallScoreA).stroke} />
               <div className="text-2xl font-bold text-slate-500">VS</div>
-              <ScoreGauge score={comparisonResult.overallScoreB} label="영상 B" color={scoreColor(comparisonResult.overallScoreB).stroke} />
+              <ScoreGauge score={comparisonResult.overallScoreB} label={t('compare.videoB')} color={scoreColor(comparisonResult.overallScoreB).stroke} />
             </div>
             <p className="text-slate-300 max-w-lg leading-relaxed">{renderEmphasis(comparisonResult.summary)}</p>
           </section>
 
-          {/* Stage-by-stage */}
           <section className={`${card} p-6`}>
             <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-slate-100">
-              <span className="text-xl" aria-hidden>📊</span> 단계별 비교 점수
+              <span className="text-xl" aria-hidden>📊</span> {t('compare.stageScores')}
             </h3>
             <div className="space-y-4">
               {comparisonResult.stageComparisons.map((sc, i) => (
@@ -488,7 +476,7 @@ export default function SwingCompare() {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <div className="flex items-baseline justify-between text-[11px]">
-                        <span className="text-slate-400">영상 A</span>
+                        <span className="text-slate-400">{t('compare.videoA')}</span>
                         <span className={`font-bold ${scoreColor(sc.scoreA).text}`}>{sc.scoreA}</span>
                       </div>
                       <div className="h-1.5 w-full rounded-full bg-white/5 overflow-hidden">
@@ -497,7 +485,7 @@ export default function SwingCompare() {
                     </div>
                     <div className="space-y-1">
                       <div className="flex items-baseline justify-between text-[11px]">
-                        <span className="text-slate-400">영상 B</span>
+                        <span className="text-slate-400">{t('compare.videoB')}</span>
                         <span className={`font-bold ${scoreColor(sc.scoreB).text}`}>{sc.scoreB}</span>
                       </div>
                       <div className="h-1.5 w-full rounded-full bg-white/5 overflow-hidden">
@@ -511,11 +499,10 @@ export default function SwingCompare() {
             </div>
           </section>
 
-          {/* Strengths */}
           <div className="grid md:grid-cols-2 gap-5">
             <section className={`${card} p-6`}>
               <h3 className="font-bold text-base mb-3 flex items-center gap-2 text-slate-100">
-                <span className="text-lg" aria-hidden>🅰️</span> 영상 A의 강점
+                <span className="text-lg" aria-hidden>🅰️</span> {t('compare.strengthsA')}
               </h3>
               <ul className="space-y-2">
                 {comparisonResult.aStrengths.map((s, i) => (
@@ -528,7 +515,7 @@ export default function SwingCompare() {
             </section>
             <section className={`${card} p-6`}>
               <h3 className="font-bold text-base mb-3 flex items-center gap-2 text-slate-100">
-                <span className="text-lg" aria-hidden>🅱️</span> 영상 B의 강점
+                <span className="text-lg" aria-hidden>🅱️</span> {t('compare.strengthsB')}
               </h3>
               <ul className="space-y-2">
                 {comparisonResult.bStrengths.map((s, i) => (
@@ -541,11 +528,10 @@ export default function SwingCompare() {
             </section>
           </div>
 
-          {/* Common Issues */}
           {comparisonResult.commonIssues.length > 0 && (
             <section className={`${card} p-6`}>
               <h3 className="font-bold text-base mb-3 flex items-center gap-2 text-slate-100">
-                <span className="text-lg" aria-hidden>⚠️</span> 공통 개선점
+                <span className="text-lg" aria-hidden>⚠️</span> {t('compare.commonIssues')}
               </h3>
               <ul className="space-y-2">
                 {comparisonResult.commonIssues.map((s, i) => (
@@ -558,10 +544,9 @@ export default function SwingCompare() {
             </section>
           )}
 
-          {/* Recommendation */}
           <section className={`${card} p-6`}>
             <h3 className="font-bold text-base mb-3 flex items-center gap-2 text-slate-100">
-              <span className="text-lg" aria-hidden>💡</span> 종합 조언
+              <span className="text-lg" aria-hidden>💡</span> {t('compare.recommendation')}
             </h3>
             <p className="text-slate-300 text-sm leading-relaxed">{renderEmphasis(comparisonResult.recommendation)}</p>
           </section>
@@ -572,7 +557,7 @@ export default function SwingCompare() {
 
       {!slots[0].file && !slots[1].file && (
         <p className="text-center text-sm text-slate-500">
-          두 개의 스윙 영상을 올리면 나란히 재생하며 비교할 수 있고, AI가 두 스윙의 차이를 분석해 줍니다.
+          {t('compare.emptyHint')}
         </p>
       )}
     </div>

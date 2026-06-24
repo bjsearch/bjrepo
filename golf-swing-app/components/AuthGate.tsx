@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { AuthUser, fetchMe, login, logout, signup } from '@/lib/authClient'
+import { useI18n } from '@/lib/i18n'
 
 type Mode = 'login' | 'signup'
 
@@ -10,6 +11,7 @@ export default function AuthGate({
 }: {
   children: (user: AuthUser, onLogout: () => void) => React.ReactNode
 }) {
+  const { t } = useI18n()
   const [user, setUser] = useState<AuthUser | null | undefined>(undefined)
   const [mode, setMode] = useState<Mode>('login')
   const [email, setEmail] = useState('')
@@ -32,7 +34,7 @@ export default function AuthGate({
       setUser(result)
       setPassword('')
     } catch (err) {
-      setError(err instanceof Error ? err.message : '요청에 실패했습니다.')
+      setError(err instanceof Error ? err.message : t('auth.requestFailed'))
     } finally {
       setBusy(false)
     }
@@ -53,7 +55,7 @@ export default function AuthGate({
   if (user === undefined) {
     return (
       <div className="rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl p-10 text-center text-sm text-slate-400">
-        불러오는 중...
+        {t('auth.loading')}
       </div>
     )
   }
@@ -73,7 +75,7 @@ export default function AuthGate({
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                로그인
+                {t('auth.login')}
               </button>
               <button
                 type="button"
@@ -84,14 +86,14 @@ export default function AuthGate({
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                회원가입
+                {t('auth.signup')}
               </button>
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5">이메일</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">{t('auth.email')}</label>
               <input
                 type="email"
                 required
@@ -102,7 +104,7 @@ export default function AuthGate({
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5">비밀번호</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">{t('auth.password')}</label>
               <input
                 type="password"
                 required
@@ -110,7 +112,7 @@ export default function AuthGate({
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-2.5 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-lime-400/40 focus:ring-1 focus:ring-lime-400/30"
-                placeholder="8자 이상"
+                placeholder={t('auth.passwordPlaceholder')}
               />
             </div>
 
@@ -123,18 +125,18 @@ export default function AuthGate({
               disabled={busy}
               className="w-full rounded-full bg-gradient-to-r from-lime-400 via-emerald-400 to-teal-400 text-emerald-950 font-bold py-3 shadow-[0_0_24px_rgba(132,204,22,0.3)] transition hover:shadow-[0_0_36px_rgba(132,204,22,0.45)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:shadow-[0_0_24px_rgba(132,204,22,0.3)]"
             >
-              {busy ? '처리 중...' : mode === 'login' ? '로그인' : '회원가입'}
+              {busy ? t('auth.processing') : mode === 'login' ? t('auth.login') : t('auth.signup')}
             </button>
           </form>
 
           <p className="text-center text-xs text-slate-500">
-            {mode === 'login' ? '계정이 없으신가요? ' : '이미 계정이 있으신가요? '}
+            {mode === 'login' ? t('auth.noAccount') : t('auth.hasAccount')}
             <button
               type="button"
               onClick={() => switchMode(mode === 'login' ? 'signup' : 'login')}
               className="text-lime-300 font-semibold hover:underline"
             >
-              {mode === 'login' ? '회원가입' : '로그인'}
+              {mode === 'login' ? t('auth.signup') : t('auth.login')}
             </button>
           </p>
         </div>
