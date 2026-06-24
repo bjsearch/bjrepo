@@ -93,25 +93,110 @@ async function renderInstagramCard(
   canvas.width = S
   canvas.height = S
   const ctx = canvas.getContext('2d')!
+  const color = scoreColor(score)
+  const font = '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
 
-  // Background
-  const bg = ctx.createLinearGradient(0, 0, 0, S)
-  bg.addColorStop(0, '#0b1410')
-  bg.addColorStop(1, '#0f2118')
-  ctx.fillStyle = bg
+  // Card outer background (dark with subtle texture)
+  ctx.fillStyle = '#080d0a'
   ctx.fillRect(0, 0, S, S)
 
-  // Top frame image (left half, with rounded mask)
+  // Card border - holographic gradient effect
+  const pad = 24
+  const cardR = 40
+  const borderW = 4
+
+  // Outer glow
+  ctx.shadowColor = color
+  ctx.shadowBlur = 30
+  roundRect(ctx, pad, pad, S - pad * 2, S - pad * 2, cardR)
+  ctx.strokeStyle = color
+  ctx.lineWidth = borderW
+  ctx.stroke()
+  ctx.shadowBlur = 0
+
+  // Inner holographic border shimmer
+  const holoGrad = ctx.createLinearGradient(pad, pad, S - pad, S - pad)
+  holoGrad.addColorStop(0, 'rgba(163,230,53,0.8)')
+  holoGrad.addColorStop(0.25, 'rgba(52,211,153,0.6)')
+  holoGrad.addColorStop(0.5, 'rgba(56,189,248,0.8)')
+  holoGrad.addColorStop(0.75, 'rgba(168,85,247,0.6)')
+  holoGrad.addColorStop(1, 'rgba(251,191,36,0.8)')
+  roundRect(ctx, pad, pad, S - pad * 2, S - pad * 2, cardR)
+  ctx.strokeStyle = holoGrad
+  ctx.lineWidth = borderW
+  ctx.stroke()
+
+  // Card inner fill
+  const innerPad = pad + borderW + 2
+  const cardBg = ctx.createLinearGradient(0, 0, 0, S)
+  cardBg.addColorStop(0, '#0d1a14')
+  cardBg.addColorStop(0.4, '#0f2118')
+  cardBg.addColorStop(1, '#0a1610')
+  roundRect(ctx, innerPad, innerPad, S - innerPad * 2, S - innerPad * 2, cardR - 4)
+  ctx.fillStyle = cardBg
+  ctx.fill()
+
+  // Diagonal holographic shine overlay
+  ctx.save()
+  ctx.globalAlpha = 0.04
+  const shine = ctx.createLinearGradient(0, 0, S, S)
+  shine.addColorStop(0, 'transparent')
+  shine.addColorStop(0.3, 'transparent')
+  shine.addColorStop(0.45, '#ffffff')
+  shine.addColorStop(0.55, '#ffffff')
+  shine.addColorStop(0.7, 'transparent')
+  shine.addColorStop(1, 'transparent')
+  roundRect(ctx, innerPad, innerPad, S - innerPad * 2, S - innerPad * 2, cardR - 4)
+  ctx.fillStyle = shine
+  ctx.fill()
+  ctx.restore()
+
+  // Top bar: CARRY COACH + type badge
+  ctx.textAlign = 'left'
+  ctx.fillStyle = 'rgba(163,230,53,0.9)'
+  ctx.font = `800 28px ${font}`
+  ctx.letterSpacing = '5px'
+  ctx.fillText('CARRY COACH', 70, 90)
+  ctx.letterSpacing = '0px'
+
+  // Type badge (right side)
+  ctx.textAlign = 'right'
+  ctx.fillStyle = color
+  ctx.font = `bold 22px ${font}`
+  ctx.fillText(`SCORE ${score}`, S - 70, 90)
+
+  // Decorative line under header
+  const lineGrad = ctx.createLinearGradient(60, 0, S - 60, 0)
+  lineGrad.addColorStop(0, color)
+  lineGrad.addColorStop(0.5, 'rgba(56,189,248,0.6)')
+  lineGrad.addColorStop(1, 'rgba(168,85,247,0.6)')
+  ctx.fillStyle = lineGrad
+  ctx.fillRect(60, 110, S - 120, 2)
+
+  // Main image frame (centered, like Pokémon card art window)
+  const imgX = 60
+  const imgY = 130
+  const imgW = S - 120
+  const imgH = 560
+
+  // Image border glow
+  ctx.shadowColor = color
+  ctx.shadowBlur = 15
+  roundRect(ctx, imgX - 2, imgY - 2, imgW + 4, imgH + 4, 20)
+  ctx.strokeStyle = color
+  ctx.lineWidth = 2
+  ctx.stroke()
+  ctx.shadowBlur = 0
+
   try {
     const img = await loadImage(`data:image/jpeg;base64,${topFrameBase64}`)
-    const imgW = 500
-    const imgH = 680
-    const imgX = 40
-    const imgY = 160
+
     ctx.save()
-    roundRect(ctx, imgX, imgY, imgW, imgH, 24)
+    roundRect(ctx, imgX, imgY, imgW, imgH, 18)
     ctx.clip()
 
+    // Center crop: for golf swing, golfer is typically in the center
+    // Use center-weighted crop to keep the person centered
     const srcAspect = img.width / img.height
     const dstAspect = imgW / imgH
     let sx = 0, sy = 0, sw = img.width, sh = img.height
@@ -120,105 +205,138 @@ async function renderInstagramCard(
       sx = (img.width - sw) / 2
     } else {
       sh = img.width / dstAspect
-      sy = (img.height - sh) / 2
+      // Bias toward upper-center (golfer's body in backswing top)
+      sy = (img.height - sh) * 0.35
     }
     ctx.drawImage(img, sx, sy, sw, sh, imgX, imgY, imgW, imgH)
 
-    // Subtle overlay gradient on image
-    const overlay = ctx.createLinearGradient(imgX, imgY, imgX, imgY + imgH)
-    overlay.addColorStop(0, 'rgba(11,20,16,0)')
-    overlay.addColorStop(0.85, 'rgba(11,20,16,0)')
-    overlay.addColorStop(1, 'rgba(11,20,16,0.7)')
-    ctx.fillStyle = overlay
+    // Cinematic vignette on image
+    const vig = ctx.createRadialGradient(
+      imgX + imgW / 2, imgY + imgH / 2, imgH * 0.3,
+      imgX + imgW / 2, imgY + imgH / 2, imgH * 0.75,
+    )
+    vig.addColorStop(0, 'rgba(0,0,0,0)')
+    vig.addColorStop(1, 'rgba(0,0,0,0.5)')
+    ctx.fillStyle = vig
     ctx.fillRect(imgX, imgY, imgW, imgH)
+
+    // Bottom gradient fade on image
+    const imgFade = ctx.createLinearGradient(imgX, imgY + imgH - 100, imgX, imgY + imgH)
+    imgFade.addColorStop(0, 'rgba(13,26,20,0)')
+    imgFade.addColorStop(1, 'rgba(13,26,20,0.85)')
+    ctx.fillStyle = imgFade
+    ctx.fillRect(imgX, imgY + imgH - 100, imgW, 100)
+
     ctx.restore()
 
-    // "Top of Backswing" label on image
-    ctx.fillStyle = 'rgba(163,230,53,0.8)'
-    ctx.font = '600 20px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+    // Phase label on image bottom
     ctx.textAlign = 'left'
-    ctx.fillText('Top of Backswing', imgX + 20, imgY + imgH - 20)
+    ctx.fillStyle = 'rgba(163,230,53,0.9)'
+    ctx.font = `700 18px ${font}`
+    ctx.fillText('TOP OF BACKSWING', imgX + 20, imgY + imgH - 18)
+
+    // Stars decoration on image top-right
+    ctx.textAlign = 'right'
+    const starColor = score >= 80 ? '#fbbf24' : score >= 60 ? '#94a3b8' : '#78716c'
+    ctx.fillStyle = starColor
+    ctx.shadowColor = starColor
+    ctx.shadowBlur = 8
+    const starCount = score >= 80 ? 3 : score >= 60 ? 2 : 1
+    ctx.font = `24px ${font}`
+    ctx.fillText('★'.repeat(starCount), imgX + imgW - 16, imgY + 36)
+    ctx.shadowBlur = 0
   } catch {
-    // If image fails, draw placeholder
-    ctx.fillStyle = 'rgba(255,255,255,0.05)'
-    roundRect(ctx, 40, 160, 500, 680, 24)
+    ctx.fillStyle = 'rgba(255,255,255,0.03)'
+    roundRect(ctx, imgX, imgY, imgW, imgH, 18)
     ctx.fill()
   }
 
-  // Right side: Score section
-  const rightCx = 790
-  const color = scoreColor(score)
+  // Score section below image
+  const scoreY = 720
 
-  // App name
+  // Decorative line
+  ctx.fillStyle = lineGrad
+  ctx.fillRect(60, scoreY, S - 120, 2)
+
+  // Large score with glow
   ctx.textAlign = 'center'
-  ctx.fillStyle = 'rgba(163,230,53,0.6)'
-  ctx.font = '600 22px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
-  ctx.letterSpacing = '6px'
-  ctx.fillText('CARRY COACH', rightCx, 210)
-  ctx.letterSpacing = '0px'
-
-  // Score ring
-  const ringCy = 420
-  const radius = 130
-  const lineW = 18
-
-  ctx.beginPath()
-  ctx.arc(rightCx, ringCy, radius, 0, Math.PI * 2)
-  ctx.strokeStyle = 'rgba(255,255,255,0.08)'
-  ctx.lineWidth = lineW
-  ctx.stroke()
-
-  const startAngle = -Math.PI / 2
-  const endAngle = startAngle + (Math.PI * 2 * score) / 100
-  ctx.beginPath()
-  ctx.arc(rightCx, ringCy, radius, startAngle, endAngle)
-  ctx.strokeStyle = color
-  ctx.lineWidth = lineW
-  ctx.lineCap = 'round'
   ctx.shadowColor = color
-  ctx.shadowBlur = 25
-  ctx.stroke()
+  ctx.shadowBlur = 40
+  ctx.fillStyle = color
+  ctx.font = `900 120px ${font}`
+  ctx.fillText(`${score}`, S / 2, scoreY + 120)
   ctx.shadowBlur = 0
 
-  // Score number
-  ctx.fillStyle = color
-  ctx.font = 'bold 90px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
-  ctx.fillText(`${score}`, rightCx, ringCy + 32)
+  // /100
+  ctx.fillStyle = 'rgba(255,255,255,0.25)'
+  ctx.font = `500 32px ${font}`
+  ctx.fillText('/ 100', S / 2, scoreY + 160)
 
-  ctx.fillStyle = 'rgba(255,255,255,0.3)'
-  ctx.font = '500 24px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
-  ctx.fillText('/ 100', rightCx, ringCy + 68)
+  // Grade badge with glow border
+  const badgeW = 340
+  const badgeH = 52
+  const badgeX = (S - badgeW) / 2
+  const badgeY2 = scoreY + 185
 
-  // Grade badge
-  ctx.fillStyle = 'rgba(16,185,129,0.15)'
-  const badgeW = 260
-  const badgeH = 48
-  const badgeX = rightCx - badgeW / 2
-  const badgeY = 620
-  roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 24)
+  // Badge glow
+  ctx.shadowColor = 'rgba(52,211,153,0.5)'
+  ctx.shadowBlur = 12
+  const badgeBg = ctx.createLinearGradient(badgeX, badgeY2, badgeX + badgeW, badgeY2)
+  badgeBg.addColorStop(0, 'rgba(16,185,129,0.2)')
+  badgeBg.addColorStop(0.5, 'rgba(52,211,153,0.15)')
+  badgeBg.addColorStop(1, 'rgba(16,185,129,0.2)')
+  roundRect(ctx, badgeX, badgeY2, badgeW, badgeH, 26)
+  ctx.fillStyle = badgeBg
   ctx.fill()
-  ctx.strokeStyle = 'rgba(52,211,153,0.3)'
+  ctx.shadowBlur = 0
+
+  const badgeBorder = ctx.createLinearGradient(badgeX, badgeY2, badgeX + badgeW, badgeY2)
+  badgeBorder.addColorStop(0, 'rgba(163,230,53,0.4)')
+  badgeBorder.addColorStop(0.5, 'rgba(52,211,153,0.6)')
+  badgeBorder.addColorStop(1, 'rgba(56,189,248,0.4)')
+  roundRect(ctx, badgeX, badgeY2, badgeW, badgeH, 26)
+  ctx.strokeStyle = badgeBorder
   ctx.lineWidth = 1.5
-  roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 24)
   ctx.stroke()
 
   ctx.fillStyle = '#6ee7b7'
-  ctx.font = 'bold 22px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
-  ctx.fillText(grade, rightCx, badgeY + 33)
-
-  // Date
-  ctx.fillStyle = 'rgba(148,163,184,0.5)'
-  ctx.font = '400 20px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
-  ctx.fillText(dateStr, rightCx, 770)
+  ctx.font = `bold 24px ${font}`
+  ctx.fillText(grade, S / 2, badgeY2 + 35)
 
   // Bottom bar
-  ctx.fillStyle = 'rgba(255,255,255,0.03)'
-  ctx.fillRect(0, S - 100, S, 100)
-  ctx.fillStyle = 'rgba(148,163,184,0.3)'
-  ctx.font = '400 20px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+  const bottomY = S - 70
+
+  // Decorative line
+  ctx.fillStyle = lineGrad
+  ctx.fillRect(60, bottomY - 20, S - 120, 1)
+
+  // Date left, branding right
+  ctx.textAlign = 'left'
+  ctx.fillStyle = 'rgba(148,163,184,0.5)'
+  ctx.font = `400 20px ${font}`
+  ctx.fillText(dateStr, 70, bottomY + 10)
+
+  ctx.textAlign = 'right'
+  ctx.fillStyle = 'rgba(148,163,184,0.35)'
+  ctx.font = `500 18px ${font}`
   ctx.letterSpacing = '3px'
-  ctx.fillText('carry-coach.netlify.app', S / 2, S - 40)
+  ctx.fillText('carry-coach.netlify.app', S - 70, bottomY + 10)
   ctx.letterSpacing = '0px'
+
+  // Corner holographic sparkle dots
+  const sparkles = [
+    [56, 56], [S - 56, 56], [56, S - 56], [S - 56, S - 56],
+  ]
+  sparkles.forEach(([x, y]) => {
+    const sg = ctx.createRadialGradient(x, y, 0, x, y, 12)
+    sg.addColorStop(0, 'rgba(163,230,53,0.6)')
+    sg.addColorStop(0.5, 'rgba(56,189,248,0.3)')
+    sg.addColorStop(1, 'transparent')
+    ctx.fillStyle = sg
+    ctx.beginPath()
+    ctx.arc(x, y, 12, 0, Math.PI * 2)
+    ctx.fill()
+  })
 
   return canvas
 }
