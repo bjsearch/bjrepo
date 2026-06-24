@@ -239,6 +239,14 @@ const translations = {
   'share.kakaoTitle': { ko: '⛳ Carry Coach 스윙 분석 결과', en: '⛳ Carry Coach Swing Analysis' },
   'share.kakaoScoreLabel': { ko: '종합 점수', en: 'Overall Score' },
   'share.kakaoViewResult': { ko: '분석 결과 보기', en: 'View Analysis' },
+  'share.twitter': { ko: 'X(트위터) 공유', en: 'Share on X (Twitter)' },
+  'share.instagram': { ko: '인스타그램용 이미지 저장', en: 'Save image for Instagram' },
+  'share.saveImage': { ko: '이미지로 저장', en: 'Save as Image' },
+  'share.imageSaved': { ko: '📸 이미지가 저장되었습니다!', en: '📸 Image saved!' },
+  'share.imageFailed': { ko: '이미지 저장에 실패했습니다.', en: 'Failed to save image.' },
+  'share.shareTitle': { ko: '공유하기', en: 'Share' },
+  'share.kakaoCompareTitle': { ko: '⛳ Carry Coach 스윙 비교 결과', en: '⛳ Carry Coach Swing Comparison' },
+  'share.compareScoreLabel': { ko: '비교 점수', en: 'Comparison Score' },
 } as const
 
 export type TranslationKey = keyof typeof translations

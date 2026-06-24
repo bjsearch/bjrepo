@@ -7,6 +7,7 @@ import { buildPhaseFeedbackHint } from '@/lib/phaseFeedback'
 import { AI_PROVIDERS, AIProvider, DEFAULT_GEMINI_MODEL, GEMINI_MODELS } from '@/lib/types'
 import { useI18n } from '@/lib/i18n'
 import SwingLoaderAnimation from './SwingLoaderAnimation'
+import ShareButtons from './ShareButtons'
 
 const MIN_TRIM_SPAN = 0.3
 
@@ -112,6 +113,7 @@ export default function SwingCompare() {
   const videoRefs = [useRef<HTMLVideoElement>(null), useRef<HTMLVideoElement>(null)]
   const fileInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)]
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const compareResultRef = useRef<HTMLDivElement>(null)
 
   const [playing, setPlaying] = useState(false)
   const [playbackRate, setPlaybackRate] = useState(1)
@@ -456,6 +458,7 @@ export default function SwingCompare() {
 
       {comparisonResult && (
         <div className="space-y-5 animate-[fadeIn_0.4s_ease-out]">
+          <div ref={compareResultRef} className="space-y-5">
           <section className={`${card} p-8 flex flex-col items-center text-center gap-5`}>
             <div className="flex items-center gap-8">
               <ScoreGauge score={comparisonResult.overallScoreA} label={t('compare.videoA')} color={scoreColor(comparisonResult.overallScoreA).stroke} />
@@ -549,6 +552,15 @@ export default function SwingCompare() {
               <span className="text-lg" aria-hidden>💡</span> {t('compare.recommendation')}
             </h3>
             <p className="text-slate-300 text-sm leading-relaxed">{renderEmphasis(comparisonResult.recommendation)}</p>
+          </section>
+          </div>
+
+          <section className={`${card} p-5`}>
+            <ShareButtons
+              title={t('share.kakaoCompareTitle')}
+              description={`${t('share.compareScoreLabel')}: ${t('compare.videoA')} ${comparisonResult.overallScoreA}/100 vs ${t('compare.videoB')} ${comparisonResult.overallScoreB}/100\n${comparisonResult.summary}`}
+              captureTargetRef={compareResultRef}
+            />
           </section>
         </div>
       )}

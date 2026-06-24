@@ -1,18 +1,7 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useRef, useState } from 'react'
 import { SwingAnalysisResult, youtubeSearchUrl } from '@/lib/types'
 import { useI18n } from '@/lib/i18n'
-
-declare global {
-  interface Window {
-    Kakao?: {
-      isInitialized: () => boolean
-      init: (key: string) => void
-      Share: {
-        sendDefault: (options: Record<string, unknown>) => void
-      }
-    }
-  }
-}
+import ShareButtons from './ShareButtons'
 
 function renderEmphasis(text: string): React.ReactNode {
   const parts = text.split(/(\*\*[^*]+\*\*|__[^_]+__)/g)
@@ -238,189 +227,147 @@ export default function AnalysisResult({
   frameLabels?: string[]
   onFrameFeedback?: (frameIndex: number, accurate: boolean) => void
 }) {
-  const { t, locale } = useI18n()
-  const [shareToast, setShareToast] = useState<string | null>(null)
+  const { t } = useI18n()
+  const captureRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    const kakaoKey = process.env.NEXT_PUBLIC_KAKAO_JS_KEY
-    if (kakaoKey && window.Kakao && !window.Kakao.isInitialized()) {
-      window.Kakao.init(kakaoKey)
-    }
-  }, [])
-
-  const handleKakaoShare = useCallback(() => {
-    const title = t('share.kakaoTitle')
-    const scoreLabel = t('share.kakaoScoreLabel')
-    const gradeLabel = result.score >= 90 ? t('grade.tourPro')
-      : result.score >= 80 ? t('grade.advanced')
-      : result.score >= 70 ? t('grade.upperIntermediate')
-      : result.score >= 60 ? t('grade.intermediate')
-      : result.score >= 50 ? t('grade.lowerIntermediate')
-      : t('grade.beginner')
-    const description = `${scoreLabel}: ${result.score}/100 (${gradeLabel})\n${result.scoreSummary.replace(/\*\*/g, '').replace(/__/g, '')}`
-    const pageUrl = typeof window !== 'undefined' ? window.location.href : ''
-
-    if (window.Kakao?.isInitialized()) {
-      window.Kakao.Share.sendDefault({
-        objectType: 'feed',
-        content: {
-          title,
-          description: description.slice(0, 200),
-          imageUrl: 'https://carry-coach.netlify.app/og-image.png',
-          link: { mobileWebUrl: pageUrl, webUrl: pageUrl },
-        },
-        buttons: [
-          { title: t('share.kakaoViewResult'), link: { mobileWebUrl: pageUrl, webUrl: pageUrl } },
-        ],
-      })
-      return
-    }
-
-    const text = `${title}\n${description}\n${pageUrl}`
-    navigator.clipboard.writeText(text).then(() => {
-      setShareToast(t('share.copied'))
-      setTimeout(() => setShareToast(null), 2500)
-    }).catch(() => {
-      setShareToast(t('share.copyFailed'))
-      setTimeout(() => setShareToast(null), 2500)
-    })
-  }, [result, t])
+  const gradeLabel = result.score >= 90 ? t('grade.tourPro')
+    : result.score >= 80 ? t('grade.advanced')
+    : result.score >= 70 ? t('grade.upperIntermediate')
+    : result.score >= 60 ? t('grade.intermediate')
+    : result.score >= 50 ? t('grade.lowerIntermediate')
+    : t('grade.beginner')
+  const shareTitle = t('share.kakaoTitle')
+  const shareDesc = `${t('share.kakaoScoreLabel')}: ${result.score}/100 (${gradeLabel})\n${result.scoreSummary}`
 
   return (
     <div className="space-y-5 animate-[fadeIn_0.4s_ease-out]">
-      <section className={`${card} p-8 flex flex-col items-center text-center gap-3`}>
-        <ScoreGauge score={result.score} />
-        <GradeBadge score={result.score} />
-        <p className="text-xs text-lime-300/80 uppercase tracking-[0.2em] font-semibold">{t('result.overallScore')}</p>
-        <p className="text-slate-300 max-w-md leading-relaxed">{renderEmphasis(result.scoreSummary)}</p>
-        {(myAverageScore != null || globalAverageScore != null || regionAverageScore != null) && (
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            {myAverageScore != null && (
-              <ScoreComparison score={result.score} average={myAverageScore} label={t('result.myAvg')} theme="self" />
-            )}
-            {globalAverageScore != null && (
-              <ScoreComparison score={result.score} average={globalAverageScore} label={t('result.globalAvg')} theme="global" />
-            )}
-            {regionAverageScore != null && (
-              <ScoreComparison
-                score={result.score}
-                average={regionAverageScore}
-                label={`${regionLabel ?? t('result.regionDefault')} ${t('result.regionAvg')}`}
-                theme="region"
-              />
-            )}
-          </div>
-        )}
-
-        <button
-          type="button"
-          onClick={handleKakaoShare}
-          className="mt-2 inline-flex items-center gap-2 text-sm font-semibold rounded-full px-5 py-2 border border-yellow-400/30 text-yellow-300 bg-yellow-400/10 hover:bg-yellow-400/20 transition"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-            <path d="M12 3C6.48 3 2 6.58 2 10.94c0 2.8 1.86 5.27 4.66 6.68l-1.19 4.38 5.08-3.35c.47.05.95.07 1.45.07 5.52 0 10-3.58 10-7.78S17.52 3 12 3z" />
-          </svg>
-          {t('share.kakao')}
-        </button>
-        {shareToast && (
-          <p className="text-xs text-yellow-300 bg-yellow-400/10 border border-yellow-400/20 rounded-full px-3 py-1 animate-[fadeIn_0.2s_ease-out]">
-            {shareToast}
-          </p>
-        )}
-      </section>
-
-      {frames && frames.length > 0 && (
-        <section className={`${card} p-6`}>
-          <h3 className="font-bold text-lg mb-1 flex items-center gap-2 text-slate-100">
-            <span className="text-xl" aria-hidden>🖼️</span> {t('result.framesTitle')}
-          </h3>
-          {onFrameFeedback && (
-            <p className="text-xs text-slate-500 mb-4">
-              {t('result.framesDescription')}
-            </p>
-          )}
-          <div className={`grid grid-cols-2 ${frames.length > 4 ? 'sm:grid-cols-3' : 'sm:grid-cols-4'} gap-3`}>
-            {frames.map((frame, i) => (
-              <div key={i} className="space-y-1.5">
-                <img
-                  src={`data:image/jpeg;base64,${frame}`}
-                  alt={`${frameLabels?.[i] ?? `Frame ${i + 1}`}`}
-                  className="w-full aspect-square object-cover rounded-xl ring-1 ring-white/10 bg-black/40"
+      <div ref={captureRef} className="space-y-5">
+        <section className={`${card} p-8 flex flex-col items-center text-center gap-3`}>
+          <ScoreGauge score={result.score} />
+          <GradeBadge score={result.score} />
+          <p className="text-xs text-lime-300/80 uppercase tracking-[0.2em] font-semibold">{t('result.overallScore')}</p>
+          <p className="text-slate-300 max-w-md leading-relaxed">{renderEmphasis(result.scoreSummary)}</p>
+          {(myAverageScore != null || globalAverageScore != null || regionAverageScore != null) && (
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {myAverageScore != null && (
+                <ScoreComparison score={result.score} average={myAverageScore} label={t('result.myAvg')} theme="self" />
+              )}
+              {globalAverageScore != null && (
+                <ScoreComparison score={result.score} average={globalAverageScore} label={t('result.globalAvg')} theme="global" />
+              )}
+              {regionAverageScore != null && (
+                <ScoreComparison
+                  score={result.score}
+                  average={regionAverageScore}
+                  label={`${regionLabel ?? t('result.regionDefault')} ${t('result.regionAvg')}`}
+                  theme="region"
                 />
-                <p className="text-center text-[11px] text-slate-500">{frameLabels?.[i] ?? `Frame ${i + 1}`}</p>
-                {onFrameFeedback && <FrameFeedback onRate={(accurate) => onFrameFeedback(i, accurate)} />}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {result.stageScores.length > 0 && (
-        <section className={`${card} p-6`}>
-          <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-slate-100">
-            <span className="text-xl" aria-hidden>📊</span> {t('result.stageScores')}
-          </h3>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {result.stageScores.map((s, i) => (
-              <StageScoreBar key={i} stage={s.stage} score={s.score} comment={s.comment} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      <section className={`${card} p-6`}>
-        <h3 className="font-bold text-lg mb-3 flex items-center gap-2 text-slate-100">
-          <span className="text-xl" aria-hidden>🏌️</span> {t('result.swingAnalysis')}
-        </h3>
-        <ul className="space-y-2.5">
-          {result.analysis.map((point, i) => (
-            <li key={i} className="flex gap-2.5 text-slate-300 text-sm leading-relaxed">
-              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-lime-400 shadow-[0_0_6px_rgba(163,230,53,0.7)] shrink-0" />
-              <span>{renderEmphasis(point)}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className={`${card} p-6`}>
-        <h3 className="font-bold text-lg mb-3 flex items-center gap-2 text-slate-100">
-          <span className="text-xl" aria-hidden>📋</span> {t('result.practiceTips')}
-        </h3>
-        <ul className="space-y-2.5">
-          {result.practiceTips.map((tip, i) => (
-            <li key={i} className="flex gap-2.5 text-slate-300 text-sm leading-relaxed">
-              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-teal-400 shadow-[0_0_6px_rgba(45,212,191,0.7)] shrink-0" />
-              <span>{renderEmphasis(tip)}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className={`${card} p-6`}>
-        <h3 className="font-bold text-lg mb-3 flex items-center gap-2 text-slate-100">
-          <span className="text-xl" aria-hidden>⭐</span> {t('result.recommendedPlayers')}
-        </h3>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {result.recommendedPlayers.map((player, i) => (
-            <div
-              key={i}
-              className="rounded-xl bg-gradient-to-br from-emerald-400/10 to-lime-400/5 border border-emerald-300/15 p-4 flex flex-col gap-2"
-            >
-              <div>
-                <p className="font-semibold text-lime-300">{player.name}</p>
-                <p className="text-sm text-slate-400 mt-1 leading-relaxed">{player.reason}</p>
-              </div>
-              <a
-                href={youtubeSearchUrl(`${player.name} golf swing`)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 self-start text-xs font-semibold text-rose-300 bg-rose-500/10 border border-rose-400/20 rounded-full px-3 py-1.5 hover:bg-rose-500/20 transition"
-              >
-                <span aria-hidden>▶</span> {t('result.watchYoutube')}
-              </a>
+              )}
             </div>
-          ))}
-        </div>
+          )}
+        </section>
+
+        {frames && frames.length > 0 && (
+          <section className={`${card} p-6`}>
+            <h3 className="font-bold text-lg mb-1 flex items-center gap-2 text-slate-100">
+              <span className="text-xl" aria-hidden>🖼️</span> {t('result.framesTitle')}
+            </h3>
+            {onFrameFeedback && (
+              <p className="text-xs text-slate-500 mb-4">
+                {t('result.framesDescription')}
+              </p>
+            )}
+            <div className={`grid grid-cols-2 ${frames.length > 4 ? 'sm:grid-cols-3' : 'sm:grid-cols-4'} gap-3`}>
+              {frames.map((frame, i) => (
+                <div key={i} className="space-y-1.5">
+                  <img
+                    src={`data:image/jpeg;base64,${frame}`}
+                    alt={`${frameLabels?.[i] ?? `Frame ${i + 1}`}`}
+                    className="w-full aspect-square object-cover rounded-xl ring-1 ring-white/10 bg-black/40"
+                  />
+                  <p className="text-center text-[11px] text-slate-500">{frameLabels?.[i] ?? `Frame ${i + 1}`}</p>
+                  {onFrameFeedback && <FrameFeedback onRate={(accurate) => onFrameFeedback(i, accurate)} />}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {result.stageScores.length > 0 && (
+          <section className={`${card} p-6`}>
+            <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-slate-100">
+              <span className="text-xl" aria-hidden>📊</span> {t('result.stageScores')}
+            </h3>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {result.stageScores.map((s, i) => (
+                <StageScoreBar key={i} stage={s.stage} score={s.score} comment={s.comment} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        <section className={`${card} p-6`}>
+          <h3 className="font-bold text-lg mb-3 flex items-center gap-2 text-slate-100">
+            <span className="text-xl" aria-hidden>🏌️</span> {t('result.swingAnalysis')}
+          </h3>
+          <ul className="space-y-2.5">
+            {result.analysis.map((point, i) => (
+              <li key={i} className="flex gap-2.5 text-slate-300 text-sm leading-relaxed">
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-lime-400 shadow-[0_0_6px_rgba(163,230,53,0.7)] shrink-0" />
+                <span>{renderEmphasis(point)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className={`${card} p-6`}>
+          <h3 className="font-bold text-lg mb-3 flex items-center gap-2 text-slate-100">
+            <span className="text-xl" aria-hidden>📋</span> {t('result.practiceTips')}
+          </h3>
+          <ul className="space-y-2.5">
+            {result.practiceTips.map((tip, i) => (
+              <li key={i} className="flex gap-2.5 text-slate-300 text-sm leading-relaxed">
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-teal-400 shadow-[0_0_6px_rgba(45,212,191,0.7)] shrink-0" />
+                <span>{renderEmphasis(tip)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className={`${card} p-6`}>
+          <h3 className="font-bold text-lg mb-3 flex items-center gap-2 text-slate-100">
+            <span className="text-xl" aria-hidden>⭐</span> {t('result.recommendedPlayers')}
+          </h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {result.recommendedPlayers.map((player, i) => (
+              <div
+                key={i}
+                className="rounded-xl bg-gradient-to-br from-emerald-400/10 to-lime-400/5 border border-emerald-300/15 p-4 flex flex-col gap-2"
+              >
+                <div>
+                  <p className="font-semibold text-lime-300">{player.name}</p>
+                  <p className="text-sm text-slate-400 mt-1 leading-relaxed">{player.reason}</p>
+                </div>
+                <a
+                  href={youtubeSearchUrl(`${player.name} golf swing`)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 self-start text-xs font-semibold text-rose-300 bg-rose-500/10 border border-rose-400/20 rounded-full px-3 py-1.5 hover:bg-rose-500/20 transition"
+                >
+                  <span aria-hidden>▶</span> {t('result.watchYoutube')}
+                </a>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      <section className={`${card} p-5`}>
+        <ShareButtons
+          title={shareTitle}
+          description={shareDesc}
+          captureTargetRef={captureRef}
+        />
       </section>
     </div>
   )
