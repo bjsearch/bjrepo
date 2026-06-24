@@ -2,11 +2,12 @@
 
 import { useState } from 'react'
 import SwingAnalyzer from './SwingAnalyzer'
+import SwingCompare from './SwingCompare'
 import HistoryCalendar from './HistoryCalendar'
 import AdminDashboard from './AdminDashboard'
 import AuthGate from './AuthGate'
 
-type Tab = 'analyze' | 'calendar' | 'dashboard'
+type Tab = 'analyze' | 'compare' | 'calendar' | 'dashboard'
 
 export default function AppShell() {
   const [tab, setTab] = useState<Tab>('analyze')
@@ -43,6 +44,17 @@ export default function AppShell() {
               </button>
               <button
                 type="button"
+                onClick={() => setTab('compare')}
+                className={`px-5 py-2 rounded-full text-sm font-semibold transition ${
+                  tab === 'compare'
+                    ? 'bg-gradient-to-r from-lime-400 to-emerald-500 text-emerald-950 shadow-[0_0_16px_rgba(132,204,22,0.35)]'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                🆚 스윙 비교
+              </button>
+              <button
+                type="button"
                 onClick={() => setTab('calendar')}
                 className={`px-5 py-2 rounded-full text-sm font-semibold transition ${
                   tab === 'calendar'
@@ -69,6 +81,7 @@ export default function AppShell() {
           </div>
 
           {tab === 'analyze' && <SwingAnalyzer />}
+          {tab === 'compare' && <SwingCompare />}
           {tab === 'calendar' && <HistoryCalendar />}
           {tab === 'dashboard' && user.isAdmin && <AdminDashboard />}
         </div>
