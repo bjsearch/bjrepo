@@ -230,6 +230,7 @@ const translations = {
 
   // KakaoTalk sharing
   'share.kakao': { ko: '카카오톡 공유', en: 'Share on KakaoTalk' },
+  'share.kakaoUploading': { ko: '이미지 준비 중...', en: 'Preparing image...' },
   'share.kakaoNotReady': {
     ko: '카카오톡 공유가 준비되지 않았습니다. 클립보드에 복사합니다.',
     en: 'KakaoTalk sharing not ready. Copying to clipboard instead.',

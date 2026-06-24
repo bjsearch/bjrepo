@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useI18n } from '@/lib/i18n'
 
 declare global {
@@ -10,6 +10,7 @@ declare global {
       init: (key: string) => void
       Share: {
         sendDefault: (options: Record<string, unknown>) => void
+        uploadImage: (options: { file: File[] }) => Promise<{ infos: { original: { url: string } } }>
       }
     }
   }
@@ -31,6 +32,7 @@ interface ShareButtonsProps {
 export default function ShareButtons({ title, description, captureTargetRef }: ShareButtonsProps) {
   const { t } = useI18n()
   const [toast, setToast] = useState<string | null>(null)
+  const [kakaoLoading, setKakaoLoading] = useState(false)
 
   const showToast = useCallback((msg: string) => {
     setToast(msg)
@@ -39,35 +41,6 @@ export default function ShareButtons({ title, description, captureTargetRef }: S
 
   const pageUrl = typeof window !== 'undefined' ? window.location.href : ''
   const plainDesc = description.replace(/\*\*/g, '').replace(/__/g, '')
-
-  const handleKakao = useCallback(() => {
-    initKakao()
-    if (window.Kakao?.isInitialized()) {
-      window.Kakao.Share.sendDefault({
-        objectType: 'feed',
-        content: {
-          title,
-          description: plainDesc.slice(0, 200),
-          imageUrl: 'https://carry-coach.netlify.app/og-image.png',
-          link: { mobileWebUrl: pageUrl, webUrl: pageUrl },
-        },
-        buttons: [
-          { title: t('share.kakaoViewResult'), link: { mobileWebUrl: pageUrl, webUrl: pageUrl } },
-        ],
-      })
-      return
-    }
-    navigator.clipboard.writeText(`${title}\n${plainDesc}\n${pageUrl}`).then(
-      () => showToast(t('share.copied')),
-      () => showToast(t('share.copyFailed')),
-    )
-  }, [title, plainDesc, pageUrl, t, showToast])
-
-  const handleTwitter = useCallback(() => {
-    const text = encodeURIComponent(`${title}\n${plainDesc.slice(0, 200)}`)
-    const url = encodeURIComponent(pageUrl)
-    window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank', 'noopener,noreferrer,width=600,height=400')
-  }, [title, plainDesc, pageUrl])
 
   const captureToBlob = useCallback(async (): Promise<Blob | null> => {
     const target = captureTargetRef.current
@@ -81,6 +54,59 @@ export default function ShareButtons({ title, description, captureTargetRef }: S
     })
     return new Promise((resolve) => canvas.toBlob((b) => resolve(b), 'image/png'))
   }, [captureTargetRef])
+
+  const handleKakao = useCallback(async () => {
+    initKakao()
+
+    if (!window.Kakao?.isInitialized()) {
+      navigator.clipboard.writeText(`${title}\n${plainDesc}\n${pageUrl}`).then(
+        () => showToast(t('share.copied')),
+        () => showToast(t('share.copyFailed')),
+      )
+      return
+    }
+
+    setKakaoLoading(true)
+    try {
+      const blob = await captureToBlob()
+
+      let imageUrl = 'https://carry-coach.netlify.app/og-image.png'
+      if (blob) {
+        try {
+          const file = new File([blob], 'carry-coach-report.png', { type: 'image/png' })
+          const uploaded = await window.Kakao!.Share.uploadImage({ file: [file] })
+          imageUrl = uploaded.infos.original.url
+        } catch {
+          // fall back to default OG image
+        }
+      }
+
+      window.Kakao!.Share.sendDefault({
+        objectType: 'feed',
+        content: {
+          title,
+          description: plainDesc.slice(0, 200),
+          imageUrl,
+          imageWidth: 800,
+          imageHeight: 600,
+          link: { mobileWebUrl: pageUrl, webUrl: pageUrl },
+        },
+        buttons: [
+          { title: t('share.kakaoViewResult'), link: { mobileWebUrl: pageUrl, webUrl: pageUrl } },
+        ],
+      })
+    } catch {
+      showToast(t('share.copyFailed'))
+    } finally {
+      setKakaoLoading(false)
+    }
+  }, [title, plainDesc, pageUrl, t, showToast, captureToBlob])
+
+  const handleTwitter = useCallback(() => {
+    const text = encodeURIComponent(`${title}\n${plainDesc.slice(0, 200)}`)
+    const url = encodeURIComponent(pageUrl)
+    window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank', 'noopener,noreferrer,width=600,height=400')
+  }, [title, plainDesc, pageUrl])
 
   const handleSaveImage = useCallback(async () => {
     try {
@@ -128,12 +154,19 @@ export default function ShareButtons({ title, description, captureTargetRef }: S
         <button
           type="button"
           onClick={handleKakao}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-4 py-2 border border-yellow-400/30 text-yellow-300 bg-yellow-400/10 hover:bg-yellow-400/20 transition"
+          disabled={kakaoLoading}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-4 py-2 border border-yellow-400/30 text-yellow-300 bg-yellow-400/10 hover:bg-yellow-400/20 transition disabled:opacity-60 disabled:cursor-wait"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-            <path d="M12 3C6.48 3 2 6.58 2 10.94c0 2.8 1.86 5.27 4.66 6.68l-1.19 4.38 5.08-3.35c.47.05.95.07 1.45.07 5.52 0 10-3.58 10-7.78S17.52 3 12 3z" />
-          </svg>
-          {t('share.kakao')}
+          {kakaoLoading ? (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="animate-spin" aria-hidden>
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round" />
+            </svg>
+          ) : (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+              <path d="M12 3C6.48 3 2 6.58 2 10.94c0 2.8 1.86 5.27 4.66 6.68l-1.19 4.38 5.08-3.35c.47.05.95.07 1.45.07 5.52 0 10-3.58 10-7.78S17.52 3 12 3z" />
+            </svg>
+          )}
+          {kakaoLoading ? t('share.kakaoUploading') : t('share.kakao')}
         </button>
         <button
           type="button"
