@@ -1,6 +1,18 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { SwingAnalysisResult, youtubeSearchUrl } from '@/lib/types'
 import { useI18n } from '@/lib/i18n'
+
+declare global {
+  interface Window {
+    Kakao?: {
+      isInitialized: () => boolean
+      init: (key: string) => void
+      Share: {
+        sendDefault: (options: Record<string, unknown>) => void
+      }
+    }
+  }
+}
 
 function renderEmphasis(text: string): React.ReactNode {
   const parts = text.split(/(\*\*[^*]+\*\*|__[^_]+__)/g)
@@ -226,7 +238,53 @@ export default function AnalysisResult({
   frameLabels?: string[]
   onFrameFeedback?: (frameIndex: number, accurate: boolean) => void
 }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const [shareToast, setShareToast] = useState<string | null>(null)
+
+  useEffect(() => {
+    const kakaoKey = process.env.NEXT_PUBLIC_KAKAO_JS_KEY
+    if (kakaoKey && window.Kakao && !window.Kakao.isInitialized()) {
+      window.Kakao.init(kakaoKey)
+    }
+  }, [])
+
+  const handleKakaoShare = useCallback(() => {
+    const title = t('share.kakaoTitle')
+    const scoreLabel = t('share.kakaoScoreLabel')
+    const gradeLabel = result.score >= 90 ? t('grade.tourPro')
+      : result.score >= 80 ? t('grade.advanced')
+      : result.score >= 70 ? t('grade.upperIntermediate')
+      : result.score >= 60 ? t('grade.intermediate')
+      : result.score >= 50 ? t('grade.lowerIntermediate')
+      : t('grade.beginner')
+    const description = `${scoreLabel}: ${result.score}/100 (${gradeLabel})\n${result.scoreSummary.replace(/\*\*/g, '').replace(/__/g, '')}`
+    const pageUrl = typeof window !== 'undefined' ? window.location.href : ''
+
+    if (window.Kakao?.isInitialized()) {
+      window.Kakao.Share.sendDefault({
+        objectType: 'feed',
+        content: {
+          title,
+          description: description.slice(0, 200),
+          imageUrl: 'https://carry-coach.netlify.app/og-image.png',
+          link: { mobileWebUrl: pageUrl, webUrl: pageUrl },
+        },
+        buttons: [
+          { title: t('share.kakaoViewResult'), link: { mobileWebUrl: pageUrl, webUrl: pageUrl } },
+        ],
+      })
+      return
+    }
+
+    const text = `${title}\n${description}\n${pageUrl}`
+    navigator.clipboard.writeText(text).then(() => {
+      setShareToast(t('share.copied'))
+      setTimeout(() => setShareToast(null), 2500)
+    }).catch(() => {
+      setShareToast(t('share.copyFailed'))
+      setTimeout(() => setShareToast(null), 2500)
+    })
+  }, [result, t])
 
   return (
     <div className="space-y-5 animate-[fadeIn_0.4s_ease-out]">
@@ -252,6 +310,22 @@ export default function AnalysisResult({
               />
             )}
           </div>
+        )}
+
+        <button
+          type="button"
+          onClick={handleKakaoShare}
+          className="mt-2 inline-flex items-center gap-2 text-sm font-semibold rounded-full px-5 py-2 border border-yellow-400/30 text-yellow-300 bg-yellow-400/10 hover:bg-yellow-400/20 transition"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+            <path d="M12 3C6.48 3 2 6.58 2 10.94c0 2.8 1.86 5.27 4.66 6.68l-1.19 4.38 5.08-3.35c.47.05.95.07 1.45.07 5.52 0 10-3.58 10-7.78S17.52 3 12 3z" />
+          </svg>
+          {t('share.kakao')}
+        </button>
+        {shareToast && (
+          <p className="text-xs text-yellow-300 bg-yellow-400/10 border border-yellow-400/20 rounded-full px-3 py-1 animate-[fadeIn_0.2s_ease-out]">
+            {shareToast}
+          </p>
         )}
       </section>
 

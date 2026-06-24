@@ -227,6 +227,18 @@ const translations = {
     ko: '({avg}점)보다 {diff}점 낮아요',
     en: '({avg}pts) by {diff}pts lower',
   },
+
+  // KakaoTalk sharing
+  'share.kakao': { ko: '카카오톡 공유', en: 'Share on KakaoTalk' },
+  'share.kakaoNotReady': {
+    ko: '카카오톡 공유가 준비되지 않았습니다. 클립보드에 복사합니다.',
+    en: 'KakaoTalk sharing not ready. Copying to clipboard instead.',
+  },
+  'share.copied': { ko: '📋 클립보드에 복사되었습니다!', en: '📋 Copied to clipboard!' },
+  'share.copyFailed': { ko: '공유 정보를 복사하지 못했습니다.', en: 'Failed to copy share info.' },
+  'share.kakaoTitle': { ko: '⛳ Carry Coach 스윙 분석 결과', en: '⛳ Carry Coach Swing Analysis' },
+  'share.kakaoScoreLabel': { ko: '종합 점수', en: 'Overall Score' },
+  'share.kakaoViewResult': { ko: '분석 결과 보기', en: 'View Analysis' },
 } as const
 
 export type TranslationKey = keyof typeof translations
