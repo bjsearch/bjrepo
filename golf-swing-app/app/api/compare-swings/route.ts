@@ -57,7 +57,8 @@ ${stageComparisonSchema}
 
 강조 표시: summary, comparison, aStrengths, bStrengths, commonIssues, recommendation 문장에서
 핵심 표현은 \`**굵게**\`로 감싸 강조하고, 가장 중요한 행동 지침에는 \`__밑줄__\`을 사용하세요.
-이미지만으로 정확한 스윙 속도나 club path를 측정할 수 없으므로, 시각적으로 관찰 가능한 자세·정렬·균형·템포 위주로 비교하세요.`
+이미지만으로 정확한 스윙 속도나 club path를 측정할 수 없으므로, 시각적으로 관찰 가능한 자세·정렬·균형·템포 위주로 비교하세요.
+채점 기준: 아마추어 골퍼 기준으로 채점하세요. 프로 수준의 완벽함을 요구하지 마세요. 기본 자세가 잡혀 있고 큰 결함이 없으면 70점 이상, 전체적으로 안정적이면 80점 이상을 주세요. 격려하는 방향으로 너그럽게 채점하되, 개선점은 구체적으로 짚어주세요.`
 
     const imageBlocks = [
       ...usedA.map((base64) => ({ type: 'image' as const, base64 })),
