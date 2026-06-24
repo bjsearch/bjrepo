@@ -115,7 +115,7 @@ export default function SwingCompare() {
   const [playbackRate, setPlaybackRate] = useState(1)
   const [capturedImage, setCapturedImage] = useState<string | null>(null)
 
-  const [provider, setProvider] = useState<AIProvider>('anthropic')
+  const [provider, setProvider] = useState<AIProvider>('gemini')
   const [geminiModel, setGeminiModel] = useState<string>(DEFAULT_GEMINI_MODEL)
   const [analysisStatus, setAnalysisStatus] = useState<AnalysisStatus>('idle')
   const [analysisProgress, setAnalysisProgress] = useState(0)

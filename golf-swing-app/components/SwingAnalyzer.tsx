@@ -123,7 +123,7 @@ export default function SwingAnalyzer() {
   const [trimStart, setTrimStart] = useState(0)
   const [trimEnd, setTrimEnd] = useState(0)
   const [club, setClub] = useState<ClubSelection>({ category: 'iron', number: 7 })
-  const [provider, setProvider] = useState<AIProvider>('anthropic')
+  const [provider, setProvider] = useState<AIProvider>('gemini')
   const [geminiModel, setGeminiModel] = useState<string>(DEFAULT_GEMINI_MODEL)
   const [status, setStatus] = useState<Status>('idle')
   const [progress, setProgress] = useState(0)
