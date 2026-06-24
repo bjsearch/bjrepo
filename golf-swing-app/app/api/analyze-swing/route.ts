@@ -107,6 +107,9 @@ export async function POST(req: Request) {
     if (!Array.isArray(frames) || frames.length === 0) {
       return NextResponse.json({ error: locale === 'en' ? 'No frames to analyze.' : '분석할 프레임이 없습니다.' }, { status: 400 })
     }
+    if (frames.length > 10 || frames.some((f: unknown) => typeof f !== 'string' || (f as string).length > 2_000_000)) {
+      return NextResponse.json({ error: 'Payload too large' }, { status: 413 })
+    }
     if (typeof clubDescription !== 'string' || !clubDescription.trim()) {
       return NextResponse.json({ error: locale === 'en' ? 'Club information is required.' : '클럽 정보가 필요합니다.' }, { status: 400 })
     }
@@ -145,9 +148,8 @@ export async function POST(req: Request) {
     return NextResponse.json(parsed)
   } catch (err) {
     console.error('swing analysis error', err)
-    const detail = err instanceof Error ? err.message : String(err)
     return NextResponse.json(
-      { error: `Swing analysis error. (${detail})` },
+      { error: 'Swing analysis failed' },
       { status: 500 },
     )
   }

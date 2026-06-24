@@ -14,7 +14,10 @@ export async function POST(req: Request) {
     const provider = isProvider(rp) ? rp : undefined
     const geminiModel = isGeminiModel(rgm) ? rgm : undefined
 
-    const hintBlock = feedbackHint ? `\n\n참고: 이전 피드백 데이터에 따르면\n${feedbackHint}` : ''
+    const sanitizedHint = typeof feedbackHint === 'string'
+      ? feedbackHint.replace(/[^\w가-힣→ .,()0-9회]/g, '').slice(0, 500)
+      : ''
+    const hintBlock = sanitizedHint ? `\n\n참고: 이전 피드백 데이터에 따르면\n${sanitizedHint}` : ''
 
     const prompt = `아래 이미지는 골프 스윙 영상의 한 프레임입니다.
 이 이미지에서 골퍼가 사용하고 있는 클럽의 종류를 식별하세요.

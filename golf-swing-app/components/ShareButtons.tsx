@@ -17,7 +17,7 @@ declare global {
 }
 
 const KAKAO_SDK_URL = 'https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js'
-const KAKAO_JS_KEY = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || '200cb8d714463d5558c7a3454e161fcf'
+const KAKAO_JS_KEY = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || ''
 let kakaoLoadPromise: Promise<boolean> | null = null
 
 function loadKakaoSdk(): Promise<boolean> {

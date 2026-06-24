@@ -97,6 +97,10 @@ export async function POST(req: Request) {
     const phaseCount: PhaseCount = isPhaseCount(requestedPhaseCount) ? requestedPhaseCount : 6
     const locale = isLocale(requestedLocale) ? requestedLocale : 'ko'
 
+    const allFrames = [...(Array.isArray(framesA) ? framesA : []), ...(Array.isArray(framesB) ? framesB : [])]
+    if (allFrames.length > 20 || allFrames.some((f: unknown) => typeof f !== 'string' || (f as string).length > 2_000_000)) {
+      return NextResponse.json({ error: 'Payload too large' }, { status: 413 })
+    }
     if (!Array.isArray(framesA) || framesA.length === 0 || !Array.isArray(framesB) || framesB.length === 0) {
       return NextResponse.json({
         error: locale === 'en'
@@ -145,8 +149,7 @@ export async function POST(req: Request) {
     return NextResponse.json(parsed)
   } catch (err) {
     console.error('swing comparison error', err)
-    const detail = err instanceof Error ? err.message : String(err)
-    return NextResponse.json({ error: `Swing comparison error. (${detail})` }, { status: 500 })
+    return NextResponse.json({ error: 'Swing comparison failed' }, { status: 500 })
   }
 }
 

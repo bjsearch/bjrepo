@@ -8,6 +8,7 @@ interface ClubFeedbackTally {
 
 type ClubFeedbackStats = Record<string, ClubFeedbackTally>
 
+const VALID_CATEGORIES = ['driver', 'wood', 'utility', 'iron', 'wedge'] as const
 const BLOB_KEY = 'club-detection-feedback'
 
 async function loadStats(): Promise<ClubFeedbackStats> {
@@ -31,6 +32,13 @@ export async function POST(req: Request) {
 
     if (typeof detectedCategory !== 'string' || typeof accurate !== 'boolean') {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
+    }
+
+    if (!VALID_CATEGORIES.includes(detectedCategory as typeof VALID_CATEGORIES[number])) {
+      return NextResponse.json({ error: 'Invalid category' }, { status: 400 })
+    }
+    if (typeof actualCategory === 'string' && !VALID_CATEGORIES.includes(actualCategory as typeof VALID_CATEGORIES[number])) {
+      return NextResponse.json({ error: 'Invalid category' }, { status: 400 })
     }
 
     const store = getStore('feedback')
