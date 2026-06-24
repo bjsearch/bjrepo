@@ -107,7 +107,7 @@ type AnalysisStatus = 'idle' | 'extracting' | 'detecting' | 'analyzing' | 'done'
 const card = 'rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.35)]'
 
 export default function SwingCompare() {
-  const { t, locale } = useI18n()
+  const { t } = useI18n()
   const [slots, setSlots] = useState<[VideoSlot, VideoSlot]>([emptySlot(), emptySlot()])
   const videoRefs = [useRef<HTMLVideoElement>(null), useRef<HTMLVideoElement>(null)]
   const fileInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)]
@@ -307,14 +307,14 @@ export default function SwingCompare() {
       setComparisonResult(data as ComparisonResult)
       setAnalysisStatus('done')
     } catch (err) {
-      setAnalysisError(err instanceof Error ? err.message : (locale === 'en' ? 'An unknown error occurred.' : '알 수 없는 오류가 발생했습니다.'))
+      setAnalysisError(err instanceof Error ? err.message : t('analyzer.unknownError'))
       setAnalysisStatus('error')
     }
   }
 
   const RATES = [0.25, 0.5, 1, 1.5, 2]
   const slotLabels = [t('compare.videoA'), t('compare.videoB')]
-  const stageLabel = analysisStatus === 'extracting' ? t('step.extracting') : analysisStatus === 'detecting' ? t('step.detecting') : analysisStatus === 'analyzing' ? (locale === 'en' ? 'AI Comparison' : 'AI 비교 분석') : ''
+  const stageLabel = analysisStatus === 'extracting' ? t('step.extracting') : analysisStatus === 'detecting' ? t('step.detecting') : analysisStatus === 'analyzing' ? t('compare.aiComparisonLabel') : ''
 
   return (
     <div className="space-y-6">

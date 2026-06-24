@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import AnalysisResult from './AnalysisResult'
 import { countByDate, deleteAnalysis, fetchGlobalStats, fetchHistory, fetchRegionalStats, getAnalysesByDate } from '@/lib/history'
-import { SavedAnalysis, describeClub } from '@/lib/types'
-import { useI18n } from '@/lib/i18n'
+import { ClubSelection, SavedAnalysis } from '@/lib/types'
+import { useI18n, type TranslationKey } from '@/lib/i18n'
 
 function toKey(year: number, month: number, day: number): string {
   return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
@@ -16,6 +16,18 @@ function todayKey(): string {
 }
 
 const MONTH_NAMES_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
+const CLUB_KEYS: Record<string, TranslationKey> = {
+  driver: 'club.driver', wood: 'club.wood', utility: 'club.utility', iron: 'club.iron', wedge: 'club.wedge',
+}
+
+function describeClubI18n(club: ClubSelection, t: (k: TranslationKey) => string): string {
+  const label = t(CLUB_KEYS[club.category] ?? 'club.iron')
+  if (club.category === 'driver') return label
+  if (club.number == null) return label
+  const suffix = t('club.numberSuffix')
+  return suffix ? `${club.number}${suffix} ${label}` : `${club.number} ${label}`
+}
 
 export default function HistoryCalendar() {
   const { t, locale } = useI18n()
@@ -115,9 +127,9 @@ export default function HistoryCalendar() {
   const selectedEntries = selectedDate ? getAnalysesByDate(history, selectedDate) : []
   const today = todayKey()
 
-  const monthTitle = locale === 'ko'
-    ? `${cursor.year}년 ${cursor.month + 1}월`
-    : `${MONTH_NAMES_EN[cursor.month]} ${cursor.year}`
+  const monthTitle = t('calendar.yearMonth')
+    .replace('{year}', String(cursor.year))
+    .replace('{month}', locale === 'ko' ? String(cursor.month + 1) : MONTH_NAMES_EN[cursor.month])
 
   if (loading) {
     return (
@@ -212,7 +224,7 @@ export default function HistoryCalendar() {
       {selectedDate && (
         <section className="space-y-3">
           <h3 className="text-sm font-semibold text-slate-300 px-1">
-            {selectedDate} {t('calendar.records')} {selectedEntries.length > 0 && `(${selectedEntries.length}${locale === 'ko' ? '건' : ''})`}
+            {selectedDate} {t('calendar.records')} {selectedEntries.length > 0 && `(${selectedEntries.length}${t('unit.count')})`}
           </h3>
 
           {deleteError && (
@@ -246,7 +258,7 @@ export default function HistoryCalendar() {
                       {entry.result.score}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-200 truncate">{describeClub(entry.club)} {t('calendar.swingAnalysis')}</p>
+                      <p className="text-sm font-semibold text-slate-200 truncate">{describeClubI18n(entry.club, t)} {t('calendar.swingAnalysis')}</p>
                       <p className="text-xs text-slate-500 flex items-center gap-1.5">
                         <span>{time}</span>
                         {entry.location?.region && (

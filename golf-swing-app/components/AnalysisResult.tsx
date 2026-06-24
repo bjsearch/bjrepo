@@ -114,27 +114,28 @@ function ScoreComparison({
   label: string
   theme: ComparisonTheme
 }) {
-  const { t, locale } = useI18n()
+  const { t } = useI18n()
   const diff = Math.round((score - average) * 10) / 10
   const avgLabel = average.toFixed(1)
+  const diffLabel = Math.abs(diff).toFixed(1)
   const colors = COMPARISON_COLORS[theme]
 
   if (Math.abs(diff) < 0.5) {
+    const text = t('score.similarTo').replace('{avg}', avgLabel)
     return (
       <p className={`text-xs font-semibold rounded-full px-3.5 py-1.5 border ${colors.similar}`}>
-        {locale === 'ko'
-          ? `─ ${label}(${avgLabel}점)와 비슷해요`
-          : `─ Similar to ${label} (${avgLabel}pts)`}
+        ─ {label}{text}
       </p>
     )
   }
 
   const isHigher = diff > 0
+  const text = t(isHigher ? 'score.higherThan' : 'score.lowerThan')
+    .replace('{avg}', avgLabel)
+    .replace('{diff}', diffLabel)
   return (
     <p className={`text-xs font-semibold rounded-full px-3.5 py-1.5 border ${isHigher ? colors.higher : colors.lower}`}>
-      {locale === 'ko'
-        ? `${isHigher ? '▲' : '▼'} ${label}(${avgLabel}점)보다 ${Math.abs(diff).toFixed(1)}점 ${isHigher ? '높아요' : '낮아요'}`
-        : `${isHigher ? '▲' : '▼'} ${Math.abs(diff).toFixed(1)}pts ${isHigher ? 'higher' : 'lower'} than ${label} (${avgLabel}pts)`}
+      {isHigher ? '▲' : '▼'} {label}{text}
     </p>
   )
 }

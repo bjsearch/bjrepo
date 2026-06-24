@@ -111,7 +111,7 @@ async function detectPhaseFrames(
 }
 
 export default function SwingAnalyzer() {
-  const { t, locale } = useI18n()
+  const { t } = useI18n()
   const [file, setFile] = useState<File | null>(null)
   const [videoUrl, setVideoUrl] = useState<string | null>(null)
   const [videoDuration, setVideoDuration] = useState<number | null>(null)
@@ -265,7 +265,7 @@ export default function SwingAnalyzer() {
         const detail = data?.error ?? raw.slice(0, 200) ?? `HTTP ${res.status}`
         throw new Error(
           data?.error ??
-            `${locale === 'en' ? 'Analysis request failed' : '분석 요청이 실패했습니다'}. (${res.status}) ${detail ? '- ' + detail : ''}`,
+            `${t('analyzer.requestFailed')}. (${res.status}) ${detail ? '- ' + detail : ''}`,
         )
       }
 

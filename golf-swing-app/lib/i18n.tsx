@@ -208,6 +208,25 @@ const translations = {
   'ai.geminiDesc': { ko: 'Google Gemini로 분석합니다', en: 'Analyze with Google Gemini' },
   'ai.geminiFlashDesc': { ko: '속도와 품질의 균형이 좋은 기본 모델', en: 'Balanced speed and quality' },
   'ai.geminiFlashLiteDesc': { ko: '가장 가볍고 빠른 모델', en: 'Lightest and fastest model' },
+
+  // Inline strings that were previously hardcoded
+  'analyzer.requestFailed': { ko: '분석 요청이 실패했습니다', en: 'Analysis request failed' },
+  'compare.aiComparisonLabel': { ko: 'AI 비교 분석', en: 'AI Comparison' },
+  'unit.count': { ko: '건', en: '' },
+  'unit.people': { ko: '명', en: '' },
+  'unit.score': { ko: '점', en: 'pts' },
+  'score.similarTo': {
+    ko: '({avg}점)와 비슷해요',
+    en: '({avg}pts) — similar',
+  },
+  'score.higherThan': {
+    ko: '({avg}점)보다 {diff}점 높아요',
+    en: '({avg}pts) by {diff}pts higher',
+  },
+  'score.lowerThan': {
+    ko: '({avg}점)보다 {diff}점 낮아요',
+    en: '({avg}pts) by {diff}pts lower',
+  },
 } as const
 
 export type TranslationKey = keyof typeof translations

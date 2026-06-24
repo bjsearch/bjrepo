@@ -26,7 +26,7 @@ function StatCard({ label, value }: { label: string; value: string }) {
 }
 
 export default function AdminDashboard() {
-  const { t, locale } = useI18n()
+  const { t } = useI18n()
   const [data, setData] = useState<AdminDashboardData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -57,8 +57,8 @@ export default function AdminDashboard() {
   const regionEntries = Object.entries(data.regionBreakdown).sort((a, b) => b[1].count - a[1].count)
   const phaseFeedbackEntries = Object.entries(data.phaseFeedback)
 
-  const userCount = locale === 'ko' ? `${data.totalUsers.toLocaleString()}명` : data.totalUsers.toLocaleString()
-  const analysesCount = locale === 'ko' ? `${data.totalAnalyses.toLocaleString()}건` : data.totalAnalyses.toLocaleString()
+  const userCount = `${data.totalUsers.toLocaleString()}${t('unit.people')}`
+  const analysesCount = `${data.totalAnalyses.toLocaleString()}${t('unit.count')}`
 
   return (
     <div className="space-y-5">
@@ -84,7 +84,7 @@ export default function AdminDashboard() {
                   <div className="flex items-baseline justify-between text-sm">
                     <span className="text-slate-200 font-semibold">{clubLabel}</span>
                     <span className="text-slate-400">
-                      {count.toLocaleString()}{locale === 'ko' ? '건' : ''} ({pct}%)
+                      {count.toLocaleString()}{t('unit.count')} ({pct}%)
                     </span>
                   </div>
                   <div className="h-1.5 w-full rounded-full bg-white/5 overflow-hidden">
@@ -109,7 +109,7 @@ export default function AdminDashboard() {
               <div key={region} className="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-2.5 flex items-center justify-between">
                 <span className="text-sm text-slate-200">{region}</span>
                 <span className="text-sm font-semibold text-lime-300">
-                  {stats.average != null ? stats.average.toFixed(1) : '-'}{locale === 'ko' ? '점' : 'pts'} ({stats.count}{locale === 'ko' ? '건' : ''})
+                  {stats.average != null ? stats.average.toFixed(1) : '-'}{t('unit.score')} ({stats.count}{t('unit.count')})
                 </span>
               </div>
             ))}
