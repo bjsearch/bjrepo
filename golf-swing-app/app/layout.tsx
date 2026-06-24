@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: '골프 스윙 분석기',
+  title: 'Carry Coach',
   description: '스윙 영상을 업로드하면 AI가 점수, 분석, 연습법, 참고 선수를 알려줍니다.',
 }
 
