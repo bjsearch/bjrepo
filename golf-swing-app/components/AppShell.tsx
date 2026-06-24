@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import SwingAnalyzer from './SwingAnalyzer'
 import SwingCompare from './SwingCompare'
 import HistoryCalendar from './HistoryCalendar'
@@ -10,8 +10,22 @@ import { useI18n } from '@/lib/i18n'
 
 type Tab = 'analyze' | 'compare' | 'calendar' | 'dashboard'
 
+function getInitialTab(): Tab {
+  if (typeof window === 'undefined') return 'analyze'
+  const params = new URLSearchParams(window.location.search)
+  const t = params.get('tab')
+  if (t === 'calendar' || t === 'compare' || t === 'analyze' || t === 'dashboard') return t
+  return 'analyze'
+}
+
+function getInitialDate(): string | null {
+  if (typeof window === 'undefined') return null
+  return new URLSearchParams(window.location.search).get('date')
+}
+
 export default function AppShell() {
-  const [tab, setTab] = useState<Tab>('analyze')
+  const [tab, setTab] = useState<Tab>(getInitialTab)
+  const [initialDate] = useState<string | null>(getInitialDate)
   const { t } = useI18n()
 
   return (
@@ -69,7 +83,7 @@ export default function AppShell() {
 
           {tab === 'analyze' && <SwingAnalyzer />}
           {tab === 'compare' && <SwingCompare />}
-          {tab === 'calendar' && <HistoryCalendar />}
+          {tab === 'calendar' && <HistoryCalendar initialDate={initialDate} />}
           {tab === 'dashboard' && user.isAdmin && <AdminDashboard />}
         </div>
       )}

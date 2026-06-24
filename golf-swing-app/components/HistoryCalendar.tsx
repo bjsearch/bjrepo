@@ -29,14 +29,18 @@ function describeClubI18n(club: ClubSelection, t: (k: TranslationKey) => string)
   return suffix ? `${club.number}${suffix} ${label}` : `${club.number} ${label}`
 }
 
-export default function HistoryCalendar() {
+export default function HistoryCalendar({ initialDate }: { initialDate?: string | null }) {
   const { t, locale } = useI18n()
   const [history, setHistory] = useState<SavedAnalysis[]>([])
   const [cursor, setCursor] = useState(() => {
+    if (initialDate) {
+      const [y, m] = initialDate.split('-').map(Number)
+      if (y && m) return { year: y, month: m - 1 }
+    }
     const d = new Date()
     return { year: d.getFullYear(), month: d.getMonth() }
   })
-  const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [selectedDate, setSelectedDate] = useState<string | null>(initialDate ?? null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)

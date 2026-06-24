@@ -56,9 +56,10 @@ interface ShareButtonsProps {
   title: string
   description: string
   captureTargetRef: React.RefObject<HTMLDivElement | null>
+  shareDate?: string
 }
 
-export default function ShareButtons({ title, description, captureTargetRef }: ShareButtonsProps) {
+export default function ShareButtons({ title, description, captureTargetRef, shareDate }: ShareButtonsProps) {
   const { t } = useI18n()
   const [toast, setToast] = useState<string | null>(null)
   const [kakaoLoading, setKakaoLoading] = useState(false)
@@ -68,7 +69,12 @@ export default function ShareButtons({ title, description, captureTargetRef }: S
     setTimeout(() => setToast(null), 2500)
   }, [])
 
-  const pageUrl = typeof window !== 'undefined' ? window.location.href : ''
+  const pageUrl = (() => {
+    if (typeof window === 'undefined') return ''
+    const base = `${window.location.origin}${window.location.pathname}`
+    const date = shareDate ?? new Date().toISOString().slice(0, 10)
+    return `${base}?tab=calendar&date=${date}`
+  })()
   const plainDesc = description.replace(/\*\*/g, '').replace(/__/g, '')
 
   const captureToBlob = useCallback(async (): Promise<Blob | null> => {
