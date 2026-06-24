@@ -247,6 +247,7 @@ const translations = {
   'share.instagram': { ko: '인스타용 저장', en: 'Save for Instagram' },
   'share.instagramCopied': { ko: '📋 이미지가 저장되었습니다. 인스타그램에서 스토리를 올려주세요!', en: '📋 Image saved. Open Instagram to post your story!' },
   'share.saveReport': { ko: '분석리포트 저장', en: 'Save Report' },
+  'share.openInstagram': { ko: '인스타로 이동하기', en: 'Open Instagram' },
   'share.saveImage': { ko: '이미지로 저장', en: 'Save as Image' },
   'share.imageSaved': { ko: '📸 이미지가 저장되었습니다!', en: '📸 Image saved!' },
   'share.imageFailed': { ko: '이미지 저장에 실패했습니다.', en: 'Failed to save image.' },
