@@ -16,11 +16,41 @@ declare global {
   }
 }
 
-function initKakao() {
+const KAKAO_SDK_URL = 'https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js'
+let kakaoLoadPromise: Promise<boolean> | null = null
+
+function loadKakaoSdk(): Promise<boolean> {
+  if (kakaoLoadPromise) return kakaoLoadPromise
+
   const key = process.env.NEXT_PUBLIC_KAKAO_JS_KEY
-  if (key && window.Kakao && !window.Kakao.isInitialized()) {
-    window.Kakao.init(key)
+  if (!key) {
+    kakaoLoadPromise = Promise.resolve(false)
+    return kakaoLoadPromise
   }
+
+  if (window.Kakao) {
+    if (!window.Kakao.isInitialized()) window.Kakao.init(key)
+    kakaoLoadPromise = Promise.resolve(true)
+    return kakaoLoadPromise
+  }
+
+  kakaoLoadPromise = new Promise<boolean>((resolve) => {
+    const script = document.createElement('script')
+    script.src = KAKAO_SDK_URL
+    script.async = true
+    script.onload = () => {
+      if (window.Kakao && !window.Kakao.isInitialized()) {
+        window.Kakao.init(key)
+      }
+      resolve(!!window.Kakao?.isInitialized())
+    }
+    script.onerror = () => {
+      kakaoLoadPromise = null
+      resolve(false)
+    }
+    document.head.appendChild(script)
+  })
+  return kakaoLoadPromise
 }
 
 interface ShareButtonsProps {
@@ -56,18 +86,16 @@ export default function ShareButtons({ title, description, captureTargetRef }: S
   }, [captureTargetRef])
 
   const handleKakao = useCallback(async () => {
-    initKakao()
-
-    if (!window.Kakao?.isInitialized()) {
-      navigator.clipboard.writeText(`${title}\n${plainDesc}\n${pageUrl}`).then(
-        () => showToast(t('share.copied')),
-        () => showToast(t('share.copyFailed')),
-      )
-      return
-    }
-
     setKakaoLoading(true)
     try {
+      const sdkReady = await loadKakaoSdk()
+
+      if (!sdkReady || !window.Kakao?.isInitialized()) {
+        await navigator.clipboard.writeText(`${title}\n${plainDesc}\n${pageUrl}`)
+        showToast(t('share.copied'))
+        return
+      }
+
       const blob = await captureToBlob()
 
       let imageUrl = 'https://carry-coach.netlify.app/og-image.png'
