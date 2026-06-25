@@ -305,14 +305,27 @@ export default function ShareButtons({ title, description, captureTargetRef, sha
       }
     }
     try {
-      const sdkReady = await loadKakaoSdk()
+      const blob = await captureToBlob()
 
+      // Try Web Share API first — sends the actual image file to KakaoTalk
+      if (blob) {
+        const file = new File([blob], 'carry-coach-report.png', { type: 'image/png' })
+        if (navigator.share && navigator.canShare?.({ files: [file] })) {
+          await navigator.share({
+            title,
+            text: `${plainDesc.slice(0, 200)}\n${pageUrl}`,
+            files: [file],
+          })
+          return
+        }
+      }
+
+      // Fallback: Kakao SDK feed template (link card with thumbnail)
+      const sdkReady = await loadKakaoSdk()
       if (!sdkReady || !window.Kakao?.isInitialized()) {
         await fallbackCopy('share.kakaoNotReady')
         return
       }
-
-      const blob = await captureToBlob()
 
       let imageUrl = 'https://carry-coach.netlify.app/og-image.png'
       if (blob) {
@@ -321,8 +334,8 @@ export default function ShareButtons({ title, description, captureTargetRef, sha
           imageUrl = serverUrl
         } else {
           try {
-            const file = new File([blob], 'carry-coach-report.png', { type: 'image/png' })
-            const uploaded = await window.Kakao!.Share.uploadImage({ file: [file] })
+            const imgFile = new File([blob], 'carry-coach-report.png', { type: 'image/png' })
+            const uploaded = await window.Kakao!.Share.uploadImage({ file: [imgFile] })
             imageUrl = uploaded.infos.original.url
           } catch (e) {
             console.warn('Image upload failed, using default', e)
