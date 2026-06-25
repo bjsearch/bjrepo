@@ -127,6 +127,7 @@ export default function SwingAnalyzer() {
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<SwingAnalysisResult | null>(null)
   const [frames, setFrames] = useState<string[]>([])
+  const [hiResTopFrame, setHiResTopFrame] = useState<string | null>(null)
   const [framePhaseCount, setFramePhaseCount] = useState<4 | 6>(4)
   const [myAverageScore, setMyAverageScore] = useState<number | null>(null)
   const [globalAverageScore, setGlobalAverageScore] = useState<number | null>(null)
@@ -144,6 +145,7 @@ export default function SwingAnalyzer() {
     setFile(selected)
     setResult(null)
     setFrames([])
+    setHiResTopFrame(null)
     setMyAverageScore(null)
     setGlobalAverageScore(null)
     setRegionAverageScore(null)
@@ -278,6 +280,23 @@ export default function SwingAnalyzer() {
       setProgress(66)
       setFrames(phaseFrames)
       setFramePhaseCount(phaseCount)
+
+      // Extract hi-res backswing top frame from video
+      const topIdx = phaseCount === 6 ? 2 : 1
+      if (videoRef.current) {
+        try {
+          const video = videoRef.current
+          const topTime = (trimRange?.start ?? 0) + ((trimRange?.end ?? video.duration) - (trimRange?.start ?? 0)) * phaseFractions(phaseCount)[topIdx]
+          video.currentTime = topTime
+          await new Promise<void>((r) => { const h = () => { video.removeEventListener('seeked', h); r() }; video.addEventListener('seeked', h) })
+          const c = document.createElement('canvas')
+          c.width = video.videoWidth
+          c.height = video.videoHeight
+          c.getContext('2d')!.drawImage(video, 0, 0, c.width, c.height)
+          const hd = c.toDataURL('image/png').split(',')[1]
+          if (hd) setHiResTopFrame(hd)
+        } catch { /* use low-res fallback */ }
+      }
 
       setStatus('analyzing')
       const analyzingTimer = window.setInterval(() => {
@@ -642,6 +661,7 @@ export default function SwingAnalyzer() {
             frames={frames}
             frameLabels={phaseLabels(framePhaseCount, locale)}
             onFrameFeedback={handleFrameFeedback}
+            hiResTopFrame={hiResTopFrame}
           />
         </>
       )}

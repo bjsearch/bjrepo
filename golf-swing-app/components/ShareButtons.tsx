@@ -102,20 +102,34 @@ async function renderInstagramCard(
   ctx.fillRect(0, 0, W, H)
 
   try {
-    const img = await loadImage(`data:image/jpeg;base64,${topFrameBase64}`)
+    const prefix = topFrameBase64.startsWith('iVBOR') ? 'data:image/png;base64,' : 'data:image/jpeg;base64,'
+    const img = await loadImage(`${prefix}${topFrameBase64}`)
 
-    // Fill entire canvas with photo, center-crop for person
+    // Contain mode: show full body, fill remaining space with blurred bg
     const srcAspect = img.width / img.height
     const dstAspect = W / H
-    let sx = 0, sy = 0, sw = img.width, sh = img.height
+
     if (srcAspect > dstAspect) {
-      sw = img.height * dstAspect
-      sx = (img.width - sw) / 2
+      // Wider than canvas: fill height, letterbox sides with blurred bg
+      const bgScale = H / img.height
+      const bgW = img.width * bgScale
+      ctx.filter = 'blur(30px) brightness(0.4)'
+      ctx.drawImage(img, (W - bgW) / 2, 0, bgW, H)
+      ctx.filter = 'none'
+      const drawW = W
+      const drawH = W / srcAspect
+      ctx.drawImage(img, 0, (H - drawH) / 2, drawW, drawH)
     } else {
-      sh = img.width / dstAspect
-      sy = (img.height - sh) * 0.3
+      // Taller than canvas: fill width, pillarbox top/bottom with blurred bg
+      const bgScale = W / img.width
+      const bgH = img.height * bgScale
+      ctx.filter = 'blur(30px) brightness(0.4)'
+      ctx.drawImage(img, 0, (H - bgH) / 2, W, bgH)
+      ctx.filter = 'none'
+      const drawH = H
+      const drawW = H * srcAspect
+      ctx.drawImage(img, (W - drawW) / 2, 0, drawW, drawH)
     }
-    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, W, H)
   } catch {
     // dark fallback
   }
@@ -190,20 +204,30 @@ async function renderInstagramCard(
   roundRect(ctx, 50, dotY, W - 100, 1, 0)
   ctx.fill()
 
-  // Bottom bar: phase label + site
+  // Bottom bar: phase label + QR code
   ctx.fillStyle = 'rgba(255,255,255,0.45)'
   ctx.font = `500 18px ${font}`
   ctx.textAlign = 'left'
   ctx.letterSpacing = '1px'
-  ctx.fillText('TOP OF BACKSWING', 50, dotY + 40)
+  ctx.fillText('TOP OF BACKSWING', 50, dotY + 35)
   ctx.letterSpacing = '0px'
 
-  ctx.textAlign = 'right'
   ctx.fillStyle = 'rgba(255,255,255,0.25)'
-  ctx.font = `400 18px ${font}`
-  ctx.letterSpacing = '2px'
-  ctx.fillText('carry-coach.netlify.app', W - 50, dotY + 40)
-  ctx.letterSpacing = '0px'
+  ctx.font = `400 16px ${font}`
+  ctx.fillText('carry-coach.netlify.app', 50, dotY + 60)
+
+  // QR code
+  try {
+    const QRCode = (await import('qrcode')).default
+    const qrDataUrl = await QRCode.toDataURL('https://carry-coach.netlify.app', {
+      width: 120,
+      margin: 1,
+      color: { dark: '#ffffffcc', light: '#00000000' },
+    })
+    const qrImg = await loadImage(qrDataUrl)
+    const qrSize = 100
+    ctx.drawImage(qrImg, W - 50 - qrSize, dotY - 10, qrSize, qrSize)
+  } catch { /* QR generation failed, skip */ }
 
   return canvas
 }
