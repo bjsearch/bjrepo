@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getStore } from '@netlify/blobs'
 
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024 // 10MB
+const MAX_IMAGE_BYTES = 50 * 1024 * 1024 // 50MB
 const ALLOWED_HOSTS = ['carry-coach.netlify.app', 'localhost:3000']
 
 export async function POST(req: Request) {

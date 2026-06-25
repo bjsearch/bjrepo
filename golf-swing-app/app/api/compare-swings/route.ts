@@ -98,7 +98,7 @@ export async function POST(req: Request) {
     const locale = isLocale(requestedLocale) ? requestedLocale : 'ko'
 
     const allFrames = [...(Array.isArray(framesA) ? framesA : []), ...(Array.isArray(framesB) ? framesB : [])]
-    if (allFrames.length > 20 || allFrames.some((f: unknown) => typeof f !== 'string' || (f as string).length > 2_000_000)) {
+    if (allFrames.length > 20 || allFrames.some((f: unknown) => typeof f !== 'string' || (f as string).length > 5_000_000)) {
       return NextResponse.json({ error: 'Payload too large' }, { status: 413 })
     }
     if (!Array.isArray(framesA) || framesA.length === 0 || !Array.isArray(framesB) || framesB.length === 0) {
