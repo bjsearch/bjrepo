@@ -17,7 +17,7 @@ declare global {
 }
 
 const KAKAO_SDK_URL = 'https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js'
-const KAKAO_JS_KEY = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || ''
+const KAKAO_JS_KEY = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || '200cb8d714463d5558c7a3454e161fcf'
 let kakaoLoadPromise: Promise<boolean> | null = null
 
 function loadKakaoSdk(): Promise<boolean> {
@@ -292,14 +292,17 @@ export default function ShareButtons({ title, description, captureTargetRef, sha
 
       let imageUrl = 'https://carry-coach.netlify.app/og-image.png'
       if (blob) {
-        try {
-          const file = new File([blob], 'carry-coach-report.png', { type: 'image/png' })
-          const uploaded = await window.Kakao!.Share.uploadImage({ file: [file] })
-          imageUrl = uploaded.infos.original.url
-        } catch (e) {
-          console.warn('Kakao image upload failed, trying server', e)
-          const serverUrl = await uploadImageToServer(blob)
-          if (serverUrl) imageUrl = serverUrl
+        const serverUrl = await uploadImageToServer(blob)
+        if (serverUrl) {
+          imageUrl = serverUrl
+        } else {
+          try {
+            const file = new File([blob], 'carry-coach-report.png', { type: 'image/png' })
+            const uploaded = await window.Kakao!.Share.uploadImage({ file: [file] })
+            imageUrl = uploaded.infos.original.url
+          } catch (e) {
+            console.warn('Image upload failed, using default', e)
+          }
         }
       }
 

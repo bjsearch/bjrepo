@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server'
 import { getStore } from '@netlify/blobs'
 
 const MAX_IMAGE_BYTES = 50 * 1024 * 1024 // 50MB
-const ALLOWED_HOSTS = ['carry-coach.netlify.app', 'localhost:3000']
+function isAllowedHost(host: string): boolean {
+  return host === 'localhost:3000' || host.endsWith('.netlify.app')
+}
 
 export async function POST(req: Request) {
   try {
@@ -24,7 +26,7 @@ export async function POST(req: Request) {
     await store.set(id, new Blob([uint8], { type: 'image/png' }), { metadata: { contentType: 'image/png', createdAt: new Date().toISOString() } })
 
     const host = req.headers.get('host') || new URL(req.url).host
-    const safeHost = ALLOWED_HOSTS.includes(host) ? host : ALLOWED_HOSTS[0]
+    const safeHost = isAllowedHost(host) ? host : 'carry-coach.netlify.app'
     const proto = safeHost.startsWith('localhost') ? 'http' : 'https'
     const url = `${proto}://${safeHost}/api/share-image/${id}`
 
