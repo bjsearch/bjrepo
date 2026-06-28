@@ -137,6 +137,7 @@ export default function SwingAnalyzer() {
   const [clubDetectStatus, setClubDetectStatus] = useState<'idle' | 'detecting' | 'done' | 'error'>('idle')
   const [detectedClub, setDetectedClub] = useState<{ category: ClubCategory; confidence: string; reason: string } | null>(null)
   const [clubFeedbackGiven, setClubFeedbackGiven] = useState(false)
+  const [trajectory, setTrajectory] = useState<{ headSpeed: number; ballSpeed: number; launchAngle: number; carry: number; apex: number; smashFactor: number } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
 
@@ -159,6 +160,7 @@ export default function SwingAnalyzer() {
     setClubDetectStatus('idle')
     setDetectedClub(null)
     setClubFeedbackGiven(false)
+    setTrajectory(null)
     if (videoUrl) URL.revokeObjectURL(videoUrl)
     setVideoUrl(selected ? URL.createObjectURL(selected) : null)
   }
@@ -341,6 +343,21 @@ export default function SwingAnalyzer() {
       const analysisResult = data as SwingAnalysisResult
       setResult(analysisResult)
       setStatus('done')
+
+      // Estimate trajectory in background
+      fetch('/api/estimate-trajectory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          frames: phaseFrames,
+          clubCategory: club.category,
+          provider,
+          geminiModel,
+        }),
+      })
+        .then((r) => r.ok ? r.json() : null)
+        .then((d) => { if (d && d.carry > 0) setTrajectory(d) })
+        .catch(() => {})
 
       try {
         const pastEntries = await fetchHistory()
@@ -662,6 +679,7 @@ export default function SwingAnalyzer() {
             frameLabels={phaseLabels(framePhaseCount, locale)}
             onFrameFeedback={handleFrameFeedback}
             hiResTopFrame={hiResTopFrame}
+            trajectory={trajectory}
           />
         </>
       )}

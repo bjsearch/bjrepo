@@ -265,6 +265,17 @@ const translations = {
   'clubDetect.incorrect': { ko: '👎 아니에요', en: '👎 Wrong' },
   'clubDetect.feedbackDone': { ko: '피드백이 저장되었습니다', en: 'Feedback saved' },
   'clubDetect.failed': { ko: '클럽 인식 실패 — 직접 선택해 주세요', en: 'Club detection failed — please select manually' },
+
+  // Trajectory
+  'trajectory.title': { ko: '볼 궤적 & 예상 비거리', en: 'Ball Trajectory & Estimated Carry' },
+  'trajectory.disclaimer': { ko: '※ AI 추정값이며 실제와 다를 수 있습니다', en: '※ AI estimate — may differ from actual values' },
+  'trajectory.headSpeed': { ko: '헤드스피드', en: 'Head Speed' },
+  'trajectory.ballSpeed': { ko: '볼스피드', en: 'Ball Speed' },
+  'trajectory.launch': { ko: '런치앵글', en: 'Launch Angle' },
+  'trajectory.carry': { ko: '캐리', en: 'Carry' },
+  'trajectory.apex': { ko: '최고높이', en: 'Apex' },
+  'trajectory.estimating': { ko: '궤적 추정 중...', en: 'Estimating trajectory...' },
+  'trajectory.failed': { ko: '궤적 추정에 실패했습니다', en: 'Trajectory estimation failed' },
 } as const
 
 export type TranslationKey = keyof typeof translations

@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { SwingAnalysisResult, youtubeSearchUrl } from '@/lib/types'
 import { useI18n } from '@/lib/i18n'
 import ShareButtons from './ShareButtons'
+import TrajectoryView from './TrajectoryView'
 
 function renderEmphasis(text: string): React.ReactNode {
   const parts = text.split(/(\*\*[^*]+\*\*|__[^_]+__)/g)
@@ -218,6 +219,7 @@ export default function AnalysisResult({
   frameLabels,
   onFrameFeedback,
   hiResTopFrame,
+  trajectory,
 }: {
   result: SwingAnalysisResult
   myAverageScore?: number | null
@@ -228,6 +230,7 @@ export default function AnalysisResult({
   frameLabels?: string[]
   onFrameFeedback?: (frameIndex: number, accurate: boolean) => void
   hiResTopFrame?: string | null
+  trajectory?: { headSpeed: number; ballSpeed: number; launchAngle: number; carry: number; apex: number; smashFactor: number } | null
 }) {
   const { t } = useI18n()
   const captureRef = useRef<HTMLDivElement>(null)
@@ -362,6 +365,16 @@ export default function AnalysisResult({
             ))}
           </div>
         </section>
+
+        {trajectory && frames && frames.length > 0 && (() => {
+          const impactIdx = frameLabels?.findIndex((l) => l.includes('임팩트') || l.includes('Impact')) ?? -1
+          const trajFrame = impactIdx >= 0 ? frames[impactIdx] : frames[Math.min(2, frames.length - 1)]
+          return (
+            <section className={`${card} p-6`}>
+              <TrajectoryView frame={trajFrame} trajectory={trajectory} />
+            </section>
+          )
+        })()}
       </div>
 
       <section className={`${card} p-5`}>
