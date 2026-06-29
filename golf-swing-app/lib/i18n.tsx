@@ -276,6 +276,13 @@ const translations = {
   'trajectory.apex': { ko: '최고높이', en: 'Apex' },
   'trajectory.estimating': { ko: '궤적 추정 중...', en: 'Estimating trajectory...' },
   'trajectory.failed': { ko: '궤적 추정에 실패했습니다', en: 'Trajectory estimation failed' },
+
+  // Carry Tracer tab
+  'tab.tracer': { ko: '📐 캐리 트레이서', en: '📐 Carry Tracer' },
+  'tracer.upload': { ko: '스윙 영상 업로드', en: 'Upload Swing Video' },
+  'tracer.analyze': { ko: '궤적 분석 시작', en: 'Start Trajectory Analysis' },
+  'tracer.extracting': { ko: '프레임 추출 중...', en: 'Extracting frames...' },
+  'tracer.download': { ko: '궤적 이미지 다운로드', en: 'Download Trajectory Image' },
 } as const
 
 export type TranslationKey = keyof typeof translations
