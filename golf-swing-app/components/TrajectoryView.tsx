@@ -80,14 +80,19 @@ export default function TrajectoryView({ frame, trajectory }: TrajectoryViewProp
         const maxY = trajectory.apex
         const availRight = Math.max(W * 0.97 - originX, W * 0.15)
         const availTop = Math.max(originY - H * 0.08, H * 0.15)
-        const scaleX = availRight / maxX
-        const scaleY = availTop / maxY
 
         // The ball physically returns to ground level, but in camera
-        // perspective a landing spot far down the fairway sits much higher
+        // perspective a landing spot far down the fairway sits a bit higher
         // in the frame (toward the horizon) than the ball at the golfer's
-        // feet — so blend in an upward rise as the trajectory travels out.
-        const landRise = Math.min(scaleY * maxY * 0.65, originY - H * 0.12)
+        // feet. Keep this modest and capped so the landing point stays in
+        // the fairway, well below the horizon — never up in the sky.
+        const landRise = Math.min(H * 0.16, Math.max(originY - H * 0.55, 0))
+
+        // Reserve half the landRise from the vertical budget (the arc's
+        // real apex sits at the midpoint and also picks up half the rise)
+        // so the apex itself never gets pushed off the top of the canvas.
+        const scaleX = availRight / maxX
+        const scaleY = Math.max(availTop - landRise * 0.5, H * 0.1) / maxY
 
         // Main trajectory line (orange/gold gradient)
         ctx.beginPath()
