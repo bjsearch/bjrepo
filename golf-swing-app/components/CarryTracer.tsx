@@ -25,6 +25,8 @@ interface TrajectoryData {
   carry: number
   apex: number
   smashFactor: number
+  ballX?: number
+  ballY?: number
 }
 
 const card = 'rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.35)]'

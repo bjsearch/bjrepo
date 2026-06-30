@@ -10,6 +10,8 @@ interface TrajectoryData {
   carry: number
   apex: number
   smashFactor: number
+  ballX?: number
+  ballY?: number
 }
 
 interface TrajectoryViewProps {
@@ -66,16 +68,20 @@ export default function TrajectoryView({ frame, trajectory }: TrajectoryViewProp
       // Draw trajectory line from golfer position
       const points = computeTrajectoryPoints(trajectory.carry, trajectory.apex, trajectory.launchAngle)
       if (points.length > 0) {
-        // Origin: roughly where the ball would be at impact (lower-right area,
-        // matching the typical clubhead/ball position in the captured impact frame)
-        const originX = W * 0.58
-        const originY = H * 0.78
+        // Origin: AI-detected ball position from the address frame (camera is
+        // static, so the fraction maps onto this frame too); falls back to a
+        // lower-right heuristic if detection wasn't available.
+        const originX = W * (trajectory.ballX ?? 0.58)
+        const originY = H * (trajectory.ballY ?? 0.78)
 
-        // Scale trajectory to fit the upper portion of the image
+        // Scale trajectory to fit the image, bounded by available space from
+        // the ball's actual position so the arc never runs off-canvas
         const maxX = trajectory.carry
         const maxY = trajectory.apex
-        const scaleX = (W * 0.38) / maxX
-        const scaleY = (H * 0.55) / maxY
+        const availRight = Math.max(W * 0.97 - originX, W * 0.15)
+        const availTop = Math.max(originY - H * 0.08, H * 0.15)
+        const scaleX = availRight / maxX
+        const scaleY = availTop / maxY
 
         // Main trajectory line (orange/gold gradient)
         ctx.beginPath()

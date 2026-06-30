@@ -8,6 +8,8 @@ export interface TrajectoryEstimate {
   carry: number
   apex: number
   smashFactor: number
+  ballX: number
+  ballY: number
 }
 
 export async function POST(req: Request) {
@@ -36,11 +38,12 @@ export async function POST(req: Request) {
 4. 런치앵글 (도): 클럽 종류와 임팩트 자세로 추정 (드라이버 10-15°, 우드 13-17°, 유틸 15-19°, 아이언 18-25°, 웨지 28-45°)
 5. 캐리거리 (m): 볼스피드와 런치앵글로 물리적 추정
 6. 최고높이 (m): 궤적의 정점 높이
+7. 공의 위치: 첫 번째 이미지(어드레스 자세)에서 골프공의 중심 좌표를 이미지 비율(0.0~1.0, 좌상단이 0,0)의 x, y로 추정하세요. 클럽헤드 바로 옆에 놓인 공을 찾으세요. 드라이버는 티 위에 올라가 있어 지면보다 살짝 떠 있는 위치입니다.
 
 아마추어 골퍼 기준으로 현실적으로 추정하세요. 프로처럼 과대평가하지 마세요.
 
 반드시 아래 JSON 형식으로만 응답하세요:
-{"headSpeed": 35.0, "ballSpeed": 50.0, "launchAngle": 12.5, "carry": 200, "apex": 28, "smashFactor": 1.43}`
+{"headSpeed": 35.0, "ballSpeed": 50.0, "launchAngle": 12.5, "carry": 200, "apex": 28, "smashFactor": 1.43, "ballX": 0.55, "ballY": 0.78}`
 
     const contentBlocks = [
       { type: 'text' as const, text: prompt },
@@ -63,6 +66,8 @@ export async function POST(req: Request) {
     }
 
     const data = JSON.parse(jsonMatch[0])
+    const rawBallX = Number(data.ballX)
+    const rawBallY = Number(data.ballY)
     const result: TrajectoryEstimate = {
       headSpeed: Number(data.headSpeed) || 0,
       ballSpeed: Number(data.ballSpeed) || 0,
@@ -70,6 +75,8 @@ export async function POST(req: Request) {
       carry: Number(data.carry) || 0,
       apex: Number(data.apex) || 0,
       smashFactor: Number(data.smashFactor) || 0,
+      ballX: isFinite(rawBallX) && rawBallX >= 0 && rawBallX <= 1 ? rawBallX : 0.58,
+      ballY: isFinite(rawBallY) && rawBallY >= 0 && rawBallY <= 1 ? rawBallY : 0.78,
     }
 
     return NextResponse.json(result)
