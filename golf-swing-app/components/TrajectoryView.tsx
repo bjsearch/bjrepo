@@ -66,14 +66,15 @@ export default function TrajectoryView({ frame, trajectory }: TrajectoryViewProp
       // Draw trajectory line from golfer position
       const points = computeTrajectoryPoints(trajectory.carry, trajectory.apex, trajectory.launchAngle)
       if (points.length > 0) {
-        // Origin: roughly where the ball would be at impact (bottom-center area)
-        const originX = W * 0.35
-        const originY = H * 0.65
+        // Origin: roughly where the ball would be at impact (lower-right area,
+        // matching the typical clubhead/ball position in the captured impact frame)
+        const originX = W * 0.58
+        const originY = H * 0.78
 
         // Scale trajectory to fit the upper portion of the image
         const maxX = trajectory.carry
         const maxY = trajectory.apex
-        const scaleX = (W * 0.6) / maxX
+        const scaleX = (W * 0.38) / maxX
         const scaleY = (H * 0.55) / maxY
 
         // Main trajectory line (orange/gold gradient)
