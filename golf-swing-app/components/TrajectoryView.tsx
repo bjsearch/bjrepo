@@ -83,12 +83,19 @@ export default function TrajectoryView({ frame, trajectory }: TrajectoryViewProp
         const scaleX = availRight / maxX
         const scaleY = availTop / maxY
 
+        // The ball physically returns to ground level, but in camera
+        // perspective a landing spot far down the fairway sits much higher
+        // in the frame (toward the horizon) than the ball at the golfer's
+        // feet — so blend in an upward rise as the trajectory travels out.
+        const landRise = Math.min(scaleY * maxY * 0.65, originY - H * 0.12)
+
         // Main trajectory line (orange/gold gradient)
         ctx.beginPath()
         ctx.moveTo(originX, originY)
         for (const p of points) {
+          const t = p.x / maxX
           const px = originX + p.x * scaleX
-          const py = originY - p.y * scaleY
+          const py = originY - p.y * scaleY - t * landRise
           ctx.lineTo(px, py)
         }
 
@@ -101,8 +108,9 @@ export default function TrajectoryView({ frame, trajectory }: TrajectoryViewProp
 
         // Ball at apex
         const apexPoint = points[Math.floor(points.length / 2)]
+        const apexT = apexPoint.x / maxX
         const apexPx = originX + apexPoint.x * scaleX
-        const apexPy = originY - apexPoint.y * scaleY
+        const apexPy = originY - apexPoint.y * scaleY - apexT * landRise
         ctx.beginPath()
         ctx.arc(apexPx, apexPy, 8, 0, Math.PI * 2)
         ctx.fillStyle = '#ffffff'
@@ -111,9 +119,9 @@ export default function TrajectoryView({ frame, trajectory }: TrajectoryViewProp
         ctx.fill()
         ctx.shadowBlur = 0
 
-        // Landing point marker
+        // Landing point marker (raised toward the horizon to read as "far away")
         const landX = originX + trajectory.carry * scaleX
-        const landY = originY
+        const landY = originY - landRise
         ctx.beginPath()
         ctx.arc(landX, landY, 6, 0, Math.PI * 2)
         ctx.fillStyle = '#ef4444'
@@ -137,10 +145,11 @@ export default function TrajectoryView({ frame, trajectory }: TrajectoryViewProp
         ctx.textAlign = 'left'
         ctx.fillText(`${trajectory.launchAngle.toFixed(1)}°`, originX + arcRadius + 8, originY - 10)
 
-        // Thin reference line (ground line)
+        // Thin reference line (ground line, sloped toward the horizon to
+        // match the perspective rise of the landing point)
         ctx.beginPath()
         ctx.moveTo(originX, originY)
-        ctx.lineTo(landX + 20, originY)
+        ctx.lineTo(landX + 20, landY)
         ctx.strokeStyle = 'rgba(255,255,255,0.15)'
         ctx.lineWidth = 1
         ctx.setLineDash([6, 4])
