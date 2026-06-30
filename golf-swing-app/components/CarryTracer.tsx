@@ -5,10 +5,12 @@ import ClubSelector from './ClubSelector'
 import TrajectoryView from './TrajectoryView'
 import { extractFrames } from '@/lib/extractFrames'
 import SwingLoaderAnimation from './SwingLoaderAnimation'
+import { detectClubFromFrame, recordClubFeedback } from '@/lib/clubDetection'
 import { useI18n } from '@/lib/i18n'
 import {
   AI_PROVIDERS,
   AIProvider,
+  ClubCategory,
   ClubSelection,
   DEFAULT_GEMINI_MODEL,
   GEMINI_MODELS,
@@ -38,6 +40,9 @@ export default function CarryTracer() {
   const [error, setError] = useState<string | null>(null)
   const [trajectory, setTrajectory] = useState<TrajectoryData | null>(null)
   const [impactFrame, setImpactFrame] = useState<string | null>(null)
+  const [clubDetectStatus, setClubDetectStatus] = useState<'idle' | 'detecting' | 'done' | 'error'>('idle')
+  const [detectedClub, setDetectedClub] = useState<{ category: ClubCategory; confidence: string; reason: string } | null>(null)
+  const [clubFeedbackGiven, setClubFeedbackGiven] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
 
@@ -48,8 +53,56 @@ export default function CarryTracer() {
     setImpactFrame(null)
     setError(null)
     setStatus('idle')
+    setClubDetectStatus('idle')
+    setDetectedClub(null)
+    setClubFeedbackGiven(false)
     if (videoUrl) URL.revokeObjectURL(videoUrl)
     setVideoUrl(selected ? URL.createObjectURL(selected) : null)
+  }
+
+  const extractFrameFromVideo = useCallback((video: HTMLVideoElement): Promise<string | null> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas')
+      canvas.width = 640
+      canvas.height = Math.round(640 * (video.videoHeight / video.videoWidth))
+      const ctx = canvas.getContext('2d')
+      if (!ctx) { resolve(null); return }
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.7)
+      const base64 = dataUrl.split(',')[1]
+      resolve(base64 || null)
+    })
+  }, [])
+
+  const runClubDetection = useCallback(async (video: HTMLVideoElement) => {
+    setClubDetectStatus('detecting')
+    try {
+      const seekTo = video.duration * 0.3
+      video.currentTime = seekTo
+      await new Promise<void>((resolve) => {
+        const handler = () => { video.removeEventListener('seeked', handler); resolve() }
+        video.addEventListener('seeked', handler)
+      })
+      const frame = await extractFrameFromVideo(video)
+      if (!frame) { setClubDetectStatus('error'); return }
+      const result = await detectClubFromFrame(frame, provider, geminiModel)
+      if (result) {
+        setDetectedClub(result)
+        setClub((prev) => ({ ...prev, category: result.category }))
+        setClubDetectStatus('done')
+      } else {
+        setClubDetectStatus('error')
+      }
+    } catch {
+      setClubDetectStatus('error')
+    }
+  }, [provider, geminiModel, extractFrameFromVideo])
+
+  function handleVideoLoadedMetadata(e: React.SyntheticEvent<HTMLVideoElement>) {
+    const video = e.currentTarget
+    if (isFinite(video.duration) && video.duration > 0) {
+      runClubDetection(video)
+    }
   }
 
   const extractImpactFrame = useCallback(async (video: HTMLVideoElement): Promise<string | null> => {
@@ -148,12 +201,65 @@ export default function CarryTracer() {
             ref={videoRef}
             src={videoUrl}
             controls
+            onLoadedMetadata={handleVideoLoadedMetadata}
             className="w-full max-h-72 rounded-xl bg-black ring-1 ring-white/10 shadow-inner"
           />
         )}
 
         {videoUrl && (
-          <ClubSelector value={club} onChange={setClub} />
+          <ClubSelector value={club} onChange={(c) => { setClub(c); setClubFeedbackGiven(false) }} />
+        )}
+
+        {clubDetectStatus === 'detecting' && (
+          <div className="flex items-center gap-2 text-xs text-sky-300 bg-sky-400/10 border border-sky-400/20 rounded-xl px-3 py-2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="animate-spin shrink-0" aria-hidden>
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round" />
+            </svg>
+            {t('clubDetect.detecting')}
+          </div>
+        )}
+
+        {clubDetectStatus === 'done' && detectedClub && (
+          <div className="rounded-xl border border-orange-400/20 bg-orange-400/5 px-3 py-2 space-y-1.5">
+            <p className="text-xs text-orange-300">
+              {t('clubDetect.detected')}: <span className="font-bold">{detectedClub.category}</span>
+              <span className="ml-1.5 text-slate-400">({t(detectedClub.confidence === 'high' ? 'clubDetect.confidence.high' : detectedClub.confidence === 'medium' ? 'clubDetect.confidence.medium' : 'clubDetect.confidence.low')})</span>
+            </p>
+            {detectedClub.reason && (
+              <p className="text-[11px] text-slate-500">{detectedClub.reason}</p>
+            )}
+            {!clubFeedbackGiven && (
+              <div className="flex items-center gap-2 pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    recordClubFeedback(detectedClub.category, club.category, true)
+                    setClubFeedbackGiven(true)
+                  }}
+                  className="text-[11px] font-semibold text-emerald-300 bg-emerald-400/10 border border-emerald-400/20 rounded-full px-3 py-1 hover:bg-emerald-400/20 transition"
+                >
+                  {t('clubDetect.correct')} ✓
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    recordClubFeedback(detectedClub.category, club.category, false)
+                    setClubFeedbackGiven(true)
+                  }}
+                  className="text-[11px] font-semibold text-rose-300 bg-rose-400/10 border border-rose-400/20 rounded-full px-3 py-1 hover:bg-rose-400/20 transition"
+                >
+                  {t('clubDetect.incorrect')} ✗
+                </button>
+              </div>
+            )}
+            {clubFeedbackGiven && (
+              <p className="text-[11px] text-slate-500">{t('clubDetect.feedbackDone')}</p>
+            )}
+          </div>
+        )}
+
+        {clubDetectStatus === 'error' && (
+          <p className="text-[11px] text-slate-500">{t('clubDetect.failed')}</p>
         )}
 
         {videoUrl && (
