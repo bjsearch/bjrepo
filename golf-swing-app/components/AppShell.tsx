@@ -15,7 +15,8 @@ function getInitialTab(): Tab {
   if (typeof window === 'undefined') return 'analyze'
   const params = new URLSearchParams(window.location.search)
   const t = params.get('tab')
-  if (t === 'calendar' || t === 'compare' || t === 'analyze' || t === 'tracer' || t === 'dashboard') return t
+  // 'tracer' (Carry Tracer) is temporarily hidden from the UI; ignore it even if linked directly
+  if (t === 'calendar' || t === 'compare' || t === 'analyze' || t === 'dashboard') return t
   return 'analyze'
 }
 
@@ -50,7 +51,7 @@ export default function AppShell() {
             <div className="inline-flex p-1 rounded-full bg-white/[0.04] border border-white/10 backdrop-blur">
               {([
                 { key: 'analyze' as Tab, label: t('tab.analyze') },
-                { key: 'tracer' as Tab, label: t('tab.tracer') },
+                // 'tracer' (Carry Tracer) temporarily hidden — not in active use
                 { key: 'compare' as Tab, label: t('tab.compare') },
                 { key: 'calendar' as Tab, label: t('tab.calendar') },
               ] as const).map(({ key, label }) => (
