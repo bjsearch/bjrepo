@@ -1,8 +1,14 @@
-import { ClubProfileEntry, RoundState } from './types'
+import { AudioSettings, ClubProfileEntry, RoundState } from './types'
 import { DEFAULT_CLUB_PROFILE } from './clubRecommend'
 
 const CLUB_PROFILE_KEY = 'glasses-caddie:club-profile'
 const ROUND_KEY = 'glasses-caddie:round'
+const AUDIO_SETTINGS_KEY = 'glasses-caddie:audio-settings'
+
+const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
+  autoAnnounceHole: true,
+  autoAnnounceShot: true,
+}
 
 function readJSON<T>(key: string, fallback: T): T {
   if (typeof window === 'undefined') return fallback
@@ -47,4 +53,12 @@ export function loadRound(): RoundState {
 
 export function saveRound(round: RoundState) {
   writeJSON(ROUND_KEY, round)
+}
+
+export function loadAudioSettings(): AudioSettings {
+  return readJSON(AUDIO_SETTINGS_KEY, DEFAULT_AUDIO_SETTINGS)
+}
+
+export function saveAudioSettings(settings: AudioSettings) {
+  writeJSON(AUDIO_SETTINGS_KEY, settings)
 }

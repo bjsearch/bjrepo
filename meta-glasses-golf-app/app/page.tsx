@@ -1,21 +1,38 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import WatchConnect from '@/components/WatchConnect'
-import GlassesHUD from '@/components/GlassesHUD'
+import AudioFeed from '@/components/AudioFeed'
 import RoundPanel from '@/components/RoundPanel'
 import ClubProfile from '@/components/ClubProfile'
 import VoiceBar from '@/components/VoiceBar'
 import { golfWatchLink } from '@/lib/bluetoothWatch'
 import { recommendClub } from '@/lib/clubRecommend'
-import { loadClubProfile, loadRound, newRound, saveClubProfile, saveRound } from '@/lib/storage'
-import { ClubProfileEntry, RoundState, WatchConnectionState, WatchTelemetry } from '@/lib/types'
+import { distanceAnnouncement, holeAnnouncement, shotAnnouncement, speak } from '@/lib/audioAnnouncer'
+import {
+  loadAudioSettings,
+  loadClubProfile,
+  loadRound,
+  newRound,
+  saveAudioSettings,
+  saveClubProfile,
+  saveRound,
+} from '@/lib/storage'
+import {
+  AnnouncementEvent,
+  AnnouncementReason,
+  AudioSettings,
+  ClubProfileEntry,
+  RoundState,
+  WatchConnectionState,
+  WatchTelemetry,
+} from '@/lib/types'
 
-type Tab = 'connect' | 'hud' | 'round' | 'voice' | 'settings'
+type Tab = 'connect' | 'audio' | 'round' | 'voice' | 'settings'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'connect', label: '연결' },
-  { id: 'hud', label: 'HUD' },
+  { id: 'audio', label: '오디오' },
   { id: 'round', label: '라운드' },
   { id: 'voice', label: '음성' },
   { id: 'settings', label: '설정' },
@@ -28,12 +45,21 @@ export default function Home() {
   const [bluetoothSupported, setBluetoothSupported] = useState(false)
   const [clubProfile, setClubProfile] = useState<ClubProfileEntry[]>([])
   const [round, setRound] = useState<RoundState>(newRound())
+  const [audioSettings, setAudioSettings] = useState<AudioSettings>({
+    autoAnnounceHole: true,
+    autoAnnounceShot: true,
+  })
+  const [announcements, setAnnouncements] = useState<AnnouncementEvent[]>([])
   const [hydrated, setHydrated] = useState(false)
+
+  const lastAnnouncedHole = useRef<number | null>(null)
+  const lastAnnouncedShotAt = useRef<number | null>(null)
 
   useEffect(() => {
     setBluetoothSupported(golfWatchLink.isWebBluetoothSupported())
     setClubProfile(loadClubProfile())
     setRound(loadRound())
+    setAudioSettings(loadAudioSettings())
     setHydrated(true)
 
     const offState = golfWatchLink.onStateChange(setWatchState)
@@ -65,6 +91,41 @@ export default function Home() {
     if (hydrated) saveRound(round)
   }, [round, hydrated])
 
+  useEffect(() => {
+    if (hydrated) saveAudioSettings(audioSettings)
+  }, [audioSettings, hydrated])
+
+  function logAnnouncement(text: string, reason: AnnouncementReason) {
+    setAnnouncements((prev) =>
+      [{ id: `${Date.now()}-${Math.random()}`, text, reason, at: Date.now() }, ...prev].slice(0, 20)
+    )
+  }
+
+  // Every update from the watch is a candidate for a spoken announcement, since
+  // this device has no screen to glance at — the audio *is* the interface.
+  useEffect(() => {
+    if (!telemetry) return
+
+    if (audioSettings.autoAnnounceHole && telemetry.holeNumber !== lastAnnouncedHole.current) {
+      lastAnnouncedHole.current = telemetry.holeNumber
+      const text = holeAnnouncement(telemetry)
+      speak(text)
+      logAnnouncement(text, 'hole')
+    }
+
+    if (
+      audioSettings.autoAnnounceShot &&
+      telemetry.lastShotDistance != null &&
+      telemetry.updatedAt !== lastAnnouncedShotAt.current
+    ) {
+      lastAnnouncedShotAt.current = telemetry.updatedAt
+      const text = shotAnnouncement(telemetry.lastShotDistance)
+      speak(text)
+      logAnnouncement(text, 'shot')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [telemetry, audioSettings])
+
   const recommendedClub = telemetry
     ? recommendClub(telemetry.distanceToPinCenter, clubProfile)
     : null
@@ -86,12 +147,19 @@ export default function Home() {
     setRound((prev) => ({ ...prev, currentHole: hole }))
   }
 
+  function replayDistance() {
+    if (!telemetry) return
+    const text = distanceAnnouncement(telemetry)
+    speak(text)
+    logAnnouncement(text, 'manual')
+  }
+
   return (
     <main className="mx-auto max-w-2xl px-4 py-6 space-y-5">
       <header className="space-y-1">
         <h1 className="text-xl font-bold text-white">⛳ Glasses Caddie</h1>
         <p className="text-sm text-slate-400">
-          Meta 스마트 안경 × 스마트 골프 워치 컴패니언 앱
+          Meta 스마트 안경(디스플레이 없음) × 스마트 골프 워치 오디오 컴패니언 앱
         </p>
       </header>
 
@@ -120,8 +188,16 @@ export default function Home() {
         />
       )}
 
-      {tab === 'hud' && (
-        <GlassesHUD telemetry={telemetry} recommendedClub={recommendedClub} connectionState={watchState} />
+      {tab === 'audio' && (
+        <AudioFeed
+          telemetry={telemetry}
+          recommendedClub={recommendedClub}
+          connectionState={watchState}
+          settings={audioSettings}
+          onSettingsChange={setAudioSettings}
+          announcements={announcements}
+          onReplayDistance={replayDistance}
+        />
       )}
 
       {tab === 'round' && (
@@ -146,6 +222,7 @@ export default function Home() {
           round={round}
           onNextHole={() => goToHole(Math.min(18, round.currentHole + 1))}
           onPrevHole={() => goToHole(Math.max(1, round.currentHole - 1))}
+          onAnnounce={logAnnouncement}
         />
       )}
 

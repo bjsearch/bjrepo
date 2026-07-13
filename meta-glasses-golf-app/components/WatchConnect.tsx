@@ -70,7 +70,8 @@ export default function WatchConnect({
           <p className="text-xs text-slate-500 leading-relaxed">
             워치 제조사(Garmin/Coros 등)는 홀·핀 거리 데이터를 공개 프로토콜로 제공하지 않아,
             실제 연결은 표준 심박수/배터리 정보만 받아옵니다. 홀·거리 정보는 데모 모드이거나
-            라운드 탭에서 직접 입력해 사용하세요.
+            라운드 탭에서 직접 입력해 사용하세요. 안경에 화면이 없으므로, 연결 후에는 모든
+            정보를 오디오 탭·음성 명령을 통한 음성 안내로 확인합니다.
           </p>
         </div>
       )}

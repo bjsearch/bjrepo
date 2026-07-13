@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { ClubProfileEntry, RoundState, VoiceExchange, WatchTelemetry } from '@/lib/types'
+import { speak } from '@/lib/audioAnnouncer'
+import { AnnouncementReason, ClubProfileEntry, RoundState, WatchTelemetry } from '@/lib/types'
 
 interface VoiceBarProps {
   telemetry: WatchTelemetry | null
@@ -9,6 +10,7 @@ interface VoiceBarProps {
   round: RoundState
   onNextHole: () => void
   onPrevHole: () => void
+  onAnnounce: (text: string, reason: AnnouncementReason) => void
 }
 
 function buildReply(
@@ -53,10 +55,11 @@ export default function VoiceBar({
   round,
   onNextHole,
   onPrevHole,
+  onAnnounce,
 }: VoiceBarProps) {
   const [supported, setSupported] = useState(false)
   const [listening, setListening] = useState(false)
-  const [exchanges, setExchanges] = useState<VoiceExchange[]>([])
+  const [lastHeard, setLastHeard] = useState<string | null>(null)
   const recognitionRef = useRef<SpeechRecognition | null>(null)
 
   useEffect(() => {
@@ -72,10 +75,9 @@ export default function VoiceBar({
     recognition.onresult = (event) => {
       const heard = event.results[0]?.[0]?.transcript ?? ''
       const reply = buildReply(heard, telemetry, recommendedClub, round, onNextHole, onPrevHole)
-      setExchanges((prev) =>
-        [{ id: Date.now().toString(), heard, reply, at: Date.now() }, ...prev].slice(0, 5)
-      )
+      setLastHeard(heard)
       speak(reply)
+      onAnnounce(reply, 'query')
     }
     recognition.onend = () => setListening(false)
     recognition.onerror = () => setListening(false)
@@ -83,13 +85,6 @@ export default function VoiceBar({
     recognitionRef.current = recognition
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [telemetry, recommendedClub, round])
-
-  function speak(text: string) {
-    if (typeof window === 'undefined' || !window.speechSynthesis) return
-    const utterance = new SpeechSynthesisUtterance(text)
-    utterance.lang = 'ko-KR'
-    window.speechSynthesis.speak(utterance)
-  }
 
   function toggleListening() {
     if (!recognitionRef.current) return
@@ -107,6 +102,11 @@ export default function VoiceBar({
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-slate-300">음성 명령 ("Hey Meta" 시뮬레이션)</h2>
       </div>
+
+      <p className="text-xs text-slate-500">
+        화면이 없는 기기이므로 안경 마이크로 묻고, 답은 안경 스피커로만 들립니다(이 데모에서는
+        폰 마이크/스피커로 시뮬레이션).
+      </p>
 
       {supported ? (
         <button
@@ -129,14 +129,9 @@ export default function VoiceBar({
         예: "핀까지 거리 알려줘", "클럽 추천해줘", "다음 홀", "스코어 알려줘"
       </p>
 
-      {exchanges.length > 0 && (
-        <div className="space-y-2">
-          {exchanges.map((ex) => (
-            <div key={ex.id} className="rounded-lg bg-slate-800/50 p-2 text-xs">
-              <div className="text-slate-400">🎤 {ex.heard}</div>
-              <div className="text-emerald-300">🔊 {ex.reply}</div>
-            </div>
-          ))}
+      {lastHeard && (
+        <div className="rounded-lg bg-slate-800/50 p-2 text-xs text-slate-400">
+          🎤 {lastHeard}
         </div>
       )}
     </div>

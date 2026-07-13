@@ -37,3 +37,17 @@ export interface VoiceExchange {
   reply: string
   at: number
 }
+
+export type AnnouncementReason = 'hole' | 'shot' | 'query' | 'manual'
+
+export interface AnnouncementEvent {
+  id: string
+  text: string
+  reason: AnnouncementReason
+  at: number
+}
+
+export interface AudioSettings {
+  autoAnnounceHole: boolean
+  autoAnnounceShot: boolean
+}
