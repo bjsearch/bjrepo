@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+import secrets
 from contextlib import contextmanager
 from datetime import datetime, timezone
 
@@ -70,9 +71,9 @@ CREATE TABLE IF NOT EXISTS guarantee_users (
 );
 """
 
-_SUMMARY_COLS = """id, customer_name, gender, birth_date, basis_date, created_at,
+_SUMMARY_COLS = """id, customer_name, gender, birth_date, age, basis_date, created_at,
                     monthly_premium, ok_count, warn_count, gap_count, total_contracts,
-                    created_by_user_id, created_by_name"""
+                    created_by_user_id, created_by_name, share_token"""
 
 
 def _q(sql: str) -> str:
@@ -116,9 +117,11 @@ def init_db() -> None:
             stmt = stmt.strip()
             if stmt:
                 cur.execute(stmt)
-        # 기존 배포에 리포트 소유자 컬럼 마이그레이션
+        # 기존 배포에 리포트 소유자 · 공유 링크 컬럼 마이그레이션
         _add_column_if_missing(cur, "guarantee_reports", "created_by_user_id", "INTEGER")
         _add_column_if_missing(cur, "guarantee_reports", "created_by_name", "TEXT")
+        _add_column_if_missing(cur, "guarantee_reports", "share_token", "TEXT")
+        _add_column_if_missing(cur, "guarantee_reports", "age", "INTEGER")
     global _initialized
     _initialized = True
 
@@ -191,6 +194,7 @@ def save_report(data: dict, created_by_user_id: int | None = None, created_by_na
         header["name"],
         header.get("gender"),
         header.get("birth_display"),
+        header.get("age"),
         header.get("basis_date_display"),
         datetime.now(timezone.utc).isoformat(timespec="seconds"),
         _to_int(kpis.get("monthly_premium")),
@@ -203,10 +207,10 @@ def save_report(data: dict, created_by_user_id: int | None = None, created_by_na
         created_by_name,
     )
     insert_sql = """INSERT INTO guarantee_reports
-        (customer_name, gender, birth_date, basis_date, created_at,
+        (customer_name, gender, birth_date, age, basis_date, created_at,
          monthly_premium, ok_count, warn_count, gap_count, total_contracts, data_json,
          created_by_user_id, created_by_name)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"""
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"""
     with _connect() as conn:
         cur = conn.cursor()
         if BACKEND == "postgres":
@@ -262,3 +266,29 @@ def delete_report(report_id: int) -> None:
     with _connect() as conn:
         cur = conn.cursor()
         cur.execute(_q("DELETE FROM guarantee_reports WHERE id = ?"), (report_id,))
+
+
+def regenerate_share_token(report_id: int) -> str:
+    """리포트에 새 공유 토큰을 발급(또는 재발급)하고 반환한다. 기존 링크는 즉시 무효화된다."""
+    _ensure_init()
+    token = secrets.token_urlsafe(20)
+    with _connect() as conn:
+        cur = conn.cursor()
+        cur.execute(_q("UPDATE guarantee_reports SET share_token = ? WHERE id = ?"), (token, report_id))
+    return token
+
+
+def revoke_share_token(report_id: int) -> None:
+    _ensure_init()
+    with _connect() as conn:
+        cur = conn.cursor()
+        cur.execute(_q("UPDATE guarantee_reports SET share_token = NULL WHERE id = ?"), (report_id,))
+
+
+def get_report_by_share_token(token: str) -> dict | None:
+    _ensure_init()
+    with _connect() as conn:
+        cur = conn.cursor()
+        cur.execute(_q("SELECT data_json FROM guarantee_reports WHERE share_token = ?"), (token,))
+        row = cur.fetchone()
+        return json.loads(row["data_json"]) if row else None

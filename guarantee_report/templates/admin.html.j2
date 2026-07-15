@@ -93,12 +93,15 @@
   {% if reports %}
   <table>
     <thead>
-      <tr><th>고객</th><th>생성자</th><th>생성일</th><th class="r">월 보험료</th><th>진단 결과</th></tr>
+      <tr><th>고객</th><th>성별</th><th>생년월일</th><th class="r">나이</th><th>생성자</th><th>생성일</th><th class="r">월 보험료</th><th>진단 결과</th></tr>
     </thead>
     <tbody>
       {% for r in reports %}
       <tr>
         <td><a class="name-link" href="/reports/{{ r.id }}">{{ r.customer_name }}</a></td>
+        <td>{{ r.gender or '-' }}</td>
+        <td>{{ r.birth_date or '-' }}</td>
+        <td class="r">{{ (r.age ~ '세') if r.age else '-' }}</td>
         <td>{{ r.created_by_name or '-' }}</td>
         <td>{{ r.created_at[:10] }}</td>
         <td class="r">{{ "{:,}".format(r.monthly_premium) if r.monthly_premium else '-' }}원</td>
