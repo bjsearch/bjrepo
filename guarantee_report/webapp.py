@@ -98,11 +98,47 @@ def _require_login():
 
 
 NAV_CSS = """
-  .navbar{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:6px 14px;max-width:920px;margin:0 auto 8px;padding:0 20px;font-size:13px;color:var(--sub)}
-  .navbar a,.navbar span{white-space:nowrap}
-  .navbar a{color:var(--sub);text-decoration:none;font-weight:600}
+  .navbar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 14px;max-width:920px;margin:0 auto 8px;padding:0 20px;font-size:13px;color:var(--sub)}
+  .navbar .brand{display:flex;align-items:center;gap:7px;text-decoration:none;flex:none}
+  .navbar .brand .wordmark{font-family:"Noto Serif KR",serif;font-weight:700;font-size:15.5px;color:var(--ink);letter-spacing:-.01em}
+  .navbar .menu{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px}
+  .navbar a,.navbar .who{white-space:nowrap}
+  .navbar a{display:inline-flex;align-items:center;gap:5px;color:var(--sub);text-decoration:none;font-weight:600}
+  .navbar a:hover{color:var(--ink)}
   .navbar a.admin{color:var(--ok)}
+  .navbar a.admin:hover{color:var(--ink)}
+  .navbar a svg{width:14px;height:14px;flex:none}
 """
+
+LOGO_MARK = (
+    '<svg viewBox="0 0 40 40" width="22" height="22" aria-hidden="true">'
+    '<path d="M4 21 A16 15 0 0 1 36 21 Z" fill="#10233F"/>'
+    '<rect x="9" y="21" width="4.4" height="6" rx="1.6" fill="#1D5BD8"/>'
+    '<rect x="17.8" y="21" width="4.4" height="10" rx="1.6" fill="#1D5BD8"/>'
+    '<rect x="26.6" y="21" width="4.4" height="14" rx="1.6" fill="#1D5BD8"/>'
+    "</svg>"
+)
+ICON_DASHBOARD = (
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+    'stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/>'
+    '<rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/>'
+    '<rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>'
+)
+ICON_DOC = (
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+    'stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/>'
+    '<path d="M14 3v5h5"/></svg>'
+)
+ICON_LOGOUT = (
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+    'stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>'
+    '<polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>'
+)
+ICON_PLUS = (
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+    'stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/>'
+    '<line x1="5" y1="12" x2="19" y2="12"/></svg>'
+)
 
 LOGIN_PAGE = """
 <!DOCTYPE html>
@@ -110,6 +146,7 @@ LOGIN_PAGE = """
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http%3A//www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'><path%20d='M4%2021%20A16%2015%200%200%201%2036%2021%20Z'%20fill='%2310233F'/><rect%20x='9'%20y='21'%20width='4.4'%20height='6'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='17.8'%20y='21'%20width='4.4'%20height='10'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='26.6'%20y='21'%20width='4.4'%20height='14'%20rx='1.6'%20fill='%231D5BD8'/></svg>">
 <title>로그인 — 보장분석 리포트 생성기</title>
 <style>
   :root{--ink:#10233F;--paper:#F6F7F9;--card:#FFFFFF;--line:#E3E7EE;--sub:#5B6B82;--ok:#1D5BD8;--gap:#C93030}
@@ -123,10 +160,13 @@ LOGIN_PAGE = """
   input:focus{outline:2px solid var(--ok);outline-offset:-1px}
   button{margin-top:24px;width:100%;padding:13px;border:none;border-radius:8px;background:var(--ink);color:#fff;font-size:15px;font-weight:600;cursor:pointer}
   .err{margin-top:16px;padding:12px 16px;background:#FBEDED;color:var(--gap);border-radius:8px;font-size:13.5px}
+  .brand-lockup{display:flex;align-items:center;gap:9px;margin-bottom:22px}
+  .brand-lockup .wordmark{font-family:"Noto Serif KR",serif;font-weight:700;font-size:17px;color:var(--ink);letter-spacing:-.01em}
 </style>
 </head>
 <body>
 <div class="wrap">
+  <div class="brand-lockup">""" + LOGO_MARK + """<span class="wordmark">보장분석</span></div>
   <h1>보장분석 리포트 생성기</h1>
   <p class="sub">이름과 휴대폰번호로 로그인하세요. 처음이면 자동으로 계정이 만들어집니다.</p>
   {% if error %}<div class="err">{{ error }}</div>{% endif %}
@@ -173,6 +213,7 @@ UPLOAD_PAGE = """
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http%3A//www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'><path%20d='M4%2021%20A16%2015%200%200%201%2036%2021%20Z'%20fill='%2310233F'/><rect%20x='9'%20y='21'%20width='4.4'%20height='6'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='17.8'%20y='21'%20width='4.4'%20height='10'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='26.6'%20y='21'%20width='4.4'%20height='14'%20rx='1.6'%20fill='%231D5BD8'/></svg>">
 <title>보장분석 리포트 생성기</title>
 <style>
   :root{--ink:#10233F;--paper:#F6F7F9;--card:#FFFFFF;--line:#E3E7EE;--sub:#5B6B82;--ok:#1D5BD8;--gap:#C93030}
@@ -191,10 +232,23 @@ UPLOAD_PAGE = """
   .err{margin-top:16px;padding:12px 16px;background:#FBEDED;color:var(--gap);border-radius:8px;font-size:13.5px}
   .note{margin-top:28px;font-size:12px;color:var(--sub);line-height:1.7}
 """ + NAV_CSS + """
-  .overlay{position:fixed;inset:0;background:rgba(16,35,63,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:50;opacity:0;pointer-events:none;transition:opacity .2s}
+  .overlay{position:fixed;inset:0;background:rgba(16,35,63,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:50;opacity:0;pointer-events:none;transition:opacity .2s}
   .overlay.show{opacity:1;pointer-events:all}
-  .spinner{width:42px;height:42px;border:4px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
-  @keyframes spin{to{transform:rotate(360deg)}}
+  .scan-card{width:78px;height:96px}
+  .scan-card svg{width:100%;height:100%;display:block}
+  .scan-line{animation:scanmove 1.9s cubic-bezier(.65,0,.35,1) infinite}
+  @keyframes scanmove{0%{transform:translateY(0);opacity:0}8%{opacity:1}92%{opacity:1}100%{transform:translateY(78px);opacity:0}}
+  .check-row{display:flex;flex-wrap:wrap;justify-content:center;gap:7px;max-width:280px}
+  .check-chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:5px 10px;border-radius:99px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.22);animation:checkpop 2.6s ease-in-out infinite;animation-delay:var(--d,0s)}
+  @keyframes checkpop{
+    0%,12%,100%{background:rgba(255,255,255,.1);color:rgba(255,255,255,.5);border-color:rgba(255,255,255,.22);transform:scale(1)}
+    22%,60%{background:#1D5BD8;color:#fff;border-color:#1D5BD8;transform:scale(1.06)}
+    72%{background:rgba(255,255,255,.1);color:rgba(255,255,255,.5);border-color:rgba(255,255,255,.22);transform:scale(1)}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .scan-line{animation:none;opacity:.7}
+    .check-chip{animation:none}
+  }
   .overlay .status{color:#fff;font-size:15px;font-weight:600;min-height:20px}
   .overlay .bar{width:220px;height:6px;background:rgba(255,255,255,.2);border-radius:99px;overflow:hidden}
   .overlay .bar .fill{height:100%;width:0%;background:#fff;border-radius:99px;transition:width .5s ease}
@@ -203,10 +257,13 @@ UPLOAD_PAGE = """
 </head>
 <body>
 <div class="navbar">
-  <span>{{ user.name }}님{% if user.role == 'admin' %} · 관리자{% endif %}</span>
-  {% if user.role == 'admin' %}<a class="admin" href="/admin">관리자 화면</a>{% endif %}
-  <a href="/reports">저장된 리포트</a>
-  <a href="/logout">로그아웃</a>
+  <a class="brand" href="/">""" + LOGO_MARK + """<span class="wordmark">보장분석</span></a>
+  <div class="menu">
+    <span class="who">{{ user.name }}님{% if user.role == 'admin' %} · 관리자{% endif %}</span>
+    {% if user.role == 'admin' %}<a class="admin" href="/admin">""" + ICON_DASHBOARD + """관리자 화면</a>{% endif %}
+    <a href="/reports">""" + ICON_DOC + """저장된 리포트</a>
+    <a href="/logout">""" + ICON_LOGOUT + """로그아웃</a>
+  </div>
 </div>
 <div class="wrap">
   <h1>보장분석 리포트 생성기</h1>
@@ -231,7 +288,30 @@ UPLOAD_PAGE = """
 </div>
 
 <div class="overlay" id="overlay">
-  <div class="spinner"></div>
+  <div class="scan-card">
+    <svg viewBox="0 0 78 96" aria-hidden="true">
+      <defs>
+        <linearGradient id="scangrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#4C8DFF" stop-opacity="0"/>
+          <stop offset="0.5" stop-color="#4C8DFF" stop-opacity=".95"/>
+          <stop offset="1" stop-color="#4C8DFF" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <rect x="4" y="4" width="70" height="88" rx="8" fill="#16294A" stroke="rgba(255,255,255,.18)" stroke-width="2"/>
+      <rect x="16" y="20" width="46" height="4.5" rx="2.25" fill="rgba(255,255,255,.25)"/>
+      <rect x="16" y="32" width="34" height="4.5" rx="2.25" fill="rgba(255,255,255,.25)"/>
+      <rect x="16" y="44" width="40" height="4.5" rx="2.25" fill="rgba(255,255,255,.25)"/>
+      <rect x="16" y="56" width="30" height="4.5" rx="2.25" fill="rgba(255,255,255,.25)"/>
+      <rect x="16" y="68" width="38" height="4.5" rx="2.25" fill="rgba(255,255,255,.25)"/>
+      <rect class="scan-line" x="4" y="4" width="70" height="10" fill="url(#scangrad)"/>
+    </svg>
+  </div>
+  <div class="check-row">
+    <span class="check-chip" style="--d:0s">✓ 사망</span>
+    <span class="check-chip" style="--d:.5s">✓ 암</span>
+    <span class="check-chip" style="--d:1s">✓ 뇌·심장</span>
+    <span class="check-chip" style="--d:1.5s">✓ 실손</span>
+  </div>
   <div class="status" id="status">PDF 업로드 중...</div>
   <div class="bar"><div class="fill" id="fill"></div></div>
   <div class="hint2">보통 5~20초 정도 걸려요. 창을 닫지 마세요.</div>
@@ -452,6 +532,7 @@ ERROR_PAGE = """
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http%3A//www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'><path%20d='M4%2021%20A16%2015%200%200%201%2036%2021%20Z'%20fill='%2310233F'/><rect%20x='9'%20y='21'%20width='4.4'%20height='6'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='17.8'%20y='21'%20width='4.4'%20height='10'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='26.6'%20y='21'%20width='4.4'%20height='14'%20rx='1.6'%20fill='%231D5BD8'/></svg>">
 <title>오류 — 보장분석 리포트 생성기</title>
 <style>
   :root{--ink:#10233F;--paper:#F6F7F9;--card:#FFFFFF;--line:#E3E7EE;--sub:#5B6B82;--gap:#C93030}

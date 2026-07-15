@@ -3,16 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http%3A//www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'><path%20d='M4%2021%20A16%2015%200%200%201%2036%2021%20Z'%20fill='%2310233F'/><rect%20x='9'%20y='21'%20width='4.4'%20height='6'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='17.8'%20y='21'%20width='4.4'%20height='10'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='26.6'%20y='21'%20width='4.4'%20height='14'%20rx='1.6'%20fill='%231D5BD8'/></svg>">
 <title>관리자 — 보장분석 리포트</title>
 <style>
   :root{--ink:#10233F;--paper:#F6F7F9;--card:#FFFFFF;--line:#E3E7EE;--sub:#5B6B82;--ok:#1D5BD8;--warn:#C77700;--gap:#C93030;--ok-bg:#EDF3FE;--warn-bg:#FDF3E3;--gap-bg:#FBEDED}
   *{box-sizing:border-box}
   body{font-family:-apple-system,"Pretendard",sans-serif;background:var(--paper);color:var(--ink);margin:0;padding:28px 20px 80px;line-height:1.6;font-size:14px}
   .wrap{max-width:1000px;margin:0 auto}
-  .navbar{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:6px 14px;margin-bottom:14px;font-size:13px;color:var(--sub)}
-  .navbar a,.navbar span{white-space:nowrap}
-  .navbar a{color:var(--sub);text-decoration:none;font-weight:600}
+  .navbar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 14px;margin-bottom:14px;font-size:13px;color:var(--sub)}
+  .navbar .brand{display:flex;align-items:center;gap:7px;text-decoration:none;flex:none}
+  .navbar .brand .wordmark{font-family:"Noto Serif KR",serif;font-weight:700;font-size:15.5px;color:var(--ink);letter-spacing:-.01em}
+  .navbar .menu{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px}
+  .navbar a,.navbar .who{white-space:nowrap}
+  .navbar a{display:inline-flex;align-items:center;gap:5px;color:var(--sub);text-decoration:none;font-weight:600}
+  .navbar a:hover{color:var(--ink)}
   .navbar a.new{color:var(--ok)}
+  .navbar a.new:hover{color:var(--ink)}
+  .navbar a svg{width:14px;height:14px;flex:none}
   .top{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:24px}
   h1{font-size:24px;margin:0}
   h2{font-family:"Noto Serif KR",serif;font-size:18px;font-weight:700;padding-bottom:8px;border-bottom:1.5px solid var(--ink);margin:36px 0 14px}
@@ -45,10 +52,16 @@
 <body>
 <div class="wrap">
   <div class="navbar">
-    <span>{{ user.name }}님 · 관리자</span>
-    <a class="new" href="/">+ 새 리포트 생성</a>
-    <a href="/reports">저장된 리포트</a>
-    <a href="/logout">로그아웃</a>
+    <a class="brand" href="/">
+      <svg viewBox="0 0 40 40" width="22" height="22" aria-hidden="true"><path d="M4 21 A16 15 0 0 1 36 21 Z" fill="#10233F"/><rect x="9" y="21" width="4.4" height="6" rx="1.6" fill="#1D5BD8"/><rect x="17.8" y="21" width="4.4" height="10" rx="1.6" fill="#1D5BD8"/><rect x="26.6" y="21" width="4.4" height="14" rx="1.6" fill="#1D5BD8"/></svg>
+      <span class="wordmark">보장분석</span>
+    </a>
+    <div class="menu">
+      <span class="who">{{ user.name }}님 · 관리자</span>
+      <a class="new" href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>새 리포트 생성</a>
+      <a href="/reports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M14 3v5h5"/></svg>저장된 리포트</a>
+      <a href="/logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>로그아웃</a>
+    </div>
   </div>
   <div class="top">
     <h1>관리자 화면</h1>
