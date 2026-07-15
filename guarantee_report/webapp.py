@@ -79,6 +79,15 @@ UPLOAD_PAGE = """
   button:disabled{opacity:.4;cursor:not-allowed}
   .err{margin-top:16px;padding:12px 16px;background:#FBEDED;color:var(--gap);border-radius:8px;font-size:13.5px}
   .note{margin-top:28px;font-size:12px;color:var(--sub);line-height:1.7}
+
+  .overlay{position:fixed;inset:0;background:rgba(16,35,63,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:50;opacity:0;pointer-events:none;transition:opacity .2s}
+  .overlay.show{opacity:1;pointer-events:all}
+  .spinner{width:42px;height:42px;border:4px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .overlay .status{color:#fff;font-size:15px;font-weight:600;min-height:20px}
+  .overlay .bar{width:220px;height:6px;background:rgba(255,255,255,.2);border-radius:99px;overflow:hidden}
+  .overlay .bar .fill{height:100%;width:0%;background:#fff;border-radius:99px;transition:width .5s ease}
+  .overlay .hint2{color:rgba(255,255,255,.6);font-size:12px}
 </style>
 </head>
 <body>
@@ -95,7 +104,7 @@ UPLOAD_PAGE = """
       <div class="hint">보험신용정보 통합조회 결과서 (.pdf) · 최대 20MB</div>
       <div class="filename" id="fname"></div>
     </label>
-    <button type="submit">HTML 리포트 생성</button>
+    <button type="submit" id="submitBtn">HTML 리포트 생성</button>
   </form>
 
   <div class="note">
@@ -103,6 +112,14 @@ UPLOAD_PAGE = """
     파일이므로 신뢰된 네트워크에서만 사용하세요.
   </div>
 </div>
+
+<div class="overlay" id="overlay">
+  <div class="spinner"></div>
+  <div class="status" id="status">PDF 업로드 중...</div>
+  <div class="bar"><div class="fill" id="fill"></div></div>
+  <div class="hint2">보통 5~20초 정도 걸려요. 창을 닫지 마세요.</div>
+</div>
+
 <script>
   const drop = document.getElementById('drop');
   const input = document.getElementById('file');
@@ -112,6 +129,29 @@ UPLOAD_PAGE = """
   ['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('drag'); }));
   drop.addEventListener('drop', e => {
     if (e.dataTransfer.files.length) { input.files = e.dataTransfer.files; fname.textContent = input.files[0].name; }
+  });
+
+  const form = document.getElementById('f');
+  const overlay = document.getElementById('overlay');
+  const statusEl = document.getElementById('status');
+  const fillEl = document.getElementById('fill');
+  const submitBtn = document.getElementById('submitBtn');
+  const steps = ['PDF 업로드 중...', '보장 항목 표 추출 중...', '보장 매트릭스 계산 중...', '리포트 조립 중...', '거의 다 됐어요...'];
+
+  form.addEventListener('submit', () => {
+    if (!input.files.length) return;
+    submitBtn.disabled = true;
+    submitBtn.textContent = '생성 중...';
+    overlay.classList.add('show');
+    let stepIdx = 0, progress = 8;
+    statusEl.textContent = steps[0];
+    fillEl.style.width = progress + '%';
+    setInterval(() => {
+      stepIdx = Math.min(stepIdx + 1, steps.length - 1);
+      statusEl.textContent = steps[stepIdx];
+      progress = Math.min(progress + Math.random() * 18 + 10, 92);
+      fillEl.style.width = progress + '%';
+    }, 1400);
   });
 </script>
 </body>
