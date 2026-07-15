@@ -304,3 +304,22 @@ def get_report_by_share_token(token: str) -> dict | None:
         cur.execute(_q("SELECT data_json FROM guarantee_reports WHERE share_token = ?"), (token,))
         row = cur.fetchone()
         return json.loads(row["data_json"]) if row else None
+
+
+def get_owner_phone_for_token(token: str) -> str | None:
+    """공유 링크(token)로 리포트를 생성한 담당자(분석자)의 휴대폰번호를 조회한다.
+    카카오톡 등으로 공유된 링크를 열 때, 이 번호를 입력해야 리포트를 볼 수 있게 하는
+    간단한 접근 게이트에 사용된다."""
+    _ensure_init()
+    with _connect() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            _q(
+                """SELECT u.phone AS phone FROM guarantee_reports r
+                   JOIN guarantee_users u ON u.id = r.created_by_user_id
+                   WHERE r.share_token = ?"""
+            ),
+            (token,),
+        )
+        row = cur.fetchone()
+        return row["phone"] if row else None

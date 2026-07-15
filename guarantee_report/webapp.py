@@ -17,6 +17,7 @@ import os
 import re
 import secrets
 import tempfile
+import time
 from collections import Counter
 from functools import wraps
 from urllib.parse import quote
@@ -24,7 +25,7 @@ from urllib.parse import quote
 from flask import Flask, request, render_template_string, Response, redirect, url_for, abort, session
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from . import storage
+from . import chatbot, storage
 from .builder import build_report_data
 from .compare import build_comparison
 from .parser import ReportParseError, parse_pdf
@@ -84,6 +85,19 @@ def current_user() -> dict | None:
     return session.get("user")
 
 
+_CHAT_RATE_LIMIT: dict[str, list[float]] = {}
+_CHAT_RATE_MAX = 12  # 분당 최대 질문 수 (챗봇 API 비용 남용 방지)
+_CHAT_RATE_WINDOW = 60.0
+
+
+def _chat_rate_limited(key: str) -> bool:
+    now = time.time()
+    hits = [t for t in _CHAT_RATE_LIMIT.get(key, []) if now - t < _CHAT_RATE_WINDOW]
+    hits.append(now)
+    _CHAT_RATE_LIMIT[key] = hits
+    return len(hits) > _CHAT_RATE_MAX
+
+
 def admin_required(view):
     @wraps(view)
     def wrapper(*args, **kwargs):
@@ -97,7 +111,7 @@ def admin_required(view):
 
 @app.before_request
 def _require_login():
-    if request.endpoint in ("login", "logout", "static", "shared_report"):
+    if request.endpoint in ("login", "logout", "static", "shared_report", "shared_report_chat"):
         return None
     if not current_user():
         return redirect(url_for("login", next=request.path))
@@ -188,6 +202,66 @@ LOGIN_PAGE = """
     <input type="password" id="password" name="password" required>
     {% endif %}
     <button type="submit">로그인</button>
+  </form>
+</div>
+<script>
+  function formatPhone(digits) {
+    digits = digits.slice(0, 11);
+    if (digits.startsWith('02')) {
+      if (digits.length <= 2) return digits;
+      if (digits.length <= 5) return digits.slice(0, 2) + '-' + digits.slice(2);
+      if (digits.length <= 9) return digits.slice(0, 2) + '-' + digits.slice(2, 5) + '-' + digits.slice(5);
+      return digits.slice(0, 2) + '-' + digits.slice(2, 6) + '-' + digits.slice(6, 10);
+    }
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return digits.slice(0, 3) + '-' + digits.slice(3);
+    if (digits.length <= 10) return digits.slice(0, 3) + '-' + digits.slice(3, 6) + '-' + digits.slice(6);
+    return digits.slice(0, 3) + '-' + digits.slice(3, 7) + '-' + digits.slice(7, 11);
+  }
+  const phoneInput = document.getElementById('phone');
+  phoneInput.addEventListener('input', () => {
+    const digits = phoneInput.value.replace(/\\D/g, '');
+    phoneInput.value = formatPhone(digits);
+  });
+</script>
+</body>
+</html>
+"""
+
+SHARE_GATE_PAGE = """
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http%3A//www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'><path%20d='M4%2021%20A16%2015%200%200%201%2036%2021%20Z'%20fill='%2310233F'/><rect%20x='9'%20y='21'%20width='4.4'%20height='6'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='17.8'%20y='21'%20width='4.4'%20height='10'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='26.6'%20y='21'%20width='4.4'%20height='14'%20rx='1.6'%20fill='%231D5BD8'/></svg>">
+<title>보장분석 리포트 확인</title>
+<style>
+  :root{--ink:#10233F;--paper:#F6F7F9;--card:#FFFFFF;--line:#E3E7EE;--sub:#5B6B82;--ok:#1D5BD8;--gap:#C93030}
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,"Pretendard",sans-serif;background:var(--paper);color:var(--ink);margin:0;padding:64px 20px;line-height:1.6}
+  .wrap{max-width:400px;margin:0 auto}
+  h1{font-size:20px;margin-bottom:6px}
+  p.sub{color:var(--sub);font-size:13.5px;margin-bottom:26px}
+  label{display:block;font-size:13px;font-weight:700;margin:16px 0 6px}
+  input{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:15px;font-family:inherit;background:var(--card);color:var(--ink)}
+  input:focus{outline:2px solid var(--ok);outline-offset:-1px}
+  button{margin-top:24px;width:100%;padding:13px;border:none;border-radius:8px;background:var(--ink);color:#fff;font-size:15px;font-weight:600;cursor:pointer}
+  .err{margin-top:16px;padding:12px 16px;background:#FBEDED;color:var(--gap);border-radius:8px;font-size:13.5px}
+  .brand-lockup{display:flex;align-items:center;gap:9px;margin-bottom:22px}
+  .brand-lockup .wordmark{font-family:"Noto Serif KR",serif;font-weight:700;font-size:17px;color:var(--ink);letter-spacing:-.01em}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand-lockup">""" + LOGO_MARK + """<span class="wordmark">보장분석</span></div>
+  <h1>{{ customer_name }}님 보장분석 리포트</h1>
+  <p class="sub">본인 확인을 위해 이 리포트를 보내주신 담당자의 휴대폰번호를 입력해주세요.</p>
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+  <form method="post">
+    <label for="phone">담당자 휴대폰번호</label>
+    <input type="tel" id="phone" name="phone" required placeholder="010-1234-5678" autofocus>
+    <button type="submit">확인하고 리포트 보기</button>
   </form>
 </div>
 <script>
@@ -481,6 +555,8 @@ def view_report(report_id: int):
             "share_url": _share_url(meta.get("share_token")),
             "is_public_view": False,
             "kakao_js_key": KAKAO_JS_KEY,
+            "chat_endpoint": url_for("report_chat", report_id=report_id),
+            "chat_enabled": bool(chatbot.ANTHROPIC_API_KEY),
         }
     )
     filename = f"{data['header']['name']}_보장분석리포트.html"
@@ -522,15 +598,81 @@ def revoke_share_link(report_id: int):
     return redirect(url_for("view_report", report_id=report_id))
 
 
-@app.get("/s/<token>")
+def _share_verified_key(token: str) -> str:
+    return f"share_verified_{token}"
+
+
+@app.route("/s/<token>", methods=["GET", "POST"])
 def shared_report(token: str):
     data = storage.get_report_by_share_token(token)
     if not data:
         abort(404)
-    html = render_html({**data, "share_url": None, "is_public_view": True, "kakao_js_key": None})
+
+    # 카카오톡 등으로 공유된 링크는 담당자(분석자) 휴대폰번호를 입력해야 열리도록 게이트를 둔다.
+    # (담당자 계정이 없는 옛 데이터 등 번호를 확인할 수 없는 경우는 게이트 없이 통과)
+    owner_phone = storage.get_owner_phone_for_token(token)
+    verified_key = _share_verified_key(token)
+    if owner_phone and not session.get(verified_key):
+        error = None
+        if request.method == "POST":
+            entered = _normalize_phone(request.form.get("phone", ""))
+            if entered and hmac.compare_digest(entered, owner_phone):
+                session[verified_key] = True
+            else:
+                error = "휴대폰번호가 일치하지 않습니다. 리포트를 보내주신 분에게 다시 확인해주세요."
+        if not session.get(verified_key):
+            return render_template_string(
+                SHARE_GATE_PAGE, error=error, customer_name=data["header"]["name"]
+            )
+
+    html = render_html(
+        {
+            **data,
+            "share_url": None,
+            "is_public_view": True,
+            "kakao_js_key": None,
+            "chat_endpoint": url_for("shared_report_chat", token=token),
+            "chat_enabled": bool(chatbot.ANTHROPIC_API_KEY),
+        }
+    )
     resp = Response(html, mimetype="text/html")
     resp.headers["X-Robots-Tag"] = "noindex, nofollow"
     return resp
+
+
+@app.post("/reports/<int:report_id>/chat")
+def report_chat(report_id: int):
+    user = current_user()
+    meta = storage.get_report_meta(report_id)
+    if not meta or not _can_access(meta, user):
+        abort(403)
+    if _chat_rate_limited(f"r{report_id}"):
+        return {"error": "질문이 너무 잦습니다. 잠시 후 다시 시도해주세요."}, 429
+    body = request.get_json(silent=True) or {}
+    data = storage.get_report(report_id)
+    try:
+        answer = chatbot.ask(body.get("question", ""), data, body.get("history"))
+    except chatbot.ChatbotError as e:
+        return {"error": str(e)}, 400
+    return {"answer": answer}
+
+
+@app.post("/s/<token>/chat")
+def shared_report_chat(token: str):
+    data = storage.get_report_by_share_token(token)
+    if not data:
+        abort(404)
+    owner_phone = storage.get_owner_phone_for_token(token)
+    if owner_phone and not session.get(_share_verified_key(token)):
+        abort(403)
+    if _chat_rate_limited(f"s{token}"):
+        return {"error": "질문이 너무 잦습니다. 잠시 후 다시 시도해주세요."}, 429
+    body = request.get_json(silent=True) or {}
+    try:
+        answer = chatbot.ask(body.get("question", ""), data, body.get("history"))
+    except chatbot.ChatbotError as e:
+        return {"error": str(e)}, 400
+    return {"answer": answer}
 
 
 @app.get("/compare")
