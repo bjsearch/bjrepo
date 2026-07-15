@@ -75,29 +75,48 @@ APP_USERNAME=admin APP_PASSWORD=원하는비밀번호 python -m guarantee_report
 
 ### 리포트 저장 · 비교
 
-리포트를 생성하면 자동으로 저장되며(SQLite), `/reports`에서 저장된 리포트 목록을 볼 수
-있습니다. 2건 이상 체크해서 "선택한 항목 비교하기"를 누르면 같은 권장 보장금액 체크리스트
-기준으로 고객별 가입금액 · 충족도를 나란히 비교하는 화면(`/compare`)이 열립니다.
+리포트를 생성하면 자동으로 저장되며, `/reports`에서 저장된 리포트 목록을 볼 수 있습니다.
+2건 이상 체크해서 "선택한 항목 비교하기"를 누르면 같은 권장 보장금액 체크리스트 기준으로
+고객별 가입금액 · 충족도를 나란히 비교하는 화면(`/compare`)이 열립니다.
 
-DB 파일 경로는 `DB_PATH` 환경변수로 바꿀 수 있습니다 (기본값: `guarantee_report/reports.db`).
+저장 백엔드는 `storage.py` 하나에 모여 있고, 아래 두 가지를 자동으로 감지해서 씁니다.
 
-**⚠️ Render 무료 플랜 주의사항**: Render의 무료 웹 서비스는 디스크가 영구적이지 않습니다.
-15분간 요청이 없어 슬립했다가 다시 깨어나거나, 재배포할 때마다 로컬 파일(SQLite 포함)이
-초기화될 수 있습니다. 즉 무료 플랜에서는 저장된 리포트가 예고 없이 사라질 수 있습니다.
-데이터를 계속 유지하려면:
-1. Render 유료 플랜에서 [Persistent Disk](https://render.com/docs/disks)를 붙이고
-   `DB_PATH`를 그 디스크 경로로 지정하거나,
-2. `storage.py`를 외부 DB(Supabase/Neon 등의 무료 Postgres)로 교체 — SQL 접점이
-   `storage.py` 한 파일에 모여 있어 교체 범위가 작습니다.
+- **`DATABASE_URL`이 설정되어 있으면 → Postgres** (권장, 영구 저장)
+- **설정되어 있지 않으면 → 로컬 SQLite 파일** (`DB_PATH`, 기본값 `guarantee_report/reports.db`)
 
-지금 당장 데이터 유실 없이 쓰고 싶다면 로컬(사내 PC)에서 `python -m guarantee_report.webapp`로
-띄우는 것을 권장합니다.
+**⚠️ Render 무료 플랜은 로컬 파일이 영구적이지 않습니다.** 15분간 요청이 없어 슬립했다가
+다시 깨어나거나 재배포할 때마다 SQLite 파일이 초기화될 수 있어, 저장된 리포트가 예고 없이
+사라질 수 있습니다. 계속 보존하려면 외부 Postgres를 붙이세요.
+
+#### 무료 Postgres 연동 (Neon 예시)
+
+1. [neon.tech](https://neon.tech) 에서 무료 가입 (GitHub 계정으로 바로 가능)
+2. "Create a project" → 이름 아무거나 → 리전은 가까운 곳(예: AWS Singapore) 선택 → 생성
+3. 프로젝트 대시보드에 뜨는 **Connection string**을 복사
+   (`postgresql://사용자:비밀번호@ep-xxxx.ap-southeast-1.aws.neon.tech/neondb?sslmode=require` 형태)
+4. Render 대시보드 → 이미 배포된 서비스(guarantee-report) → **Environment** 탭 →
+   "Add Environment Variable" → Key: `DATABASE_URL`, Value: 방금 복사한 연결 문자열 → Save
+   (저장하면 자동으로 재배포됩니다)
+5. 재배포가 끝나면 앱이 시작할 때 자동으로 테이블을 만들고, 그 이후부터는 슬립/재배포와
+   무관하게 리포트가 영구 보존됩니다.
+
+Neon 무료 티어는 미사용 시 컴퓨트가 자동으로 쉬었다가(autosuspend) 다음 요청이 오면 몇 초
+안에 자동으로 깨어나며, 데이터는 그대로 유지됩니다 — Render가 슬립하는 상황과 잘 맞습니다.
+
+로컬 개발에서 Postgres를 테스트하려면:
+```bash
+DATABASE_URL=postgresql://user:pass@localhost:5432/dbname python -m guarantee_report.webapp
+```
+`DATABASE_URL`을 설정하지 않으면 지금까지처럼 SQLite로 자동 동작하니, 로컬 개발은
+아무것도 바꾸지 않아도 됩니다.
 
 ### Render 배포
 
 저장소 루트의 `render.yaml`로 배포합니다. render.com에서 "New → Blueprint"로 이
-저장소를 연결하면, 빌드/실행 명령이 자동으로 설정되고 `APP_PASSWORD` 값을 입력하는
-칸이 나타납니다 (레포에는 저장되지 않는 비밀값). 원하는 비밀번호를 입력하고 배포하세요.
+저장소를 연결하면, 빌드/실행 명령이 자동으로 설정되고 `APP_PASSWORD`, `DATABASE_URL`
+값을 입력하는 칸이 나타납니다 (레포에는 저장되지 않는 비밀값). `DATABASE_URL`은
+비워둬도 배포되며, 그 경우 SQLite로 동작합니다 — 나중에 위 "무료 Postgres 연동"
+단계대로 Environment 탭에서 추가해도 됩니다.
 
 ## 권장 보장금액 체크리스트 커스터마이즈
 

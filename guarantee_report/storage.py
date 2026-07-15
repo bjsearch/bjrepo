@@ -1,23 +1,43 @@
 """
-저장된 리포트 데이터 영속화 계층 (SQLite 기반).
+저장된 리포트 데이터 영속화 계층.
 
-DB_PATH 환경변수로 SQLite 파일 경로를 바꿀 수 있다. Render 무료 웹서비스처럼
-디스크가 재배포/슬립-웨이크 시 초기화되는 환경에서는 이 파일 기반 저장이 영구
-보존되지 않는다 — 실제 운영 환경에서는 Render의 유료 Persistent Disk를 켜거나,
-이 모듈을 외부 DB(Postgres 등) 연동으로 교체하는 것을 권장한다. SQL 접점이 이
-파일 하나로 모여 있어 백엔드를 바꿀 때 다른 코드는 건드릴 필요가 없다.
+DATABASE_URL 환경변수가 설정되어 있으면 Postgres를 사용하고(권장 — 예: Neon,
+Supabase의 무료 Postgres), 없으면 로컬 SQLite 파일(DB_PATH, 기본값
+guarantee_report/reports.db)을 사용한다. Render 무료 웹서비스처럼 디스크가
+재배포/슬립-웨이크 시 초기화되는 환경에서는 SQLite 저장이 영구 보존되지
+않으므로, 실제 운영 시에는 DATABASE_URL을 설정해 외부 Postgres를 쓰는 것을
+권장한다. SQL 접점이 이 파일 하나로 모여 있어 백엔드 전환 시 다른 코드는
+건드릴 필요가 없다.
 """
 from __future__ import annotations
 
 import json
 import os
-import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
 
+DATABASE_URL = os.environ.get("DATABASE_URL")
 DB_PATH = os.environ.get("DB_PATH", os.path.join(os.path.dirname(__file__), "reports.db"))
+BACKEND = "postgres" if DATABASE_URL else "sqlite"
 
-_SCHEMA = """
+_SCHEMA_POSTGRES = """
+CREATE TABLE IF NOT EXISTS reports (
+    id SERIAL PRIMARY KEY,
+    customer_name TEXT NOT NULL,
+    gender TEXT,
+    birth_date TEXT,
+    basis_date TEXT,
+    created_at TEXT NOT NULL,
+    monthly_premium INTEGER,
+    ok_count INTEGER,
+    warn_count INTEGER,
+    gap_count INTEGER,
+    total_contracts INTEGER,
+    data_json TEXT NOT NULL
+);
+"""
+
+_SCHEMA_SQLITE = """
 CREATE TABLE IF NOT EXISTS reports (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     customer_name TEXT NOT NULL,
@@ -38,10 +58,23 @@ _SUMMARY_COLS = """id, customer_name, gender, birth_date, basis_date, created_at
                     monthly_premium, ok_count, warn_count, gap_count, total_contracts"""
 
 
+def _q(sql: str) -> str:
+    """SQLite 스타일(?) 플레이스홀더를 백엔드에 맞게 변환한다."""
+    return sql.replace("?", "%s") if BACKEND == "postgres" else sql
+
+
 @contextmanager
 def _connect():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
+    if BACKEND == "postgres":
+        import psycopg2
+        import psycopg2.extras
+
+        conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
+    else:
+        import sqlite3
+
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
     try:
         yield conn
         conn.commit()
@@ -51,7 +84,8 @@ def _connect():
 
 def init_db() -> None:
     with _connect() as conn:
-        conn.execute(_SCHEMA)
+        cur = conn.cursor()
+        cur.execute(_SCHEMA_POSTGRES if BACKEND == "postgres" else _SCHEMA_SQLITE)
 
 
 def _to_int(value) -> int | None:
@@ -66,47 +100,56 @@ def _to_int(value) -> int | None:
 def save_report(data: dict) -> int:
     header = data["header"]
     kpis = data["kpis"]
+    params = (
+        header["name"],
+        header.get("gender"),
+        header.get("birth_display"),
+        header.get("basis_date_display"),
+        datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        _to_int(kpis.get("monthly_premium")),
+        kpis.get("ok_count"),
+        kpis.get("warn_count"),
+        kpis.get("gap_count"),
+        header.get("total_contracts"),
+        json.dumps(data, ensure_ascii=False),
+    )
+    insert_sql = """INSERT INTO reports
+        (customer_name, gender, birth_date, basis_date, created_at,
+         monthly_premium, ok_count, warn_count, gap_count, total_contracts, data_json)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?)"""
     with _connect() as conn:
-        cur = conn.execute(
-            """INSERT INTO reports
-               (customer_name, gender, birth_date, basis_date, created_at,
-                monthly_premium, ok_count, warn_count, gap_count, total_contracts, data_json)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
-            (
-                header["name"],
-                header.get("gender"),
-                header.get("birth_display"),
-                header.get("basis_date_display"),
-                datetime.now(timezone.utc).isoformat(timespec="seconds"),
-                _to_int(kpis.get("monthly_premium")),
-                kpis.get("ok_count"),
-                kpis.get("warn_count"),
-                kpis.get("gap_count"),
-                header.get("total_contracts"),
-                json.dumps(data, ensure_ascii=False),
-            ),
-        )
+        cur = conn.cursor()
+        if BACKEND == "postgres":
+            cur.execute(_q(insert_sql) + " RETURNING id", params)
+            return cur.fetchone()["id"]
+        cur.execute(insert_sql, params)
         return cur.lastrowid
 
 
 def list_reports() -> list[dict]:
     with _connect() as conn:
-        rows = conn.execute(f"SELECT {_SUMMARY_COLS} FROM reports ORDER BY created_at DESC").fetchall()
-        return [dict(r) for r in rows]
+        cur = conn.cursor()
+        cur.execute(f"SELECT {_SUMMARY_COLS} FROM reports ORDER BY created_at DESC")
+        return [dict(r) for r in cur.fetchall()]
 
 
 def get_report(report_id: int) -> dict | None:
     with _connect() as conn:
-        row = conn.execute("SELECT data_json FROM reports WHERE id = ?", (report_id,)).fetchone()
+        cur = conn.cursor()
+        cur.execute(_q("SELECT data_json FROM reports WHERE id = ?"), (report_id,))
+        row = cur.fetchone()
         return json.loads(row["data_json"]) if row else None
 
 
 def get_report_meta(report_id: int) -> dict | None:
     with _connect() as conn:
-        row = conn.execute(f"SELECT {_SUMMARY_COLS} FROM reports WHERE id = ?", (report_id,)).fetchone()
+        cur = conn.cursor()
+        cur.execute(_q(f"SELECT {_SUMMARY_COLS} FROM reports WHERE id = ?"), (report_id,))
+        row = cur.fetchone()
         return dict(row) if row else None
 
 
 def delete_report(report_id: int) -> None:
     with _connect() as conn:
-        conn.execute("DELETE FROM reports WHERE id = ?", (report_id,))
+        cur = conn.cursor()
+        cur.execute(_q("DELETE FROM reports WHERE id = ?"), (report_id,))
