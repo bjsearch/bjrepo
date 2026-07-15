@@ -21,7 +21,7 @@ DB_PATH = os.environ.get("DB_PATH", os.path.join(os.path.dirname(__file__), "rep
 BACKEND = "postgres" if DATABASE_URL else "sqlite"
 
 _SCHEMA_POSTGRES = """
-CREATE TABLE IF NOT EXISTS reports (
+CREATE TABLE IF NOT EXISTS guarantee_reports (
     id SERIAL PRIMARY KEY,
     customer_name TEXT NOT NULL,
     gender TEXT,
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS reports (
     total_contracts INTEGER,
     data_json TEXT NOT NULL
 );
-CREATE TABLE IF NOT EXISTS users (
+CREATE TABLE IF NOT EXISTS guarantee_users (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     phone TEXT NOT NULL UNIQUE,
@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS users (
 """
 
 _SCHEMA_SQLITE = """
-CREATE TABLE IF NOT EXISTS reports (
+CREATE TABLE IF NOT EXISTS guarantee_reports (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     customer_name TEXT NOT NULL,
     gender TEXT,
@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS reports (
     total_contracts INTEGER,
     data_json TEXT NOT NULL
 );
-CREATE TABLE IF NOT EXISTS users (
+CREATE TABLE IF NOT EXISTS guarantee_users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     phone TEXT NOT NULL UNIQUE,
@@ -117,8 +117,8 @@ def init_db() -> None:
             if stmt:
                 cur.execute(stmt)
         # 기존 배포에 리포트 소유자 컬럼 마이그레이션
-        _add_column_if_missing(cur, "reports", "created_by_user_id", "INTEGER")
-        _add_column_if_missing(cur, "reports", "created_by_name", "TEXT")
+        _add_column_if_missing(cur, "guarantee_reports", "created_by_user_id", "INTEGER")
+        _add_column_if_missing(cur, "guarantee_reports", "created_by_name", "TEXT")
     global _initialized
     _initialized = True
 
@@ -151,16 +151,16 @@ def upsert_user(name: str, phone: str, role: str) -> dict:
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     with _connect() as conn:
         cur = conn.cursor()
-        cur.execute(_q("SELECT id FROM users WHERE phone = ?"), (phone,))
+        cur.execute(_q("SELECT id FROM guarantee_users WHERE phone = ?"), (phone,))
         existing = cur.fetchone()
         if existing:
             user_id = existing["id"]
             cur.execute(
-                _q("UPDATE users SET name = ?, role = ?, last_login_at = ? WHERE id = ?"),
+                _q("UPDATE guarantee_users SET name = ?, role = ?, last_login_at = ? WHERE id = ?"),
                 (name, role, now, user_id),
             )
         else:
-            insert_sql = "INSERT INTO users (name, phone, role, created_at, last_login_at) VALUES (?,?,?,?,?)"
+            insert_sql = "INSERT INTO guarantee_users (name, phone, role, created_at, last_login_at) VALUES (?,?,?,?,?)"
             if BACKEND == "postgres":
                 cur.execute(_q(insert_sql) + " RETURNING id", (name, phone, role, now, now))
                 user_id = cur.fetchone()["id"]
@@ -174,7 +174,9 @@ def list_users() -> list[dict]:
     _ensure_init()
     with _connect() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT id, name, phone, role, created_at, last_login_at FROM users ORDER BY last_login_at DESC")
+        cur.execute(
+            "SELECT id, name, phone, role, created_at, last_login_at FROM guarantee_users ORDER BY last_login_at DESC"
+        )
         return [dict(r) for r in cur.fetchall()]
 
 
@@ -200,7 +202,7 @@ def save_report(data: dict, created_by_user_id: int | None = None, created_by_na
         created_by_user_id,
         created_by_name,
     )
-    insert_sql = """INSERT INTO reports
+    insert_sql = """INSERT INTO guarantee_reports
         (customer_name, gender, birth_date, basis_date, created_at,
          monthly_premium, ok_count, warn_count, gap_count, total_contracts, data_json,
          created_by_user_id, created_by_name)
@@ -219,10 +221,10 @@ def list_reports(created_by_user_id: int | None = None) -> list[dict]:
     with _connect() as conn:
         cur = conn.cursor()
         if created_by_user_id is None:
-            cur.execute(f"SELECT {_SUMMARY_COLS} FROM reports ORDER BY created_at DESC")
+            cur.execute(f"SELECT {_SUMMARY_COLS} FROM guarantee_reports ORDER BY created_at DESC")
         else:
             cur.execute(
-                _q(f"SELECT {_SUMMARY_COLS} FROM reports WHERE created_by_user_id = ? ORDER BY created_at DESC"),
+                _q(f"SELECT {_SUMMARY_COLS} FROM guarantee_reports WHERE created_by_user_id = ? ORDER BY created_at DESC"),
                 (created_by_user_id,),
             )
         return [dict(r) for r in cur.fetchall()]
@@ -232,7 +234,7 @@ def get_report(report_id: int) -> dict | None:
     _ensure_init()
     with _connect() as conn:
         cur = conn.cursor()
-        cur.execute(_q("SELECT data_json FROM reports WHERE id = ?"), (report_id,))
+        cur.execute(_q("SELECT data_json FROM guarantee_reports WHERE id = ?"), (report_id,))
         row = cur.fetchone()
         return json.loads(row["data_json"]) if row else None
 
@@ -241,7 +243,7 @@ def get_report_meta(report_id: int) -> dict | None:
     _ensure_init()
     with _connect() as conn:
         cur = conn.cursor()
-        cur.execute(_q(f"SELECT {_SUMMARY_COLS} FROM reports WHERE id = ?"), (report_id,))
+        cur.execute(_q(f"SELECT {_SUMMARY_COLS} FROM guarantee_reports WHERE id = ?"), (report_id,))
         row = cur.fetchone()
         return dict(row) if row else None
 
@@ -251,7 +253,7 @@ def get_all_report_data() -> list[dict]:
     _ensure_init()
     with _connect() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT data_json FROM reports ORDER BY created_at DESC")
+        cur.execute("SELECT data_json FROM guarantee_reports ORDER BY created_at DESC")
         return [json.loads(r["data_json"]) for r in cur.fetchall()]
 
 
@@ -259,4 +261,4 @@ def delete_report(report_id: int) -> None:
     _ensure_init()
     with _connect() as conn:
         cur = conn.cursor()
-        cur.execute(_q("DELETE FROM reports WHERE id = ?"), (report_id,))
+        cur.execute(_q("DELETE FROM guarantee_reports WHERE id = ?"), (report_id,))
