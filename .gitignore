@@ -27,3 +27,7 @@ yarn-error.log*
 
 # Vercel
 .vercel
+
+# Python
+__pycache__/
+*.pyc
