@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ header.name }}님 보장분석 리포트</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#10233F;
+  --paper:#F6F7F9;
+  --card:#FFFFFF;
+  --line:#E3E7EE;
+  --sub:#5B6B82;
+  --ok:#1D5BD8; --warn:#C77700; --gap:#C93030;
+  --ok-bg:#EDF3FE; --warn-bg:#FDF3E3; --gap-bg:#FBEDED;
+  --samsung:#1428A0;  --samsung-bg:#EEF0FA;
+  --meritz:#E4002B;   --meritz-bg:#FCECEF;
+  --hyundai:#F26F21;  --hyundai-bg:#FEF1E8;
+  --mg:#0067AC;       --mg-bg:#E9F2F9;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;background:var(--paper);color:var(--ink);line-height:1.6;font-size:15px}
+.page{max-width:880px;margin:0 auto;padding:48px 24px 80px}
+.serif{font-family:"Noto Serif KR",serif}
+.num{font-variant-numeric:tabular-nums}
+
+header{border-bottom:3px solid var(--ink);padding-bottom:28px;margin-bottom:32px}
+.eyebrow{font-size:12px;letter-spacing:.14em;color:var(--sub);text-transform:uppercase;margin-bottom:10px}
+h1{font-size:34px;font-weight:700;letter-spacing:-.01em}
+h1 .name{border-bottom:6px solid var(--ok-bg)}
+.meta{display:flex;flex-wrap:wrap;gap:8px 28px;margin-top:16px;font-size:13.5px;color:var(--sub)}
+.meta b{color:var(--ink);font-weight:600}
+
+.brands{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px}
+.brand{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;padding:6px 13px;border-radius:99px;border:1px solid var(--line);background:var(--card)}
+.dot{width:9px;height:9px;border-radius:50%;flex:none}
+.dot.samsung{background:var(--samsung)} .dot.meritz{background:var(--meritz)}
+.dot.hyundai{background:var(--hyundai)} .dot.mg{background:var(--mg)}
+
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:44px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 20px}
+.kpi .label{font-size:12.5px;color:var(--sub);margin-bottom:6px}
+.kpi .value{font-size:24px;font-weight:700}
+.kpi .unit{font-size:13px;font-weight:500;color:var(--sub);margin-left:2px}
+.kpi.hl{background:var(--ink);border-color:var(--ink);color:#fff}
+.kpi.hl .label,.kpi.hl .unit{color:#B9C6DB}
+
+section{margin-bottom:52px}
+h2{font-family:"Noto Serif KR",serif;font-size:21px;font-weight:700;padding-bottom:10px;border-bottom:1.5px solid var(--ink);margin-bottom:6px;display:flex;align-items:baseline;gap:10px}
+h2 .no{font-size:13px;color:var(--sub);font-family:Pretendard,sans-serif;font-weight:600}
+.sec-note{font-size:13px;color:var(--sub);margin-bottom:18px}
+
+.chip{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:99px;vertical-align:1px;white-space:nowrap}
+.chip.ok{color:var(--ok);background:var(--ok-bg)}
+.chip.warn{color:var(--warn);background:var(--warn-bg)}
+.chip.gap{color:var(--gap);background:var(--gap-bg)}
+
+.contracts{display:grid;gap:12px}
+.contract{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:grid;grid-template-columns:1fr auto;align-items:stretch}
+.contract .body{padding:16px 20px 16px 22px;position:relative}
+.contract .body::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--brand-color,#8A96A6)}
+.co-tag{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:800;letter-spacing:.02em;padding:3px 10px;border-radius:6px;margin-bottom:7px}
+.logo{display:inline-flex;align-items:center;gap:7px;margin-bottom:8px;height:22px}
+.logo .kr{font-size:12.5px;font-weight:800;letter-spacing:-.01em;color:#333}
+.sym-oval{display:inline-flex;align-items:center;justify-content:center;background:var(--samsung);color:#fff;font-size:8.5px;font-weight:700;letter-spacing:.08em;font-style:italic;width:64px;height:20px;border-radius:50%}
+.wordmark-meritz{color:var(--meritz);font-size:16px;font-weight:800;letter-spacing:-.03em;text-transform:lowercase;line-height:1}
+.sym-hi{display:inline-flex;align-items:center;justify-content:center;background:var(--hyundai);color:#fff;font-size:11px;font-weight:800;font-style:italic;width:26px;height:20px;border-radius:5px}
+.sym-mg{font-size:16px;font-weight:900;letter-spacing:-.04em;line-height:1;background:linear-gradient(115deg,var(--mg) 55%,#F5B60D 55%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sym-generic{display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:800;width:26px;height:20px;border-radius:5px}
+.contract .title{font-weight:700;font-size:15.5px;margin-bottom:2px}
+.contract .detail{font-size:13px;color:var(--sub)}
+.contract .prem{padding:16px 22px;text-align:right;font-weight:700;font-size:17px;white-space:nowrap;display:flex;flex-direction:column;justify-content:center;background:#FAFBFC;border-left:1px solid var(--line)}
+.contract .prem small{font-size:11.5px;font-weight:500;color:var(--sub)}
+.badge{display:inline-block;font-size:11px;font-weight:700;color:var(--warn);background:var(--warn-bg);border-radius:5px;padding:2px 8px;margin-left:6px;vertical-align:1px}
+.reco-divider{display:flex;align-items:center;gap:12px;margin:22px 0 12px;font-size:12.5px;font-weight:700;color:#8A96A6;letter-spacing:.04em}
+.reco-divider::before,.reco-divider::after{content:"";flex:1;border-top:1.5px dashed #C9D1DC}
+.contract.reco{border:2px dashed #B7C0CC;box-shadow:none;
+  background:repeating-linear-gradient(135deg,#F7F8FA 0px,#F7F8FA 9px,#EFF1F5 9px,#EFF1F5 10px)}
+.contract.reco .body::before{display:none}
+.contract.reco .title{color:#5B6B82}
+.contract.reco .detail{color:#8A96A6}
+.reco-tag{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:800;color:#fff;background:#9AA5B4;border-radius:6px;padding:3px 10px;margin-bottom:7px}
+.reco-tag::before{content:"+";font-size:13px;font-weight:800;line-height:1}
+.contract.reco .prem{background:transparent;border-left:1px dashed #C9D1DC;color:#8A96A6;font-size:14px}
+.contract.reco .prem small{color:#A6B0BE}
+.reco-why{display:inline-block;font-size:11.5px;font-weight:700;color:#75808F;background:#E8EBF0;border-radius:5px;padding:2px 8px;margin-left:6px;vertical-align:1px}
+
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:14px}
+thead th{background:#F0F3F8;font-size:12px;font-weight:600;color:var(--sub);text-align:left;padding:9px 14px;border-bottom:1px solid var(--line)}
+tbody td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+td.r,th.r{text-align:right}
+.src{display:inline-flex;gap:4px;margin-left:7px;vertical-align:1px}
+.src .dot{width:8px;height:8px}
+.gauge{position:relative;height:8px;background:#EDF0F5;border-radius:99px;min-width:110px;overflow:hidden}
+.gauge .fill{position:absolute;inset:0 auto 0 0;border-radius:99px;background:var(--ok)}
+.gauge .fill.warn{background:var(--warn)}
+.gauge .fill.gap{background:var(--gap)}
+.gauge-cell{width:140px}
+
+.insights{display:grid;gap:12px;counter-reset:ins}
+.insight{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 22px 18px 58px;position:relative}
+.insight::before{counter-increment:ins;content:counter(ins,decimal-leading-zero);position:absolute;left:20px;top:19px;font-size:13px;font-weight:700;color:var(--ok);font-variant-numeric:tabular-nums}
+.insight b{display:block;margin-bottom:4px;font-size:15px}
+.insight p{font-size:13.5px;color:var(--sub)}
+.insight.urgent{border-color:#F2C9C9;background:#FFFCFC}
+.insight.urgent::before{color:var(--gap)}
+
+footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-size:11.5px;color:var(--sub);line-height:1.8}
+.matrix-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+.matrix{width:100%;border-collapse:collapse;font-size:12.5px;min-width:760px;border:none}
+.matrix thead th{padding:8px 8px;font-size:11px;line-height:1.35;text-align:center;color:#fff;border-bottom:none;border-left:1px solid rgba(255,255,255,.25);background:var(--th-color,var(--ink))}
+.matrix thead th:first-child{background:var(--ink);text-align:left;border-left:none;font-size:12px}
+.matrix thead th small{display:block;font-weight:500;opacity:.85;font-size:10px}
+.matrix tbody td{padding:7px 8px;text-align:right;border-left:1px solid var(--line)}
+.matrix tbody td:first-child{text-align:left;font-weight:600;border-left:none;white-space:nowrap}
+.matrix tbody td.empty{color:#C4CCD7}
+.matrix tbody td.sum{font-weight:700;background:#F5F7FA}
+.matrix tbody tr.grp td:first-child{color:var(--sub);font-size:11px;font-weight:700;background:#F0F3F8;letter-spacing:.03em}
+.matrix tbody tr.grp td{background:#F0F3F8;padding:5px 8px}
+
+@media(max-width:640px){
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .contract{grid-template-columns:1fr}
+  .contract .prem{border-left:none;border-top:1px solid var(--line);text-align:left;flex-direction:row;gap:8px;align-items:baseline}
+  .gauge-cell{width:85px}
+  h1{font-size:26px}
+}
+@media print{body{background:#fff}.page{padding:0}}
+.hero{position:relative;border-radius:16px;overflow:hidden;margin-bottom:28px;border:1px solid #F3DECB}
+.hero svg{display:block;width:100%;height:auto}
+.hero .caption{position:absolute;left:26px;bottom:20px;font-family:"Noto Serif KR",serif;font-size:17px;font-weight:700;color:#7A4A33}
+.hero .caption small{display:block;font-family:Pretendard,sans-serif;font-size:12px;font-weight:500;color:#A9765C;margin-top:3px}
+@media(max-width:640px){.hero .caption{font-size:14px;left:16px;bottom:12px}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <div class="eyebrow">Insurance Coverage Analysis Report</div>
+  <h1><span class="name serif">{{ header.name }}</span> 님 보장분석 리포트</h1>
+  <div class="meta">
+    <span>피보험자 <b>{{ header.name }} ({{ header.gender }}, {{ header.birth_display }}{% if header.age %} · 보험나이 {{ header.age }}세{% endif %})</b></span>
+    <span>분석 기준 <b>{{ header.basis_date_display }} 발행 보장분석</b></span>
+    <span>계약 <b>총 {{ header.total_contracts }}건 (생보 {{ header.life_count }} · 손보 {{ header.nonlife_count }} · 기타 {{ header.coop_count }})</b></span>
+  </div>
+</header>
+
+<div class="hero">
+<svg viewBox="0 0 800 210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="우산 아래 함께 있는 가족 일러스트">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFF3E4"/><stop offset="1" stop-color="#FFE4CC"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="210" fill="url(#sky)"/>
+  <circle cx="700" cy="46" r="26" fill="#FFD98E"/>
+  <circle cx="700" cy="46" r="36" fill="#FFD98E" opacity=".28"/>
+  <ellipse cx="120" cy="46" rx="42" ry="14" fill="#FFFFFF" opacity=".85"/>
+  <ellipse cx="158" cy="56" rx="30" ry="11" fill="#FFFFFF" opacity=".7"/>
+  <ellipse cx="560" cy="36" rx="36" ry="12" fill="#FFFFFF" opacity=".75"/>
+  <ellipse cx="400" cy="270" rx="520" ry="105" fill="#F7CFA6"/>
+  <ellipse cx="640" cy="285" rx="380" ry="110" fill="#F2BE8C" opacity=".7"/>
+  <g transform="translate(590,92)">
+    <rect x="0" y="34" width="96" height="62" rx="8" fill="#FFF8EF" stroke="#E8C29B" stroke-width="2.5"/>
+    <path d="M-10 40 L48 -4 L106 40 Z" fill="#F28B66"/>
+    <rect x="36" y="58" width="24" height="38" rx="4" fill="#E8A877"/>
+    <rect x="12" y="50" width="16" height="16" rx="3" fill="#FFE1B8" stroke="#E8C29B" stroke-width="2"/>
+    <rect x="68" y="50" width="16" height="16" rx="3" fill="#FFE1B8" stroke="#E8C29B" stroke-width="2"/>
+    <circle cx="48" cy="16" r="4" fill="#FFF3E4"/>
+  </g>
+  <g transform="translate(58,108)">
+    <rect x="16" y="42" width="10" height="34" rx="4" fill="#B07B52"/>
+    <circle cx="21" cy="30" r="26" fill="#A8C98A"/>
+    <circle cx="4" cy="42" r="16" fill="#B7D49A"/>
+    <circle cx="40" cy="42" r="16" fill="#B7D49A"/>
+  </g>
+  <g transform="translate(318,26)">
+    <path d="M82 0 C30 0 -6 34 -8 66 C6 54 22 54 30 66 C40 52 56 52 66 66 C76 52 92 52 100 66 C110 54 126 54 140 66 C170 54 172 34 156 22 C136 6 112 0 82 0 Z" fill="#F28B66"/>
+    <path d="M82 0 C56 14 46 40 46 62 L50 62 C52 42 62 18 82 4 Z" fill="#FFFFFF" opacity=".25"/>
+    <rect x="79" y="4" width="6" height="102" rx="3" fill="#8C5E58"/>
+    <circle cx="82" cy="-4" r="6" fill="#8C5E58"/>
+  </g>
+  <g transform="translate(332,102)">
+    <circle cx="26" cy="20" r="19" fill="#FFDDBE"/>
+    <path d="M8 14 C8 2 44 2 44 14 L44 10 C44 -2 8 -2 8 10 Z" fill="#CFC6BC"/>
+    <circle cx="26" cy="-1" r="7" fill="#CFC6BC"/>
+    <circle cx="19" cy="20" r="2.1" fill="#5A4638"/><circle cx="33" cy="20" r="2.1" fill="#5A4638"/>
+    <path d="M20 27 Q26 32 32 27" stroke="#B4795A" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <circle cx="13" cy="25" r="3.4" fill="#F8B7A0" opacity=".7"/><circle cx="39" cy="25" r="3.4" fill="#F8B7A0" opacity=".7"/>
+    <path d="M6 44 C6 36 46 36 46 44 L46 74 C46 80 6 80 6 74 Z" fill="#E8A0A0"/>
+    <rect x="20" y="52" width="12" height="10" rx="3" fill="#F5C9C9"/>
+  </g>
+  <g transform="translate(396,94)">
+    <circle cx="24" cy="22" r="18" fill="#FFDDBE"/>
+    <path d="M7 20 C5 4 43 4 41 20 C36 10 12 10 7 20 Z" fill="#6B4A38"/>
+    <circle cx="17" cy="23" r="2" fill="#5A4638"/><circle cx="31" cy="23" r="2" fill="#5A4638"/>
+    <path d="M18 30 Q24 34 30 30" stroke="#B4795A" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <circle cx="11" cy="27" r="3" fill="#F8B7A0" opacity=".7"/><circle cx="37" cy="27" r="3" fill="#F8B7A0" opacity=".7"/>
+    <path d="M6 46 C6 38 42 38 42 46 L42 82 C42 88 6 88 6 82 Z" fill="#F2B25E"/>
+  </g>
+  <g transform="translate(452,122)">
+    <circle cx="18" cy="16" r="14" fill="#FFDDBE"/>
+    <path d="M5 13 C5 2 31 2 31 13 C26 6 10 6 5 13 Z" fill="#4E3A2C"/>
+    <circle cx="13" cy="17" r="1.8" fill="#5A4638"/><circle cx="23" cy="17" r="1.8" fill="#5A4638"/>
+    <path d="M13 23 Q18 26.5 23 23" stroke="#B4795A" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <circle cx="8" cy="20" r="2.6" fill="#F8B7A0" opacity=".7"/><circle cx="28" cy="20" r="2.6" fill="#F8B7A0" opacity=".7"/>
+    <path d="M5 34 C5 28 31 28 31 34 L31 56 C31 61 5 61 5 56 Z" fill="#8FB8DE"/>
+  </g>
+  <path d="M292 66 c-3.4 -6 -12 -4.4 -12 2.6 c0 5.2 7 8.6 12 12 c5 -3.4 12 -6.8 12 -12 c0 -7 -8.6 -8.6 -12 -2.6Z" fill="#F28B66" opacity=".85"/>
+  <path d="M520 84 c-2.8 -5 -10 -3.6 -10 2.2 c0 4.4 5.8 7.2 10 10 c4.2 -2.8 10 -5.6 10 -10 c0 -5.8 -7.2 -7.2 -10 -2.2Z" fill="#F5A88C" opacity=".8"/>
+  <path d="M256 110 c-2.2 -4 -8 -2.9 -8 1.8 c0 3.5 4.6 5.7 8 8 c3.4 -2.3 8 -4.5 8 -8 c0 -4.7 -5.8 -5.8 -8 -1.8Z" fill="#F5A88C" opacity=".6"/>
+</svg>
+<div class="caption">{{ header.name }} 님의 내일을 든든하게<small>가족과 함께하는 보장 점검 리포트</small></div>
+</div>
+
+<div class="brands">
+  {% for b in brands_legend %}
+  <span class="brand">{{ b.logo_html|safe }}<b>{{ b.name }}</b>&nbsp;{{ b.count_label }}</span>
+  {% endfor %}
+</div>
+
+<div class="kpis">
+  <div class="kpi hl"><div class="label">월 납입 보험료</div><div class="value num">{{ kpis.monthly_premium }}<span class="unit">원</span></div></div>
+  <div class="kpi"><div class="label">납입 완료 / 예정</div><div class="value num" style="font-size:16px;line-height:1.9">{{ kpis.paid_total_man }}만 / {{ kpis.scheduled_total_man }}만<span class="unit">원</span></div></div>
+  <div class="kpi"><div class="label">총 보험료</div><div class="value num">{{ kpis.grand_total_man }}<span class="unit">만원</span></div></div>
+  <div class="kpi"><div class="label">진단 결과</div><div class="value" style="font-size:14px;line-height:1.6"><span class="chip ok">적정 {{ kpis.ok_count }}</span> <span class="chip warn">주의·부족 {{ kpis.warn_count }}</span> <span class="chip gap">미가입 {{ kpis.gap_count }}</span></div></div>
+</div>
+
+<section>
+  <h2><span class="no">01</span>계약 현황 — 보험사별</h2>
+  <div class="sec-note">{{ brands_legend|length }}개 보험사 {{ header.total_contracts }}건 유지 중 · 카드 색상은 각 보험사 브랜드 컬러 기준</div>
+  <div class="contracts">
+    {% for c in contracts %}
+    <div class="contract" style="--brand-color:{{ c.brand_color }}">
+      <div class="body">
+        <div class="logo"><span>{{ c.logo_html|safe }}</span><span class="kr">{{ c.company }}</span></div>
+        <div class="title">{{ c.title }}{% if c.badge %} <span class="badge">{{ c.badge }}</span>{% endif %}</div>
+        <div class="detail">{{ c.detail }}</div>
+      </div>
+      <div class="prem num">{{ c.premium_display }}{% if c.premium_won %}<small>월납</small>{% endif %}</div>
+    </div>
+    {% endfor %}
+
+    {% if recommendations %}
+    <div class="reco-divider">보완 추천 — 보장 공백 기준 제안 (미가입)</div>
+    {% for r in recommendations %}
+    <div class="contract reco">
+      <div class="body">
+        <span class="reco-tag">추천 {{ r.rank }}순위</span><span class="reco-why">{{ r.why }}</span>
+        <div class="title">{{ r.title }}</div>
+        <div class="detail">{{ r.detail }}</div>
+      </div>
+      <div class="prem num">{{ r.premium_note }}</div>
+    </div>
+    {% endfor %}
+    {% endif %}
+  </div>
+</section>
+
+<section>
+  <h2><span class="no">02</span>영역별 보장 진단</h2>
+  <div class="sec-note">단위: 만원 · 항목 옆 점은 해당 담보를 보유한 보험사</div>
+
+  {% for sec in coverage_sections %}
+  <table>
+    <thead><tr><th>{{ sec.title }}</th><th class="r">권장</th><th class="r">가입</th><th class="gauge-cell">충족도</th><th class="r">진단</th></tr></thead>
+    <tbody>
+      {% for row in sec.rows %}
+      <tr>
+        <td>{{ row.label }}{% if row.source_brand_codes %}<span class="src">{% for code in row.source_brand_codes %}<span class="dot" style="background:var(--{{ code }},#8A96A6)"></span>{% endfor %}</span>{% endif %}</td>
+        <td class="r num">{{ row.recommend_display }}</td>
+        <td class="r num">{{ row.held_display }}</td>
+        <td><div class="gauge"><div class="fill {{ '' if row.status=='ok' else row.status }}" style="width:{{ (row.ratio*100)|round(0,'floor') }}%"></div></div></td>
+        <td class="r"><span class="chip {{ row.status }}">{{ row.diagnosis }}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <div style="height:14px"></div>
+  {% endfor %}
+</section>
+
+<section>
+  <h2><span class="no">03</span>상품별 보장 매트릭스</h2>
+  <div class="sec-note">각 보장이 어느 계약에서 지급되는지 계약 단위로 분해 · 단위: 만원 · 특정 계약 해지 · 만기 시 소멸 범위를 확인하는 용도</div>
+  <div class="matrix-wrap">
+  <table class="matrix">
+    <thead>
+      <tr>
+        <th>보장 항목</th>
+        {% for col in matrix.columns %}
+        <th style="--th-color:{{ col.brand_color }}">{{ col.short_title }}<small>{{ col.period }}</small></th>
+        {% endfor %}
+        <th>합계</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for grp in matrix.groups %}
+      <tr class="grp"><td colspan="{{ matrix.columns|length + 2 }}">{{ grp.title }}</td></tr>
+      {% for row in grp.rows %}
+      <tr>
+        <td>{{ row.label }}</td>
+        {% for cell in row.cells %}
+        <td class="{{ 'empty' if not cell else '' }} num">{{ cell if cell else '—' }}</td>
+        {% endfor %}
+        <td class="sum num">{{ row.total }}</td>
+      </tr>
+      {% endfor %}
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section>
+  <h2><span class="no">04</span>핵심 진단 및 제언</h2>
+  <div class="insights">
+    {% for ins in insights %}
+    <div class="insight {{ 'urgent' if ins.urgent else '' }}">
+      <b>{{ ins.title }}</b>
+      <p>{{ ins.text }}</p>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<footer>
+  본 리포트는 {{ header.basis_date_display }} 발행 보장분석 자료(신용정보원 제공 정보 기반)를 근거로 자동 생성된 참고용 요약이며, 보험금 지급 근거 자료가 될 수 없습니다.
+  정확한 보장 내용은 해당 약관 및 보험증권을 기준으로 하며, 권장금액은 분석 도구의 일반 가정에 따른 수치입니다. 상품 권유 · 승환 유도 목적으로 사용할 수 없습니다.
+  보험사 로고 컬러는 식별 편의를 위한 것으로 각 사의 공식 자료가 아닙니다.
+</footer>
+
+</div>
+</body>
+</html>
