@@ -119,6 +119,18 @@ def init_db() -> None:
         # 기존 배포에 리포트 소유자 컬럼 마이그레이션
         _add_column_if_missing(cur, "reports", "created_by_user_id", "INTEGER")
         _add_column_if_missing(cur, "reports", "created_by_name", "TEXT")
+    global _initialized
+    _initialized = True
+
+
+_initialized = False
+
+
+def _ensure_init() -> None:
+    """DB가 시작 시점에 일시적으로 응답이 없었던 경우(예: Neon autosuspend 웨이크업 지연)에도
+    실제 사용 시점에 한 번 더 초기화를 시도해, 앱 전체가 부팅 실패로 죽는 것을 막는다."""
+    if not _initialized:
+        init_db()
 
 
 def _to_int(value) -> int | None:
@@ -135,6 +147,7 @@ def _to_int(value) -> int | None:
 
 def upsert_user(name: str, phone: str, role: str) -> dict:
     """전화번호를 키로 사용자 정보를 갱신(또는 신규 생성)하고, 항상 최신 역할을 반영한다."""
+    _ensure_init()
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     with _connect() as conn:
         cur = conn.cursor()
@@ -158,6 +171,7 @@ def upsert_user(name: str, phone: str, role: str) -> dict:
 
 
 def list_users() -> list[dict]:
+    _ensure_init()
     with _connect() as conn:
         cur = conn.cursor()
         cur.execute("SELECT id, name, phone, role, created_at, last_login_at FROM users ORDER BY last_login_at DESC")
@@ -168,6 +182,7 @@ def list_users() -> list[dict]:
 
 
 def save_report(data: dict, created_by_user_id: int | None = None, created_by_name: str | None = None) -> int:
+    _ensure_init()
     header = data["header"]
     kpis = data["kpis"]
     params = (
@@ -200,6 +215,7 @@ def save_report(data: dict, created_by_user_id: int | None = None, created_by_na
 
 
 def list_reports(created_by_user_id: int | None = None) -> list[dict]:
+    _ensure_init()
     with _connect() as conn:
         cur = conn.cursor()
         if created_by_user_id is None:
@@ -213,6 +229,7 @@ def list_reports(created_by_user_id: int | None = None) -> list[dict]:
 
 
 def get_report(report_id: int) -> dict | None:
+    _ensure_init()
     with _connect() as conn:
         cur = conn.cursor()
         cur.execute(_q("SELECT data_json FROM reports WHERE id = ?"), (report_id,))
@@ -221,6 +238,7 @@ def get_report(report_id: int) -> dict | None:
 
 
 def get_report_meta(report_id: int) -> dict | None:
+    _ensure_init()
     with _connect() as conn:
         cur = conn.cursor()
         cur.execute(_q(f"SELECT {_SUMMARY_COLS} FROM reports WHERE id = ?"), (report_id,))
@@ -230,6 +248,7 @@ def get_report_meta(report_id: int) -> dict | None:
 
 def get_all_report_data() -> list[dict]:
     """관리자 통계용 — 모든 리포트의 전체 데이터(JSON)를 반환."""
+    _ensure_init()
     with _connect() as conn:
         cur = conn.cursor()
         cur.execute("SELECT data_json FROM reports ORDER BY created_at DESC")
@@ -237,6 +256,7 @@ def get_all_report_data() -> list[dict]:
 
 
 def delete_report(report_id: int) -> None:
+    _ensure_init()
     with _connect() as conn:
         cur = conn.cursor()
         cur.execute(_q("DELETE FROM reports WHERE id = ?"), (report_id,))

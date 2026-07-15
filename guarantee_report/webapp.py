@@ -31,7 +31,13 @@ from .render import render_html, render_template
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20MB
-storage.init_db()
+try:
+    storage.init_db()
+except Exception as e:  # noqa: BLE001 — DB가 기동 시점에 잠깐 응답 없어도 앱 자체는 떠야 함
+    print(
+        f"[경고] 시작 시 DB 초기화에 실패했습니다 (DB가 깨어나는 중이면 곧 자동 복구됩니다): {e}",
+        flush=True,
+    )
 
 TEAM_PASSWORD = os.environ.get("APP_PASSWORD")
 ADMIN_PHONES = {re.sub(r"\D", "", p) for p in os.environ.get("ADMIN_PHONES", "").split(",") if p.strip()}
@@ -283,7 +289,13 @@ def login():
         return _fail("팀 비밀번호가 올바르지 않습니다.", 401)
 
     role = "admin" if phone in ADMIN_PHONES else "user"
-    user = storage.upsert_user(name, phone, role)
+    try:
+        user = storage.upsert_user(name, phone, role)
+    except Exception as e:  # noqa: BLE001 — DB 문제를 화면에 바로 보여줘 진단을 돕는다
+        import traceback
+
+        traceback.print_exc()
+        return _fail(f"로그인 중 서버 오류가 발생했습니다 (DB 연결 문제일 수 있음): {e}", 500)
     session["user"] = {"id": user["id"], "name": user["name"], "role": user["role"]}
     return redirect(next_url)
 
@@ -413,6 +425,43 @@ def admin_dashboard():
         reports=storage.list_reports(),
         users=users,
     )
+
+
+ERROR_PAGE = """
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>오류 — 보장분석 리포트 생성기</title>
+<style>
+  :root{--ink:#10233F;--paper:#F6F7F9;--card:#FFFFFF;--line:#E3E7EE;--sub:#5B6B82;--gap:#C93030}
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,"Pretendard",sans-serif;background:var(--paper);color:var(--ink);margin:0;padding:64px 20px;line-height:1.6}
+  .wrap{max-width:520px;margin:0 auto}
+  h1{font-size:20px;margin-bottom:14px}
+  .err{padding:14px 16px;background:#FBEDED;color:var(--gap);border-radius:8px;font-size:13.5px;word-break:break-all}
+  a{display:inline-block;margin-top:20px;color:var(--sub);font-size:13.5px;font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>일시적인 오류가 발생했습니다</h1>
+  <div class="err">{{ message }}</div>
+  <a href="/">← 처음으로</a>
+</div>
+</body>
+</html>
+"""
+
+
+@app.errorhandler(500)
+def handle_500(e):
+    import traceback
+
+    traceback.print_exc()
+    original = getattr(e, "original_exception", None) or e
+    return render_template_string(ERROR_PAGE, message=str(original) or "알 수 없는 오류"), 500
 
 
 def main():
