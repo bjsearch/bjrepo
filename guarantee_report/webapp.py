@@ -144,6 +144,26 @@ LOGIN_PAGE = """
     <button type="submit">로그인</button>
   </form>
 </div>
+<script>
+  function formatPhone(digits) {
+    digits = digits.slice(0, 11);
+    if (digits.startsWith('02')) {
+      if (digits.length <= 2) return digits;
+      if (digits.length <= 5) return digits.slice(0, 2) + '-' + digits.slice(2);
+      if (digits.length <= 9) return digits.slice(0, 2) + '-' + digits.slice(2, 5) + '-' + digits.slice(5);
+      return digits.slice(0, 2) + '-' + digits.slice(2, 6) + '-' + digits.slice(6, 10);
+    }
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return digits.slice(0, 3) + '-' + digits.slice(3);
+    if (digits.length <= 10) return digits.slice(0, 3) + '-' + digits.slice(3, 6) + '-' + digits.slice(6);
+    return digits.slice(0, 3) + '-' + digits.slice(3, 7) + '-' + digits.slice(7, 11);
+  }
+  const phoneInput = document.getElementById('phone');
+  phoneInput.addEventListener('input', () => {
+    const digits = phoneInput.value.replace(/\\D/g, '');
+    phoneInput.value = formatPhone(digits);
+  });
+</script>
 </body>
 </html>
 """
