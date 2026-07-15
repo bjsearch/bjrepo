@@ -100,8 +100,12 @@ def _require_login():
 
 NAV_CSS = """
   .navbar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 14px;max-width:920px;margin:0 auto 8px;padding:0 20px;font-size:13px;color:var(--sub)}
+  .navbar .brand-group{display:flex;align-items:center;gap:9px}
   .navbar .brand{display:flex;align-items:center;gap:7px;text-decoration:none;flex:none}
   .navbar .brand .wordmark{font-family:"Noto Serif KR",serif;font-weight:700;font-size:15.5px;color:var(--ink);letter-spacing:-.01em}
+  .navbar .icon-dl{display:inline-flex;align-items:center;justify-content:center;padding:5px;border-radius:6px;color:var(--sub);text-decoration:none}
+  .navbar .icon-dl:hover{color:var(--ink);background:var(--line)}
+  .navbar .icon-dl svg{width:14px;height:14px}
   .navbar .menu{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px}
   .navbar a,.navbar .who{white-space:nowrap}
   .navbar a{display:inline-flex;align-items:center;gap:5px;color:var(--sub);text-decoration:none;font-weight:600}
@@ -140,6 +144,16 @@ ICON_PLUS = (
     'stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/>'
     '<line x1="5" y1="12" x2="19" y2="12"/></svg>'
 )
+ICON_DOWNLOAD = (
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+    'stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/>'
+    '<path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>'
+)
+ICON_DL_LINK = (
+    '<a class="icon-dl" href="/static/icon-512.png" download="보장분석_아이콘.png" title="앱 아이콘 다운로드 (512x512 PNG)">'
+    + ICON_DOWNLOAD
+    + "</a>"
+)
 
 LOGIN_PAGE = """
 <!DOCTYPE html>
@@ -163,11 +177,14 @@ LOGIN_PAGE = """
   .err{margin-top:16px;padding:12px 16px;background:#FBEDED;color:var(--gap);border-radius:8px;font-size:13.5px}
   .brand-lockup{display:flex;align-items:center;gap:9px;margin-bottom:22px}
   .brand-lockup .wordmark{font-family:"Noto Serif KR",serif;font-weight:700;font-size:17px;color:var(--ink);letter-spacing:-.01em}
+  .icon-dl{display:inline-flex;align-items:center;justify-content:center;padding:5px;border-radius:6px;color:var(--sub);text-decoration:none}
+  .icon-dl:hover{color:var(--ink);background:var(--line)}
+  .icon-dl svg{width:14px;height:14px}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="brand-lockup">""" + LOGO_MARK + """<span class="wordmark">보장분석</span></div>
+  <div class="brand-lockup">""" + LOGO_MARK + """<span class="wordmark">보장분석</span>""" + ICON_DL_LINK + """</div>
   <h1>보장분석 리포트 생성기</h1>
   <p class="sub">이름과 휴대폰번호로 로그인하세요. 처음이면 자동으로 계정이 만들어집니다.</p>
   {% if error %}<div class="err">{{ error }}</div>{% endif %}
@@ -258,7 +275,10 @@ UPLOAD_PAGE = """
 </head>
 <body>
 <div class="navbar">
-  <a class="brand" href="/">""" + LOGO_MARK + """<span class="wordmark">보장분석</span></a>
+  <div class="brand-group">
+    <a class="brand" href="/">""" + LOGO_MARK + """<span class="wordmark">보장분석</span></a>
+    """ + ICON_DL_LINK + """
+  </div>
   <div class="menu">
     <span class="who">{{ user.name }}님{% if user.role == 'admin' %} · 관리자{% endif %}</span>
     {% if user.role == 'admin' %}<a class="admin" href="/admin">""" + ICON_DASHBOARD + """관리자 화면</a>{% endif %}
