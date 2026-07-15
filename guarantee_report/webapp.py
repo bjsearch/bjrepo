@@ -22,6 +22,7 @@ from functools import wraps
 from urllib.parse import quote
 
 from flask import Flask, request, render_template_string, Response, redirect, url_for, abort, session
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from . import storage
 from .builder import build_report_data
@@ -31,6 +32,11 @@ from .render import render_html, render_template
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20MB
+# Render(및 대부분의 PaaS)는 앱 앞단에 리버스 프록시를 두므로, 프록시가 보내는
+# X-Forwarded-* 헤더를 신뢰하도록 설정해야 url_for(_external=True)가 내부 바인드
+# 주소(예: 127.0.0.1:10000)가 아닌 실제 공개 도메인/https를 반환한다.
+# (그렇지 않으면 카카오톡 등으로 공유한 링크의 호스트가 잘못되어 열리지 않는다.)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
 try:
     storage.init_db()
 except Exception as e:  # noqa: BLE001 — DB가 기동 시점에 잠깐 응답 없어도 앱 자체는 떠야 함
@@ -474,7 +480,7 @@ def _can_access(meta: dict, user: dict) -> bool:
 def _share_url(token: str | None) -> str | None:
     if not token:
         return None
-    return request.host_url.rstrip("/") + url_for("shared_report", token=token)
+    return url_for("shared_report", token=token, _external=True)
 
 
 @app.get("/reports/<int:report_id>")
