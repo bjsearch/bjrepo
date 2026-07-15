@@ -94,6 +94,7 @@ tbody tr:last-child td{border-bottom:none}
 td.r,th.r{text-align:right}
 .src{display:inline-flex;gap:4px;margin-left:7px;vertical-align:1px}
 .src .dot{width:8px;height:8px}
+.info-note{cursor:help;color:var(--sub);font-size:11.5px;margin-left:5px;vertical-align:1px}
 .gauge{position:relative;height:8px;background:#EDF0F5;border-radius:99px;min-width:110px;overflow:hidden}
 .gauge .fill{position:absolute;inset:0 auto 0 0;border-radius:99px;background:var(--ok)}
 .gauge .fill.warn{background:var(--warn)}
@@ -285,7 +286,7 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
     <tbody>
       {% for row in sec.rows %}
       <tr>
-        <td>{{ row.label }}{% if row.source_brand_codes %}<span class="src">{% for code in row.source_brand_codes %}<span class="dot" style="background:var(--{{ code }},#8A96A6)"></span>{% endfor %}</span>{% endif %}</td>
+        <td>{{ row.label }}{% if row.source_brand_codes %}<span class="src">{% for code in row.source_brand_codes %}<span class="dot" style="background:var(--{{ code }},#8A96A6)"></span>{% endfor %}</span>{% endif %}{% if row.note %}<span class="info-note" title="{{ row.note }}">ⓘ</span>{% endif %}</td>
         <td class="r num">{{ row.recommend_display }}</td>
         <td class="r num">{{ row.held_display }}</td>
         <td><div class="gauge"><div class="fill {{ '' if row.status=='ok' else row.status }}" style="width:{{ (row.ratio*100)|round(0,'floor') }}%"></div></div></td>
@@ -346,6 +347,7 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
   본 리포트는 {{ header.basis_date_display }} 발행 보장분석 자료(신용정보원 제공 정보 기반)를 근거로 자동 생성된 참고용 요약이며, 보험금 지급 근거 자료가 될 수 없습니다.
   정확한 보장 내용은 해당 약관 및 보험증권을 기준으로 하며, 권장금액은 분석 도구의 일반 가정에 따른 수치입니다. 상품 권유 · 승환 유도 목적으로 사용할 수 없습니다.
   보험사 로고 컬러는 식별 편의를 위한 것으로 각 사의 공식 자료가 아닙니다.
+  일부 항목의 ⓘ 참고 문구는 토스인슈어런스 보험 가이드라인을 참고해 작성되었습니다.
 </footer>
 
 </div>

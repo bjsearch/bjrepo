@@ -22,6 +22,7 @@ class EvaluatedRow:
     status: str  # ok | warn | gap
     diagnosis: str
     source_brand_codes: list[str] = field(default_factory=list)
+    note: str = ""  # 가이드라인 참고 문구 (guideline_notes.json)
 
 
 @dataclass
@@ -37,6 +38,19 @@ def load_rules(path: str | None = None) -> dict:
         path = str(res.files(__package__) / "rules_default.json")
     with open(path, encoding="utf-8") as f:
         return json.load(f)
+
+
+def _load_guideline_notes() -> dict[str, str]:
+    import importlib.resources as res
+
+    path = res.files(__package__) / "guideline_notes.json"
+    if not path.is_file():
+        return {}
+    with open(path, encoding="utf-8") as f:
+        return json.load(f).get("notes", {})
+
+
+GUIDELINE_NOTES = _load_guideline_notes()
 
 
 def _held_for_categories(totals_by_cat: dict[str, int], categories: list[str]) -> int:
@@ -122,7 +136,9 @@ def evaluate(
                     rec_disp = f"{_fmt(recommend)}" if recommend is not None else "—"
                     min_held = min(injury, disease) if matched else 0
                     status, diag, ratio = _classify(min_held, recommend)
-                rows.append(EvaluatedRow(r["label"], rec_disp, held_disp, ratio, status, diag, []))
+                rows.append(
+                    EvaluatedRow(r["label"], rec_disp, held_disp, ratio, status, diag, [], GUIDELINE_NOTES.get(r["label"], ""))
+                )
                 continue
 
             if "categories_contains" in r:
@@ -156,7 +172,9 @@ def evaluate(
                 status, diag, ratio = _classify(held, recommend)
 
             src = _source_brands(detail_items, categories, brand_registry) if categories else []
-            rows.append(EvaluatedRow(r["label"], rec_disp, held_disp, ratio, status, diag, src))
+            rows.append(
+                EvaluatedRow(r["label"], rec_disp, held_disp, ratio, status, diag, src, GUIDELINE_NOTES.get(r["label"], ""))
+            )
 
         sections.append(EvaluatedSection(sec["title"], rows))
 

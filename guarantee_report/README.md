@@ -14,6 +14,10 @@ guarantee_report/
   brands.py             보험사 브랜드 컬러 · 로고 · 업권(생보/손보/공제) 매핑
   rules.py, rules_default.json
                          권장 보장금액 체크리스트 & 충족도(적정/주의/부족/미가입) 판정 엔진
+  guidelines/insurance_guideline.md
+                         참고 보험 가이드라인 원문 정리 (사람이 읽는 문서)
+  guideline_notes.json  위 가이드라인에서 뽑은 실제 치료비 등 참고 문구 (기계가 읽는 요약,
+                         rules.py가 로드해 해당 보장 항목에 ⓘ 툴팁으로 붙임)
   builder.py            위 데이터를 리포트 JSON 스키마(헤더/KPI/계약카드/보장표/매트릭스/인사이트)로 조립
   templates/report.html.j2
                          공통 디자인 템플릿 (Jinja2) — 고객이 바뀌어도 이 파일은 그대로
@@ -147,6 +151,19 @@ Environment 탭에서 추가해도 됩니다. `ADMIN_PHONES`도 나중에 Enviro
 `rules_default.json`에 영역별(사망/암/뇌·심장/수술입원/실손) 권장 보장금액과 매칭 규칙이
 정의되어 있습니다. 설계사의 기준에 맞게 이 파일을 복사해 수정한 뒤 `--rules` 옵션으로
 지정하면 됩니다.
+
+## 보험 가이드라인 참고 자료
+
+`guidelines/insurance_guideline.md`는 참고용 보험 가이드라인(범위·크기·기간·보험료
+4가지 기준, 암/뇌혈관/심장질환의 진단명 포함 관계, 실제 치료비 벤치마크, 피해야 할 보험
+구조)을 정리한 문서입니다. `rules_default.json`의 카테고리 계층(예: 뇌혈관질환 ⊇ 뇌졸중
+⊇ 뇌출혈)은 이 문서의 포함 관계를 그대로 반영합니다.
+
+`guideline_notes.json`은 이 문서에서 뽑은 실제 치료비 등 참고 문구를 보장 항목 라벨과
+매핑해둔 파일로, `rules.py`가 자동으로 로드해 리포트의 해당 보장 항목 옆에 ⓘ 아이콘
+툴팁으로 표시합니다. 새 가이드라인 문서를 추가하려면 `guidelines/`에 md 파일을 추가하고,
+필요한 참고 문구를 `guideline_notes.json`의 `notes`에 `"보장 항목 라벨": "문구"` 형태로
+추가하면 됩니다 (라벨은 `rules_default.json`의 `label`과 정확히 일치해야 매칭됩니다).
 
 ## 한계 및 참고사항
 
