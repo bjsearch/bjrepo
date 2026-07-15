@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>보장분석 리포트 비교</title>
+<style>
+  :root{--ink:#10233F;--paper:#F6F7F9;--card:#FFFFFF;--line:#E3E7EE;--sub:#5B6B82;--ok:#1D5BD8;--warn:#C77700;--gap:#C93030;--ok-bg:#EDF3FE;--warn-bg:#FDF3E3;--gap-bg:#FBEDED}
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,"Pretendard",sans-serif;background:var(--paper);color:var(--ink);margin:0;padding:40px 20px 80px;line-height:1.6;font-size:14px}
+  .wrap{max-width:min(1100px,96vw);margin:0 auto}
+  .top{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:6px}
+  h1{font-size:24px;margin:0}
+  a.back{font-size:13.5px;font-weight:700;color:var(--ok);text-decoration:none}
+  p.sub{color:var(--sub);font-size:13.5px;margin:6px 0 26px}
+  h2{font-family:"Noto Serif KR",serif;font-size:18px;font-weight:700;padding-bottom:8px;border-bottom:1.5px solid var(--ink);margin:36px 0 14px}
+  .tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+  table{width:100%;border-collapse:collapse;font-size:13px;min-width:520px}
+  thead th{background:#F0F3F8;font-size:12px;font-weight:700;color:var(--sub);text-align:center;padding:9px 12px;border-bottom:1px solid var(--line);border-left:1px solid var(--line);white-space:nowrap}
+  thead th:first-child{text-align:left;border-left:none}
+  tbody td{padding:9px 12px;border-bottom:1px solid var(--line);border-left:1px solid var(--line);text-align:center;white-space:nowrap}
+  tbody td:first-child{text-align:left;font-weight:600;border-left:none;white-space:normal}
+  tbody tr:last-child td{border-bottom:none}
+  tbody td.empty{color:#C4CCD7}
+  .chip{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:99px;margin-left:5px;vertical-align:1px}
+  .chip.ok{color:var(--ok);background:var(--ok-bg)}
+  .chip.warn{color:var(--warn);background:var(--warn-bg)}
+  .chip.gap{color:var(--gap);background:var(--gap-bg)}
+  .cust-th{display:flex;flex-direction:column;gap:2px}
+  .cust-th small{font-weight:500;color:var(--sub)}
+  .kpi-row td{font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1>보장분석 리포트 비교</h1>
+    <a class="back" href="/reports">← 저장된 리포트 목록</a>
+  </div>
+  <p class="sub">{{ headers|map(attribute='name')|join(' · ') }} — 총 {{ headers|length }}건 비교 · 같은 권장 보장금액 체크리스트 기준</p>
+
+  <h2>기본 정보 · 보험료</h2>
+  <div class="tbl-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>항목</th>
+        {% for h in headers %}
+        <th><div class="cust-th">{{ h.name }}<small>{{ h.gender }}{% if h.age %}, {{ h.age }}세{% endif %}</small></div></th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="kpi-row"><td>분석 기준일</td>{% for h in headers %}<td>{{ h.basis_date_display }}</td>{% endfor %}</tr>
+      <tr class="kpi-row"><td>계약 건수</td>{% for h in headers %}<td>{{ h.total_contracts }}건</td>{% endfor %}</tr>
+      <tr class="kpi-row"><td>월 납입 보험료</td>{% for k in kpis %}<td>{{ k.monthly_premium }}원</td>{% endfor %}</tr>
+      <tr class="kpi-row"><td>총 보험료</td>{% for k in kpis %}<td>{{ k.grand_total_man }}만원</td>{% endfor %}</tr>
+      <tr class="kpi-row"><td>진단 결과</td>
+        {% for k in kpis %}
+        <td><span class="chip ok">적정 {{ k.ok_count }}</span><span class="chip warn">주의·부족 {{ k.warn_count }}</span><span class="chip gap">미가입 {{ k.gap_count }}</span></td>
+        {% endfor %}
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  {% for sec in sections %}
+  <h2>{{ sec.title }}</h2>
+  <div class="tbl-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>보장 항목</th>
+        {% for h in headers %}<th>{{ h.name }}</th>{% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in sec.rows %}
+      <tr>
+        <td>{{ row.label }}</td>
+        {% for cell in row.cells %}
+        {% if cell %}
+        <td>{{ cell.held_display }}<span class="chip {{ cell.status }}">{{ cell.diagnosis }}</span></td>
+        {% else %}
+        <td class="empty">—</td>
+        {% endif %}
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% endfor %}
+</div>
+</body>
+</html>

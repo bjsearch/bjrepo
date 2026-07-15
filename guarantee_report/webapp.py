@@ -16,14 +16,17 @@ import os
 import tempfile
 from urllib.parse import quote
 
-from flask import Flask, request, render_template_string, Response
+from flask import Flask, request, render_template_string, Response, redirect, url_for, abort
 
+from . import storage
 from .builder import build_report_data
+from .compare import build_comparison
 from .parser import ReportParseError, parse_pdf
-from .render import render_html
+from .render import render_html, render_template
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20MB
+storage.init_db()
 
 APP_USERNAME = os.environ.get("APP_USERNAME", "admin")
 APP_PASSWORD = os.environ.get("APP_PASSWORD")
@@ -92,8 +95,11 @@ UPLOAD_PAGE = """
 </head>
 <body>
 <div class="wrap">
-  <h1>보장분석 리포트 생성기</h1>
-  <p class="sub">신용정보원 '보험신용정보 통합조회 결과서' PDF를 업로드하면 같은 디자인의 HTML 리포트를 생성합니다.</p>
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
+    <h1>보장분석 리포트 생성기</h1>
+    <a href="/reports" style="font-size:13px;font-weight:700;color:var(--ok);text-decoration:none;white-space:nowrap">저장된 리포트 →</a>
+  </div>
+  <p class="sub">신용정보원 '보험신용정보 통합조회 결과서' PDF를 업로드하면 같은 디자인의 HTML 리포트를 생성하고 자동으로 저장합니다.</p>
 
   {% if error %}<div class="err">{{ error }}</div>{% endif %}
 
@@ -180,7 +186,6 @@ def generate():
 
         parsed = parse_pdf(tmp_path)
         data = build_report_data(parsed)
-        html = render_html(data)
     except ReportParseError as e:
         return render_template_string(UPLOAD_PAGE, error=str(e)), 400
     except Exception as e:  # noqa: BLE001 — 사용자에게 원인 안내
@@ -189,11 +194,43 @@ def generate():
         if tmp_path and os.path.exists(tmp_path):
             os.remove(tmp_path)
 
-    filename = f"{parsed.customer.name}_보장분석리포트.html"
+    report_id = storage.save_report(data)
+    return redirect(url_for("view_report", report_id=report_id))
+
+
+@app.get("/reports")
+def reports_list():
+    return render_template("reports_list.html.j2", reports=storage.list_reports())
+
+
+@app.get("/reports/<int:report_id>")
+def view_report(report_id: int):
+    data = storage.get_report(report_id)
+    if not data:
+        abort(404)
+    html = render_html(data)
+    filename = f"{data['header']['name']}_보장분석리포트.html"
     resp = Response(html, mimetype="text/html")
     # 한글 파일명은 latin-1 헤더 인코딩을 통과하지 못하므로 RFC 5987 인코딩 사용
     resp.headers["Content-Disposition"] = f"inline; filename*=UTF-8''{quote(filename)}"
     return resp
+
+
+@app.post("/reports/<int:report_id>/delete")
+def delete_report(report_id: int):
+    storage.delete_report(report_id)
+    return redirect(url_for("reports_list"))
+
+
+@app.get("/compare")
+def compare():
+    ids = [int(x) for x in request.args.getlist("ids") if x.isdigit()]
+    reports = [storage.get_report(i) for i in ids]
+    reports = [r for r in reports if r]
+    if len(reports) < 2:
+        return redirect(url_for("reports_list"))
+    comparison = build_comparison(reports)
+    return render_template("compare.html.j2", **comparison)
 
 
 def main():
