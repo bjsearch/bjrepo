@@ -137,22 +137,36 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 .hero .caption small{display:block;font-family:Pretendard,sans-serif;font-size:12px;font-weight:500;color:#A9765C;margin-top:3px}
 @media(max-width:640px){.hero .caption{font-size:14px;left:16px;bottom:12px;padding:8px 12px;max-width:78%}}
 
-.download-btn{position:fixed;top:22px;right:22px;z-index:40;display:inline-flex;align-items:center;gap:7px;padding:11px 20px;background:var(--ink);color:#fff;border:none;border-radius:99px;font-family:inherit;font-size:13.5px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(16,35,63,.28);transition:transform .15s,box-shadow .15s}
-.download-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(16,35,63,.34)}
-.download-btn svg{width:15px;height:15px;flex:none}
-@media(max-width:640px){.download-btn{top:auto;bottom:18px;right:18px;padding:14px}.download-btn span{display:none}.download-btn svg{width:18px;height:18px}}
-@media print{.download-btn{display:none}}
+.action-bar{position:fixed;top:22px;right:22px;z-index:40;display:flex;gap:8px}
+.action-bar button{display:inline-flex;align-items:center;gap:7px;padding:11px 20px;border:none;border-radius:99px;font-family:inherit;font-size:13.5px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(16,35,63,.28);transition:transform .15s,box-shadow .15s}
+.action-bar button:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(16,35,63,.34)}
+.action-bar button svg{width:15px;height:15px;flex:none}
+.download-btn{background:var(--ink);color:#fff}
+.share-btn{background:#FEE500;color:#3C1E1E}
+@media(max-width:640px){.action-bar{top:auto;bottom:18px;right:18px;flex-direction:column}.action-bar button{padding:14px}.action-bar button span{display:none}.action-bar button svg{width:18px;height:18px}}
+@media print{.action-bar{display:none}}
 .back-link{position:fixed;top:26px;left:22px;z-index:40;font-size:13px;font-weight:700;color:var(--sub);text-decoration:none;background:rgba(255,255,255,.85);padding:8px 14px;border-radius:99px}
 @media print{.back-link{display:none}}
 @media(max-width:640px){.back-link{top:16px;left:16px;font-size:12px;padding:7px 12px}}
+.share-toast{position:fixed;bottom:26px;left:50%;transform:translate(-50%,12px);background:var(--ink);color:#fff;font-size:13px;font-weight:600;padding:11px 18px;border-radius:99px;z-index:60;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;box-shadow:0 6px 18px rgba(16,35,63,.3)}
+.share-toast.show{opacity:1;transform:translate(-50%,0)}
 </style>
 </head>
 <body>
-<a class="back-link" href="/reports">← 저장된 리포트</a>
-<button class="download-btn" type="button" onclick="downloadReport()">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
-  <span>리포트 다운로드</span>
-</button>
+{% if not is_public_view %}<a class="back-link" href="/reports">← 저장된 리포트</a>{% endif %}
+<div class="action-bar">
+  {% if not is_public_view %}
+  <button class="share-btn" type="button" id="shareBtn" data-report-id="{{ report_id }}" data-title="{{ header.name }}님 보장분석 리포트" data-url="{{ share_url or '' }}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/></svg>
+    <span>카카오톡으로 보내기</span>
+  </button>
+  {% endif %}
+  <button class="download-btn" type="button" onclick="downloadReport()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+    <span>리포트 다운로드</span>
+  </button>
+</div>
+<div class="share-toast" id="shareToast"></div>
 <div class="page">
 
 <header>
@@ -365,6 +379,67 @@ function downloadReport(){
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+function showShareToast(msg){
+  var t = document.getElementById('shareToast');
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 3200);
+}
+
+async function shareReport(){
+  var btn = document.getElementById('shareBtn');
+  if (!btn) return;
+  var url = btn.dataset.url;
+  var title = btn.dataset.title;
+  if (!url) {
+    try {
+      var resp = await fetch('/reports/' + btn.dataset.reportId + '/share', {
+        method: 'POST',
+        headers: {'Accept': 'application/json'},
+      });
+      var data = await resp.json();
+      url = data.url;
+      btn.dataset.url = url;
+    } catch (e) {
+      showShareToast('공유 링크 생성에 실패했습니다.');
+      return;
+    }
+  }
+  if (window.Kakao && window.Kakao.isInitialized && window.Kakao.isInitialized()) {
+    window.Kakao.Share.sendDefault({
+      objectType: 'text',
+      text: title,
+      link: {mobileWebUrl: url, webUrl: url},
+    });
+    return;
+  }
+  if (navigator.share) {
+    try {
+      await navigator.share({title: title, url: url});
+      return;
+    } catch (e) {
+      return; // 사용자가 공유를 취소한 경우 등 — 별다른 처리 없이 종료
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    showShareToast('링크가 복사되었습니다. 카카오톡에 붙여넣어 보내주세요.');
+  } catch (e) {
+    window.prompt('아래 링크를 복사해서 카카오톡으로 보내주세요.', url);
+  }
+}
+
+document.getElementById('shareBtn')?.addEventListener('click', shareReport);
 </script>
+{% if kakao_js_key %}
+<script src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
+<script>
+  if (window.Kakao && !window.Kakao.isInitialized()) {
+    window.Kakao.init('{{ kakao_js_key }}');
+  }
+</script>
+{% endif %}
 </body>
 </html>

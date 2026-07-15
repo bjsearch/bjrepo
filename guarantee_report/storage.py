@@ -268,6 +268,18 @@ def delete_report(report_id: int) -> None:
         cur.execute(_q("DELETE FROM guarantee_reports WHERE id = ?"), (report_id,))
 
 
+def get_or_create_share_token(report_id: int) -> str:
+    """기존 공유 링크가 있으면 그대로 재사용하고, 없으면 새로 발급한다."""
+    _ensure_init()
+    with _connect() as conn:
+        cur = conn.cursor()
+        cur.execute(_q("SELECT share_token FROM guarantee_reports WHERE id = ?"), (report_id,))
+        row = cur.fetchone()
+        if row and row["share_token"]:
+            return row["share_token"]
+    return regenerate_share_token(report_id)
+
+
 def regenerate_share_token(report_id: int) -> str:
     """리포트에 새 공유 토큰을 발급(또는 재발급)하고 반환한다. 기존 링크는 즉시 무효화된다."""
     _ensure_init()

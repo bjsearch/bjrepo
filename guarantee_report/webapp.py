@@ -41,6 +41,7 @@ except Exception as e:  # noqa: BLE001 — DB가 기동 시점에 잠깐 응답 
 
 TEAM_PASSWORD = os.environ.get("APP_PASSWORD")
 ADMIN_PHONES = {re.sub(r"\D", "", p) for p in os.environ.get("ADMIN_PHONES", "").split(",") if p.strip()}
+KAKAO_JS_KEY = os.environ.get("KAKAO_JS_KEY")  # 설정 시 카카오톡 공유가 SDK 카드 형태로 동작 (없으면 웹 공유/링크복사로 대체)
 
 _secret = os.environ.get("SECRET_KEY")
 if not _secret:
@@ -90,7 +91,7 @@ def admin_required(view):
 
 @app.before_request
 def _require_login():
-    if request.endpoint in ("login", "logout", "static"):
+    if request.endpoint in ("login", "logout", "static", "shared_report"):
         return None
     if not current_user():
         return redirect(url_for("login", next=request.path))
@@ -450,6 +451,12 @@ def _can_access(meta: dict, user: dict) -> bool:
     return user["role"] == "admin" or meta.get("created_by_user_id") == user["id"]
 
 
+def _share_url(token: str | None) -> str | None:
+    if not token:
+        return None
+    return request.host_url.rstrip("/") + url_for("shared_report", token=token)
+
+
 @app.get("/reports/<int:report_id>")
 def view_report(report_id: int):
     user = current_user()
@@ -459,7 +466,15 @@ def view_report(report_id: int):
     if not _can_access(meta, user):
         abort(403)
     data = storage.get_report(report_id)
-    html = render_html(data)
+    html = render_html(
+        {
+            **data,
+            "report_id": report_id,
+            "share_url": _share_url(meta.get("share_token")),
+            "is_public_view": False,
+            "kakao_js_key": KAKAO_JS_KEY,
+        }
+    )
     filename = f"{data['header']['name']}_보장분석리포트.html"
     resp = Response(html, mimetype="text/html")
     # 한글 파일명은 latin-1 헤더 인코딩을 통과하지 못하므로 RFC 5987 인코딩 사용
@@ -474,6 +489,40 @@ def delete_report(report_id: int):
     if meta and _can_access(meta, user):
         storage.delete_report(report_id)
     return redirect(url_for("reports_list"))
+
+
+@app.post("/reports/<int:report_id>/share")
+def create_share_link(report_id: int):
+    user = current_user()
+    meta = storage.get_report_meta(report_id)
+    if not meta or not _can_access(meta, user):
+        abort(403)
+    token = storage.get_or_create_share_token(report_id)
+    url = _share_url(token)
+    if request.headers.get("Accept") == "application/json":
+        return {"url": url}
+    return redirect(url_for("view_report", report_id=report_id))
+
+
+@app.post("/reports/<int:report_id>/unshare")
+def revoke_share_link(report_id: int):
+    user = current_user()
+    meta = storage.get_report_meta(report_id)
+    if not meta or not _can_access(meta, user):
+        abort(403)
+    storage.revoke_share_token(report_id)
+    return redirect(url_for("view_report", report_id=report_id))
+
+
+@app.get("/s/<token>")
+def shared_report(token: str):
+    data = storage.get_report_by_share_token(token)
+    if not data:
+        abort(404)
+    html = render_html({**data, "share_url": None, "is_public_view": True, "kakao_js_key": None})
+    resp = Response(html, mimetype="text/html")
+    resp.headers["X-Robots-Tag"] = "noindex, nofollow"
+    return resp
 
 
 @app.get("/compare")
