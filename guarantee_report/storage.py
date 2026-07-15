@@ -1,5 +1,5 @@
 """
-저장된 리포트 데이터 영속화 계층.
+저장된 리포트 · 사용자 데이터 영속화 계층.
 
 DATABASE_URL 환경변수가 설정되어 있으면 Postgres를 사용하고(권장 — 예: Neon,
 Supabase의 무료 Postgres), 없으면 로컬 SQLite 파일(DB_PATH, 기본값
@@ -35,6 +35,14 @@ CREATE TABLE IF NOT EXISTS reports (
     total_contracts INTEGER,
     data_json TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    phone TEXT NOT NULL UNIQUE,
+    role TEXT NOT NULL DEFAULT 'user',
+    created_at TEXT NOT NULL,
+    last_login_at TEXT
+);
 """
 
 _SCHEMA_SQLITE = """
@@ -52,10 +60,19 @@ CREATE TABLE IF NOT EXISTS reports (
     total_contracts INTEGER,
     data_json TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    phone TEXT NOT NULL UNIQUE,
+    role TEXT NOT NULL DEFAULT 'user',
+    created_at TEXT NOT NULL,
+    last_login_at TEXT
+);
 """
 
 _SUMMARY_COLS = """id, customer_name, gender, birth_date, basis_date, created_at,
-                    monthly_premium, ok_count, warn_count, gap_count, total_contracts"""
+                    monthly_premium, ok_count, warn_count, gap_count, total_contracts,
+                    created_by_user_id, created_by_name"""
 
 
 def _q(sql: str) -> str:
@@ -82,10 +99,26 @@ def _connect():
         conn.close()
 
 
+def _add_column_if_missing(cur, table: str, column: str, coltype: str) -> None:
+    if BACKEND == "postgres":
+        cur.execute(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {coltype}")
+        return
+    try:
+        cur.execute(f"ALTER TABLE {table} ADD COLUMN {column} {coltype}")
+    except Exception:
+        pass  # SQLite는 IF NOT EXISTS를 지원하지 않음 — 이미 있으면 무시
+
+
 def init_db() -> None:
     with _connect() as conn:
         cur = conn.cursor()
-        cur.execute(_SCHEMA_POSTGRES if BACKEND == "postgres" else _SCHEMA_SQLITE)
+        for stmt in (_SCHEMA_POSTGRES if BACKEND == "postgres" else _SCHEMA_SQLITE).split(";"):
+            stmt = stmt.strip()
+            if stmt:
+                cur.execute(stmt)
+        # 기존 배포에 리포트 소유자 컬럼 마이그레이션
+        _add_column_if_missing(cur, "reports", "created_by_user_id", "INTEGER")
+        _add_column_if_missing(cur, "reports", "created_by_name", "TEXT")
 
 
 def _to_int(value) -> int | None:
@@ -97,7 +130,44 @@ def _to_int(value) -> int | None:
         return None
 
 
-def save_report(data: dict) -> int:
+# --- 사용자 ---
+
+
+def upsert_user(name: str, phone: str, role: str) -> dict:
+    """전화번호를 키로 사용자 정보를 갱신(또는 신규 생성)하고, 항상 최신 역할을 반영한다."""
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    with _connect() as conn:
+        cur = conn.cursor()
+        cur.execute(_q("SELECT id FROM users WHERE phone = ?"), (phone,))
+        existing = cur.fetchone()
+        if existing:
+            user_id = existing["id"]
+            cur.execute(
+                _q("UPDATE users SET name = ?, role = ?, last_login_at = ? WHERE id = ?"),
+                (name, role, now, user_id),
+            )
+        else:
+            insert_sql = "INSERT INTO users (name, phone, role, created_at, last_login_at) VALUES (?,?,?,?,?)"
+            if BACKEND == "postgres":
+                cur.execute(_q(insert_sql) + " RETURNING id", (name, phone, role, now, now))
+                user_id = cur.fetchone()["id"]
+            else:
+                cur.execute(insert_sql, (name, phone, role, now, now))
+                user_id = cur.lastrowid
+        return {"id": user_id, "name": name, "phone": phone, "role": role}
+
+
+def list_users() -> list[dict]:
+    with _connect() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT id, name, phone, role, created_at, last_login_at FROM users ORDER BY last_login_at DESC")
+        return [dict(r) for r in cur.fetchall()]
+
+
+# --- 리포트 ---
+
+
+def save_report(data: dict, created_by_user_id: int | None = None, created_by_name: str | None = None) -> int:
     header = data["header"]
     kpis = data["kpis"]
     params = (
@@ -112,11 +182,14 @@ def save_report(data: dict) -> int:
         kpis.get("gap_count"),
         header.get("total_contracts"),
         json.dumps(data, ensure_ascii=False),
+        created_by_user_id,
+        created_by_name,
     )
     insert_sql = """INSERT INTO reports
         (customer_name, gender, birth_date, basis_date, created_at,
-         monthly_premium, ok_count, warn_count, gap_count, total_contracts, data_json)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?)"""
+         monthly_premium, ok_count, warn_count, gap_count, total_contracts, data_json,
+         created_by_user_id, created_by_name)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"""
     with _connect() as conn:
         cur = conn.cursor()
         if BACKEND == "postgres":
@@ -126,10 +199,16 @@ def save_report(data: dict) -> int:
         return cur.lastrowid
 
 
-def list_reports() -> list[dict]:
+def list_reports(created_by_user_id: int | None = None) -> list[dict]:
     with _connect() as conn:
         cur = conn.cursor()
-        cur.execute(f"SELECT {_SUMMARY_COLS} FROM reports ORDER BY created_at DESC")
+        if created_by_user_id is None:
+            cur.execute(f"SELECT {_SUMMARY_COLS} FROM reports ORDER BY created_at DESC")
+        else:
+            cur.execute(
+                _q(f"SELECT {_SUMMARY_COLS} FROM reports WHERE created_by_user_id = ? ORDER BY created_at DESC"),
+                (created_by_user_id,),
+            )
         return [dict(r) for r in cur.fetchall()]
 
 
@@ -147,6 +226,14 @@ def get_report_meta(report_id: int) -> dict | None:
         cur.execute(_q(f"SELECT {_SUMMARY_COLS} FROM reports WHERE id = ?"), (report_id,))
         row = cur.fetchone()
         return dict(row) if row else None
+
+
+def get_all_report_data() -> list[dict]:
+    """관리자 통계용 — 모든 리포트의 전체 데이터(JSON)를 반환."""
+    with _connect() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT data_json FROM reports ORDER BY created_at DESC")
+        return [json.loads(r["data_json"]) for r in cur.fetchall()]
 
 
 def delete_report(report_id: int) -> None:

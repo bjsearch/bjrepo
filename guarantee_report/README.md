@@ -18,7 +18,7 @@ guarantee_report/
   templates/report.html.j2
                          공통 디자인 템플릿 (Jinja2) — 고객이 바뀌어도 이 파일은 그대로
   render.py             JSON 데이터 + 템플릿 → 최종 HTML
-  storage.py             생성된 리포트를 저장/조회/삭제하는 영속화 계층 (SQLite)
+  storage.py             생성된 리포트 · 사용자 계정을 저장/조회/삭제하는 영속화 계층
   compare.py             저장된 리포트 여러 건을 같은 체크리스트로 나란히 비교하는 데이터 조립
   templates/reports_list.html.j2, templates/compare.html.j2
                          저장 목록 · 비교 화면 템플릿
@@ -61,17 +61,39 @@ PORT=8080 python -m guarantee_report.webapp
 PDF를 드래그 앤 드롭하면 즉시 HTML 리포트가 브라우저에 렌더링됩니다. 업로드된 PDF는
 처리 직후 삭제되며 디스크에 영구 저장하지 않습니다.
 
-### 비밀번호 보호
+### 로그인 · 관리자 권한
 
-민감한 개인(신용)정보가 포함되므로, 외부에 배포할 때는 `APP_PASSWORD` 환경변수를 반드시
-설정하세요. 설정하면 사이트 전체가 HTTP Basic Auth로 보호됩니다 (브라우저 기본 로그인 창).
+첫 화면은 로그인 페이지입니다. **이름 + 휴대폰번호**를 입력하면 로그인되고(처음이면 자동으로
+계정 생성), 세션 쿠키로 유지됩니다. 비밀번호 계정이 아니라 "누가 썼는지 식별"하는 용도라
+아래 두 환경변수와 함께 쓰는 것을 전제로 합니다.
+
+- **`APP_PASSWORD`**: 설정하면 로그인 폼에 "팀 비밀번호" 입력칸이 추가됩니다. 이걸 모르면
+  이름/휴대폰번호를 알아도 로그인 자체가 안 되므로, 외부인 접근을 막는 1차 방어선입니다.
+  민감한 개인(신용)정보를 다루는 만큼 **외부에 배포할 때는 반드시 설정하세요.**
+- **`ADMIN_PHONES`**: 관리자 권한을 줄 휴대폰번호를 쉼표로 나열합니다
+  (예: `ADMIN_PHONES=01011112222,01033334444`). 여기 등록된 번호로 로그인하면 자동으로
+  관리자가 되어 `/admin`에서 **모든 사용자의 저장된 리포트**와 통계를 볼 수 있습니다.
+  일반 사용자는 자신이 만든 리포트만 `/reports`에서 볼 수 있습니다.
+- **`SECRET_KEY`**: 세션 쿠키 서명에 쓰는 키입니다. 설정하지 않으면 서버가 뜰 때마다 임시
+  키를 새로 만들어서, 재배포/재시작할 때마다 모든 로그인이 풀립니다. 배포 시 아무 랜덤
+  문자열로 설정해두세요 (Render Blueprint는 자동으로 생성해줍니다).
+
+전화번호는 실제 비밀번호가 아니라서(동료끼리 알 수 있음) 보안 강도는 낮습니다 —
+`APP_PASSWORD`를 반드시 함께 쓰는 걸 전제로 설계했습니다.
 
 ```bash
-APP_USERNAME=admin APP_PASSWORD=원하는비밀번호 python -m guarantee_report.webapp
+APP_PASSWORD=팀비밀번호 ADMIN_PHONES=01011112222,01033334444 SECRET_KEY=아무랜덤문자열 \
+  python -m guarantee_report.webapp
 ```
 
-`APP_PASSWORD`를 설정하지 않으면 로컬 개발 편의를 위해 인증 없이 열립니다 — 이 상태로는
-외부에 공개 배포하지 마세요.
+### 관리자 화면
+
+`/admin`에서 볼 수 있는 것:
+- 전체 리포트 수, 분석한 고객 수, 평균 월 보험료
+- 전체 고객 기준 가장 흔한 미가입(보장 공백) 항목 Top 8 — 어떤 보장이 공통적으로 부족한지
+  한눈에 파악
+- 전체 사용자가 생성한 모든 리포트 목록 (생성자 포함)
+- 등록된 사용자 목록 (이름, 휴대폰번호 뒷자리만 마스킹 표시, 권한, 최근 로그인)
 
 ### 리포트 저장 · 비교
 
@@ -113,10 +135,12 @@ DATABASE_URL=postgresql://user:pass@localhost:5432/dbname python -m guarantee_re
 ### Render 배포
 
 저장소 루트의 `render.yaml`로 배포합니다. render.com에서 "New → Blueprint"로 이
-저장소를 연결하면, 빌드/실행 명령이 자동으로 설정되고 `APP_PASSWORD`, `DATABASE_URL`
-값을 입력하는 칸이 나타납니다 (레포에는 저장되지 않는 비밀값). `DATABASE_URL`은
-비워둬도 배포되며, 그 경우 SQLite로 동작합니다 — 나중에 위 "무료 Postgres 연동"
-단계대로 Environment 탭에서 추가해도 됩니다.
+저장소를 연결하면, 빌드/실행 명령이 자동으로 설정되고 `APP_PASSWORD`, `DATABASE_URL`,
+`ADMIN_PHONES` 값을 입력하는 칸이 나타납니다 (레포에는 저장되지 않는 비밀값).
+`SECRET_KEY`는 Render가 자동으로 랜덤 값을 만들어줍니다. `DATABASE_URL`은 비워둬도
+배포되며, 그 경우 SQLite로 동작합니다 — 나중에 위 "무료 Postgres 연동" 단계대로
+Environment 탭에서 추가해도 됩니다. `ADMIN_PHONES`도 나중에 Environment 탭에서
+추가/수정할 수 있습니다.
 
 ## 권장 보장금액 체크리스트 커스터마이즈
 

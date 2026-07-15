@@ -140,9 +140,13 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 .download-btn svg{width:15px;height:15px;flex:none}
 @media(max-width:640px){.download-btn{top:auto;bottom:18px;right:18px;padding:14px}.download-btn span{display:none}.download-btn svg{width:18px;height:18px}}
 @media print{.download-btn{display:none}}
+.back-link{position:fixed;top:26px;left:22px;z-index:40;font-size:13px;font-weight:700;color:var(--sub);text-decoration:none;background:rgba(255,255,255,.85);padding:8px 14px;border-radius:99px}
+@media print{.back-link{display:none}}
+@media(max-width:640px){.back-link{top:16px;left:16px;font-size:12px;padding:7px 12px}}
 </style>
 </head>
 <body>
+<a class="back-link" href="/reports">← 저장된 리포트</a>
 <button class="download-btn" type="button" onclick="downloadReport()">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
   <span>리포트 다운로드</span>
