@@ -1,6 +1,7 @@
 """파싱된 PDF 데이터 + 평가된 체크리스트 → 템플릿에 주입할 리포트 JSON 스키마로 조립."""
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from dataclasses import asdict
 from datetime import date
@@ -12,6 +13,12 @@ from .rules import EvaluatedRow, EvaluatedSection, evaluate, load_rules
 
 def _fmt_man(n: float) -> str:
     return f"{round(n):,.0f}"
+
+
+def _parse_leading_number(s: str) -> float:
+    """'각 10', '10,000', '10 / 20', '—' 등에서 첫 숫자를 안전하게 뽑는다."""
+    m = re.search(r"[\d,]+(?:\.\d+)?", s or "")
+    return float(m.group().replace(",", "")) if m else 0.0
 
 
 def _fmt_date_dot(d: date) -> str:
@@ -187,7 +194,7 @@ def _build_recommendations(sections: list[EvaluatedSection], contracts: list[dic
         for r in sec.rows:
             if r.status == "gap" and r.recommend_display != "—":
                 gaps.append((sec.title, r))
-    gaps.sort(key=lambda t: -float(t[1].recommend_display.replace(",", "") or 0))
+    gaps.sort(key=lambda t: -_parse_leading_number(t[1].recommend_display))
     for sec_title, r in gaps:
         if len(recos) >= 3:
             break
@@ -247,23 +254,20 @@ def _build_insights(
         injury = by_label.get("상해사망")
         disease = by_label.get("질병사망")
         if injury and disease:
-            try:
-                iv = float(injury.held_display.replace(",", "").replace("—", "0") or 0)
-                dv = float(disease.held_display.replace(",", "").replace("—", "0") or 0)
-                if iv > 0 and dv > 0 and iv > dv * 2:
-                    insights.append(
-                        {
-                            "urgent": False,
-                            "title": "사망보장의 상해 편중 — 질병 계열 보강 필요",
-                            "text": (
-                                f"상해사망 {_fmt_man(iv)}만원 대비 질병사망은 {_fmt_man(dv)}만원으로 구조가 "
-                                f"역전되어 있습니다. 연령이 높아질수록 실제 리스크는 질병 쪽이 커지므로, "
-                                f"사망보장의 목적(생활비 · 정리자금)을 정한 뒤 질병 계열 중심으로 재배분할 필요가 있습니다."
-                            ),
-                        }
-                    )
-            except ValueError:
-                pass
+            iv = _parse_leading_number(injury.held_display)
+            dv = _parse_leading_number(disease.held_display)
+            if iv > 0 and dv > 0 and iv > dv * 2:
+                insights.append(
+                    {
+                        "urgent": False,
+                        "title": "사망보장의 상해 편중 — 질병 계열 보강 필요",
+                        "text": (
+                            f"상해사망 {_fmt_man(iv)}만원 대비 질병사망은 {_fmt_man(dv)}만원으로 구조가 "
+                            f"역전되어 있습니다. 연령이 높아질수록 실제 리스크는 질병 쪽이 커지므로, "
+                            f"사망보장의 목적(생활비 · 정리자금)을 정한 뒤 질병 계열 중심으로 재배분할 필요가 있습니다."
+                        ),
+                    }
+                )
 
     renewing_indemnity = [c for c in contracts if c["premium_display"] == "주계약 합산" and c["badge"]]
     if renewing_indemnity:
