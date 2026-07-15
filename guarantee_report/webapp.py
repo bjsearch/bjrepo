@@ -70,7 +70,7 @@ UPLOAD_PAGE = """
   .wrap{max-width:520px;margin:0 auto}
   h1{font-size:24px;margin-bottom:6px}
   p.sub{color:var(--sub);font-size:14px;margin-bottom:28px}
-  .drop{background:var(--card);border:2px dashed var(--line);border-radius:14px;padding:40px 24px;text-align:center;cursor:pointer;transition:border-color .15s}
+  .drop{display:block;background:var(--card);border:2px dashed var(--line);border-radius:14px;padding:40px 24px;text-align:center;cursor:pointer;transition:border-color .15s}
   .drop.drag{border-color:var(--ok)}
   .drop input{display:none}
   .drop .hint{color:var(--sub);font-size:13px;margin-top:8px}
