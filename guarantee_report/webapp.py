@@ -3,11 +3,15 @@
 
 주의: 업로드되는 PDF에는 이름 · 주민등록번호 일부 · 보험 가입내역 등 민감한 개인(신용)정보가
 포함됩니다. 업로드된 파일은 처리 즉시 메모리에서만 다루고 디스크에 영구 저장하지 않으며,
-요청 종료 시 임시 파일을 삭제합니다. 사내망 등 신뢰된 환경에서만 구동하고, 외부에 공개로
-배포하지 마십시오 (인증 없음).
+요청 종료 시 임시 파일을 삭제합니다.
+
+인증: 환경변수 APP_PASSWORD를 설정하면 HTTP Basic Auth로 전체 사이트가 보호됩니다.
+설정하지 않으면(로컬 개발 편의를 위해) 인증 없이 열려 있으니, 외부에 공개 배포할 때는
+반드시 APP_PASSWORD를 설정하세요.
 """
 from __future__ import annotations
 
+import hmac
 import os
 import tempfile
 from urllib.parse import quote
@@ -20,6 +24,37 @@ from .render import render_html
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20MB
+
+APP_USERNAME = os.environ.get("APP_USERNAME", "admin")
+APP_PASSWORD = os.environ.get("APP_PASSWORD")
+
+if not APP_PASSWORD:
+    print(
+        "[경고] APP_PASSWORD 환경변수가 설정되지 않아 인증 없이 열려 있습니다. "
+        "외부에 배포할 때는 반드시 설정하세요.",
+        flush=True,
+    )
+
+
+def _auth_ok(auth) -> bool:
+    if not auth:
+        return False
+    return hmac.compare_digest(auth.username or "", APP_USERNAME) and hmac.compare_digest(
+        auth.password or "", APP_PASSWORD
+    )
+
+
+@app.before_request
+def _require_auth():
+    if not APP_PASSWORD:
+        return None  # 인증 비활성화 (로컬 개발용)
+    if not _auth_ok(request.authorization):
+        return Response(
+            "인증이 필요합니다.",
+            401,
+            {"WWW-Authenticate": 'Basic realm="Guarantee Report Generator"'},
+        )
+    return None
 
 UPLOAD_PAGE = """
 <!DOCTYPE html>
