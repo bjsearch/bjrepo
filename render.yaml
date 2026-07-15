@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: guarantee-report
+    runtime: python
+    plan: free
+    buildCommand: pip install -r guarantee_report/requirements.txt
+    startCommand: gunicorn guarantee_report.webapp:app --bind 0.0.0.0:$PORT --timeout 120
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
