@@ -9,11 +9,10 @@
   *{box-sizing:border-box}
   body{font-family:-apple-system,"Pretendard",sans-serif;background:var(--paper);color:var(--ink);margin:0;padding:28px 20px 80px;line-height:1.6;font-size:14px}
   .wrap{max-width:1000px;margin:0 auto}
-  .navbar{display:flex;justify-content:flex-end;align-items:center;gap:14px;margin-bottom:14px;font-size:13px;color:var(--sub)}
+  .navbar{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:6px 14px;margin-bottom:14px;font-size:13px;color:var(--sub)}
+  .navbar a,.navbar span{white-space:nowrap}
   .navbar a{color:var(--sub);text-decoration:none;font-weight:600}
   .navbar a.new{color:var(--ok)}
-  .navbar form{display:inline}
-  .navbar button.linklike{background:none;border:none;color:var(--sub);font:inherit;cursor:pointer;padding:0;font-weight:600}
   .top{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:24px}
   h1{font-size:24px;margin:0}
   h2{font-family:"Noto Serif KR",serif;font-size:18px;font-weight:700;padding-bottom:8px;border-bottom:1.5px solid var(--ink);margin:36px 0 14px}
@@ -49,7 +48,7 @@
     <span>{{ user.name }}님 · 관리자</span>
     <a class="new" href="/">+ 새 리포트 생성</a>
     <a href="/reports">저장된 리포트</a>
-    <form method="post" action="/logout"><button type="submit" class="linklike">로그아웃</button></form>
+    <a href="/logout">로그아웃</a>
   </div>
   <div class="top">
     <h1>관리자 화면</h1>

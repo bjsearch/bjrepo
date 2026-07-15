@@ -98,11 +98,10 @@ def _require_login():
 
 
 NAV_CSS = """
-  .navbar{display:flex;justify-content:flex-end;align-items:center;gap:14px;max-width:920px;margin:0 auto 8px;padding:0 20px;font-size:13px;color:var(--sub)}
+  .navbar{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:6px 14px;max-width:920px;margin:0 auto 8px;padding:0 20px;font-size:13px;color:var(--sub)}
+  .navbar a,.navbar span{white-space:nowrap}
   .navbar a{color:var(--sub);text-decoration:none;font-weight:600}
   .navbar a.admin{color:var(--ok)}
-  .navbar form{display:inline}
-  .navbar button.linklike{background:none;border:none;color:var(--sub);font:inherit;cursor:pointer;padding:0;font-weight:600}
 """
 
 LOGIN_PAGE = """
@@ -207,7 +206,7 @@ UPLOAD_PAGE = """
   <span>{{ user.name }}님{% if user.role == 'admin' %} · 관리자{% endif %}</span>
   {% if user.role == 'admin' %}<a class="admin" href="/admin">관리자 화면</a>{% endif %}
   <a href="/reports">저장된 리포트</a>
-  <form method="post" action="/logout"><button type="submit" class="linklike">로그아웃</button></form>
+  <a href="/logout">로그아웃</a>
 </div>
 <div class="wrap">
   <h1>보장분석 리포트 생성기</h1>
@@ -320,7 +319,7 @@ def login():
     return redirect(next_url)
 
 
-@app.post("/logout")
+@app.route("/logout", methods=["GET", "POST"])
 def logout():
     session.clear()
     return redirect(url_for("login"))
