@@ -703,6 +703,7 @@ h1{{font-size:24px;margin-bottom:28px}}
 let newInsightCount = 0;
 function addNewInsightPanel() {{
   const container = document.getElementById('new-insights-container');
+  const panelNumber = container.querySelectorAll('[id^="new-insight-panel-"]').length + 1;
   const idx = newInsightCount++;
   const panel = document.createElement('div');
   panel.className = 'item';
@@ -711,7 +712,7 @@ function addNewInsightPanel() {{
   panel.id = `new-insight-panel-${{idx}}`;
   panel.innerHTML = `
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-      <span style="font-size:13px;font-weight:600">새 항목 ${{idx+1}}</span>
+      <span style="font-size:13px;font-weight:600">새 항목 ${{panelNumber}}</span>
       <button type="button" class="btn btn-danger" onclick="removeNewInsightPanel(${{idx}})">- 제거</button>
     </div>
     <div class="form-group">

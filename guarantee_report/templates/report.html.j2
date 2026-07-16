@@ -504,8 +504,13 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 <!-- 각 상품별 상세 페이지 -->
 {% for c in contracts %}
 {% if not c.is_recommendation %}
-<section class="section-page product-detail">
-  <h2 style="border:none;margin-bottom:24px">{{ c.company }} · {{ c.title }}{% if c.is_complete %} <span class="badge" style="background:#E8F5E9;color:#2E7D32;margin-left:6px">완납</span>{% endif %}</h2>
+<section class="section-page product-detail" style="background:{{ c.brand_color_bg or 'white' }};border-left:4px solid {{ c.brand_color or '#1D5BD8' }}">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+    {% if c.logo_html %}
+    <div style="width:40px;height:40px;display:flex;align-items:center;justify-content:center">{{ c.logo_html|safe }}</div>
+    {% endif %}
+    <h2 style="border:none;margin:0;flex:1">{{ c.company }} · {{ c.title }}{% if c.is_complete %} <span class="badge" style="background:#E8F5E9;color:#2E7D32;margin-left:6px">완납</span>{% endif %}</h2>
+  </div>
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:28px">
     <div>
