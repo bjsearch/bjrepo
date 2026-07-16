@@ -410,7 +410,7 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
     <div class="contract" style="--brand-color:{{ c.brand_color }}">
       <div class="body">
         <div class="logo"><span>{{ c.logo_html|safe }}</span><span class="kr">{{ c.company }}</span></div>
-        <div class="title">{{ c.title }}{% if c.badge %} <span class="badge">{{ c.badge }}</span>{% endif %}</div>
+        <div class="title">{{ c.title }}{% if c.is_complete %} <span class="badge" style="background:#E8F5E9;color:#2E7D32;margin-left:6px">완납</span>{% endif %}{% if c.badge %} <span class="badge">{{ c.badge }}</span>{% endif %}</div>
         <div class="detail">{{ c.detail }}</div>
       </div>
       <div class="prem num">{{ c.premium_display }}{% if c.premium_won %}<small>월납</small>{% endif %}</div>
@@ -503,7 +503,7 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 {% for c in contracts %}
 {% if not c.is_recommendation %}
 <section class="section-page product-detail">
-  <h2 style="border:none;margin-bottom:24px">{{ c.company }} · {{ c.title }}</h2>
+  <h2 style="border:none;margin-bottom:24px">{{ c.company }} · {{ c.title }}{% if c.is_complete %} <span class="badge" style="background:#E8F5E9;color:#2E7D32;margin-left:6px">완납</span>{% endif %}</h2>
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:28px">
     <div class="kpi" style="border:1px solid var(--line);border-radius:10px;padding:18px 20px">

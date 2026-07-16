@@ -65,6 +65,7 @@ def _build_contracts(parsed: ParsedReport, brand_registry: BrandRegistry) -> lis
 
         elapsed_months = _months_between(start, basis) if start else 0
         total_months = (pay_years or 0) * 12
+        is_complete = total_months > 0 and elapsed_months >= total_months
         elapsed_months = min(elapsed_months, total_months) if total_months else elapsed_months
         complete_year = start.year + pay_years if (start and pay_years) else None
 
@@ -105,6 +106,7 @@ def _build_contracts(parsed: ParsedReport, brand_registry: BrandRegistry) -> lis
                 "detail": detail_line,
                 "premium_won": premium,
                 "premium_display": f"{premium:,}원",
+                "is_complete": is_complete,
             }
         )
 

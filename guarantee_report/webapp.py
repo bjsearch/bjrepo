@@ -60,6 +60,15 @@ if not _secret:
     )
 app.secret_key = _secret
 
+# 임시 리포트 데이터 캐시 (UUID → 리포트 데이터)
+_draft_reports = {}
+
+
+def _generate_draft_id() -> str:
+    """임시 리포트 ID 생성"""
+    return secrets.token_urlsafe(16)
+
+
 if not TEAM_PASSWORD:
     print(
         "[경고] APP_PASSWORD가 설정되지 않아 로그인 화면에 팀 비밀번호 확인이 없습니다. "
@@ -518,7 +527,202 @@ def generate():
         if tmp_path and os.path.exists(tmp_path):
             os.remove(tmp_path)
 
+    # 임시 리포트 저장 후 수정 페이지로 이동
+    draft_id = _generate_draft_id()
+    _draft_reports[draft_id] = {
+        "data": data,
+        "user_id": user["id"],
+        "user_name": user["name"],
+        "created_at": time.time(),
+    }
+    return redirect(url_for("edit_report", draft_id=draft_id))
+
+
+@app.route("/edit-report/<draft_id>", methods=["GET", "POST"])
+def edit_report(draft_id: str):
+    user = current_user()
+    draft = _draft_reports.get(draft_id)
+    if not draft:
+        abort(404)
+    if draft["user_id"] != user["id"]:
+        abort(403)
+
+    data = draft["data"]
+
+    if request.method == "GET":
+        # 편집 UI 표시
+        import json
+        recommendations = data.get("recommendations", [])
+        insights = data.get("insights", [])
+        header = data.get("header", {})
+
+        html = f"""<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>리포트 편집</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<style>
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;background:#F6F7F9;color:#10233F;padding:24px}}
+.container{{max-width:880px;margin:0 auto}}
+h1{{font-size:24px;margin-bottom:28px}}
+.section{{background:#fff;border-radius:12px;margin-bottom:24px;padding:24px;border:1px solid #E3E7EE}}
+.section h2{{font-size:18px;margin-bottom:16px;color:#10233F}}
+.form-group{{margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #F0F3F8}}
+.form-group:last-child{{border:none;margin-bottom:0;padding-bottom:0}}
+.form-group label{{display:block;margin-bottom:6px;font-weight:600;font-size:14px}}
+.form-group input[type="text"],.form-group textarea{{width:100%;padding:8px 12px;border:1px solid #E3E7EE;border-radius:8px;font-family:inherit;font-size:13px}}
+.form-group textarea{{resize:vertical;min-height:60px}}
+.checkbox-group{{display:flex;align-items:center;gap:8px;margin-bottom:8px}}
+.checkbox-group input[type="checkbox"]{{width:18px;height:18px;cursor:pointer}}
+.checkbox-group label{{margin:0;cursor:pointer;flex:1}}
+.btn{{padding:10px 16px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}}
+.btn-primary{{background:#1D5BD8;color:#fff}}
+.btn-danger{{background:#C93030;color:#fff;padding:8px 12px;font-size:12px}}
+.btn-secondary{{background:#E3E7EE;color:#10233F;padding:8px 12px;font-size:12px}}
+.action-bar{{display:flex;gap:12px;margin-top:24px}}
+.item{{background:#FAFBFC;padding:12px;border-radius:8px;border:1px solid #E3E7EE;margin-bottom:8px}}
+.urgent-badge{{background:#FBEDED;color:#C93030;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>{header.get('name', '')}님 리포트 편집</h1>
+
+<form method="POST">
+  <div class="section">
+    <h2>1. 보완 추천 (최대 3개)</h2>
+    <p style="font-size:12px;color:#5B6B82;margin-bottom:16px">완성된 리포트에 포함할 추천 항목을 선택하고 내용을 수정하세요.</p>
+"""
+        for idx, reco in enumerate(recommendations):
+            checked = "checked" if reco.get("_included", True) else ""
+            html += f"""
+    <div class="item">
+      <div class="checkbox-group">
+        <input type="checkbox" name="reco_include_{idx}" value="1" {checked} id="reco_{idx}">
+        <label for="reco_{idx}">추천 {reco.get('rank', idx+1)} - 포함하기</label>
+      </div>
+      <div style="display:{'block' if reco.get('_included', True) else 'none'}">
+        <div class="form-group">
+          <label for="reco_title_{idx}">제목</label>
+          <input type="text" name="reco_title_{idx}" value="{reco.get('title', '')}">
+        </div>
+        <div class="form-group">
+          <label for="reco_detail_{idx}">상품 설명</label>
+          <input type="text" name="reco_detail_{idx}" value="{reco.get('detail', '')}">
+        </div>
+        <div class="form-group">
+          <label for="reco_why_{idx}">추천 이유</label>
+          <textarea name="reco_why_{idx}">{reco.get('why', '')}</textarea>
+        </div>
+      </div>
+    </div>
+"""
+
+        html += """  </div>
+
+  <div class="section">
+    <h2>2. 핵심 진단 및 제언</h2>
+    <p style="font-size:12px;color:#5B6B82;margin-bottom:16px">항목을 수정하거나 새로 추가할 수 있습니다.</p>
+"""
+
+        for idx, insight in enumerate(insights):
+            urgent_badge = '<span class="urgent-badge">긴급</span>' if insight.get("urgent") else ""
+            urgent_checked = "checked" if insight.get("urgent") else ""
+            html += f"""
+    <div class="item">
+      <div class="form-group">
+        <label>제목 {urgent_badge}</label>
+        <input type="text" name="insight_title_{idx}" value="{insight.get('title', '')}">
+      </div>
+      <div class="form-group">
+        <label>내용</label>
+        <textarea name="insight_text_{idx}">{insight.get('text', '')}</textarea>
+      </div>
+      <div class="checkbox-group">
+        <input type="checkbox" name="insight_urgent_{idx}" value="1" {urgent_checked}>
+        <label>긴급</label>
+      </div>
+      <button type="button" class="btn btn-danger" onclick="document.querySelector('[name=insight_deleted_{idx}]').value='1'; this.parentElement.parentElement.style.opacity='0.5'">삭제</button>
+      <input type="hidden" name="insight_deleted_{idx}" value="0">
+    </div>
+"""
+
+        html += f"""
+    <div style="margin-top:16px;padding:12px;background:#EDF3FE;border-radius:8px">
+      <div class="form-group">
+        <label>새 항목 추가 - 제목</label>
+        <input type="text" name="new_insight_title" placeholder="새 항목의 제목을 입력하세요">
+      </div>
+      <div class="form-group">
+        <label>내용</label>
+        <textarea name="new_insight_text" placeholder="새 항목의 내용을 입력하세요"></textarea>
+      </div>
+      <div class="checkbox-group">
+        <input type="checkbox" name="new_insight_urgent" value="1">
+        <label>긴급</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="action-bar">
+    <button type="submit" class="btn btn-primary">완성된 리포트 저장</button>
+    <button type="button" class="btn btn-secondary" onclick="window.history.back()">취소</button>
+  </div>
+
+  <input type="hidden" name="draft_id" value="{draft_id}">
+  <input type="hidden" name="insights_count" value="{len(insights)}">
+</form>
+</div>
+</body>
+</html>
+"""
+        return html
+
+    # POST: 수정된 데이터로 최종 저장
+    # 추천 항목 처리
+    modified_recommendations = []
+    for idx, reco in enumerate(recommendations):
+        if request.form.get(f"reco_include_{idx}"):
+            modified_reco = dict(reco)
+            modified_reco["title"] = request.form.get(f"reco_title_{idx}", reco.get("title"))
+            modified_reco["detail"] = request.form.get(f"reco_detail_{idx}", reco.get("detail"))
+            modified_reco["why"] = request.form.get(f"reco_why_{idx}", reco.get("why"))
+            modified_recommendations.append(modified_reco)
+
+    # 핵심 진단 처리
+    modified_insights = []
+    insights_count = int(request.form.get("insights_count", 0))
+    for idx in range(insights_count):
+        if not request.form.get(f"insight_deleted_{idx}"):
+            modified_insights.append({
+                "title": request.form.get(f"insight_title_{idx}", insights[idx].get("title")),
+                "text": request.form.get(f"insight_text_{idx}", insights[idx].get("text")),
+                "urgent": bool(request.form.get(f"insight_urgent_{idx}")),
+            })
+
+    # 새 항목 추가
+    new_title = request.form.get("new_insight_title", "").strip()
+    new_text = request.form.get("new_insight_text", "").strip()
+    if new_title or new_text:
+        modified_insights.append({
+            "title": new_title,
+            "text": new_text,
+            "urgent": bool(request.form.get("new_insight_urgent")),
+        })
+
+    # 데이터 업데이트
+    data["recommendations"] = modified_recommendations
+    data["insights"] = modified_insights
+
+    # DB에 저장
     report_id = storage.save_report(data, created_by_user_id=user["id"], created_by_name=user["name"])
+
+    # 임시 데이터 정리
+    del _draft_reports[draft_id]
+
     return redirect(url_for("view_report", report_id=report_id))
 
 
