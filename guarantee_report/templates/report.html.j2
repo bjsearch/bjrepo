@@ -537,12 +537,12 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
   </div>
 
   {% if c.coverages %}
-  <h3 style="font-size:16px;font-weight:700;margin-bottom:12px;color:var(--ink)">주요 보장 내용</h3>
-  <div style="background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px">
+  <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;color:var(--ink)">주요 보장 내용</h3>
+  <div style="background:var(--card);border:1px solid var(--line);border-radius:10px;padding:24px">
     {% for cov in c.coverages %}
-    <div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--line)">
-      <div style="font-weight:600;font-size:14px;margin-bottom:4px">{{ cov.name }}</div>
-      <div style="font-size:13px;color:var(--sub)">{{ cov.amount }}</div>
+    <div style="{% if not loop.last %}margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--line){% else %}margin-bottom:0{% endif %}">
+      <div style="font-weight:600;font-size:14px;color:var(--ink);margin-bottom:6px">{{ cov.name }}</div>
+      <div style="font-size:13px;color:var(--sub);font-weight:500">{{ cov.amount }}</div>
     </div>
     {% endfor %}
   </div>

@@ -657,17 +657,16 @@ h1{{font-size:24px;margin-bottom:28px}}
         for idx, insight in enumerate(insights):
             checked = "checked" if insight.get("_included", True) else ""
             urgent_checked = "checked" if insight.get("urgent") else ""
-            urgent_badge = '<span class="urgent-badge" style="background:#FBEDED;color:#C93030">긴급</span>' if insight.get("urgent") else ""
             html += f"""
     <div class="item">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
         <div class="checkbox-group" style="margin:0">
           <input type="checkbox" name="insight_include_{idx}" value="1" {checked} id="insight_{idx}">
           <label for="insight_{idx}" style="margin:0">진단 {idx+1} - 포함하기</label>
         </div>
         <div class="checkbox-group" style="margin:0">
           <input type="checkbox" name="insight_urgent_{idx}" value="1" {urgent_checked} id="insight_urgent_{idx}">
-          <label for="insight_urgent_{idx}" style="margin:0;background:#C93030;color:#fff;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:600">긴급</label>
+          <label for="insight_urgent_{idx}" style="margin:0;background:#FF9500;color:#fff;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:600">긴급</label>
         </div>
       </div>
       <div style="display:{'block' if insight.get('_included', True) else 'none'}">
@@ -711,9 +710,13 @@ function addNewInsightPanel() {{
   panel.style.background = '#EDF3FE';
   panel.id = `new-insight-panel-${{idx}}`;
   panel.innerHTML = `
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
       <span style="font-size:13px;font-weight:600">새 항목 ${{panelNumber}}</span>
       <button type="button" class="btn btn-danger" onclick="removeNewInsightPanel(${{idx}})">- 제거</button>
+      <div class="checkbox-group" style="margin:0">
+        <input type="checkbox" name="new_insight_urgent_${{idx}}" value="1" id="new_urgent_${{idx}}">
+        <label for="new_urgent_${{idx}}" style="margin:0;background:#FF9500;color:#fff;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:600">긴급</label>
+      </div>
     </div>
     <div class="form-group">
       <label>제목</label>
@@ -722,10 +725,6 @@ function addNewInsightPanel() {{
     <div class="form-group">
       <label>내용</label>
       <textarea name="new_insight_text_${{idx}}" placeholder="새 항목의 내용을 입력하세요"></textarea>
-    </div>
-    <div class="checkbox-group">
-      <input type="checkbox" name="new_insight_urgent_${{idx}}" value="1">
-      <label style="background:#C93030;color:#fff;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:600">긴급</label>
     </div>
   `;
   container.appendChild(panel);
