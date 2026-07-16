@@ -133,7 +133,7 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 @media print{
   body{background:#fff}
   .page{padding:0}
-  .cover{page-break-after:always;padding:48px 24px;display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:100vh;background:linear-gradient(135deg,#F0F4F8 0%,#E8ECF1 100%);border-radius:0}
+  .cover{page-break-after:always;background:#fff;border-radius:0}
   .cover-logo{font-size:14px;font-weight:700;color:#1D5BD8;margin-bottom:40px;letter-spacing:.05em}
   .cover-visual{width:100%;max-width:380px;height:320px;margin-bottom:50px;background:#fff;border-radius:20px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(16,35,63,.12)}
   .cover-title{font-size:36px;font-weight:700;color:#10233F;margin-bottom:8px;text-align:center}
@@ -226,10 +226,19 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 <div class="page">
 
 <!-- 첫번째 페이지: 표지 -->
-<div class="cover">
-  <div class="cover-logo">● toss insurance</div>
-  <div class="cover-visual">
-    <svg viewBox="0 0 380 280" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+<div class="cover" style="position:relative;padding:60px 48px;min-height:100vh;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start">
+  <!-- Toss Insurance 로고 (우측 상단) -->
+  <div style="position:absolute;top:48px;right:48px;font-size:13px;font-weight:700;color:#1D5BD8;letter-spacing:.05em;display:flex;align-items:center;gap:6px">
+    <svg viewBox="0 0 24 24" width="20" height="20" style="fill:#1D5BD8">
+      <circle cx="12" cy="12" r="10" fill="currentColor"/>
+    </svg>
+    <span>toss insurance</span>
+  </div>
+
+  <!-- 메인 콘텐츠 -->
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;width:100%">
+    <!-- 가족/블록 일러스트 -->
+    <svg viewBox="0 0 380 280" xmlns="http://www.w3.org/2000/svg" style="width:280px;height:220px;margin-bottom:40px">
       <defs>
         <linearGradient id="hand-grad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stop-color="#F5D4C0"/><stop offset="1" stop-color="#E8BCA8"/>
@@ -275,21 +284,27 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
         <path d="M 272 78 Q 274 82 276 78" stroke="#333" stroke-width="1.3" fill="none" stroke-linecap="round" opacity=".7"/>
       </g>
     </svg>
+
+    <!-- 고객명 -->
+    <div style="font-size:13px;color:#5B6B82;margin-bottom:16px">{{ header.name }}님을 위한 <span style="font-size:11px">(보험나이: {{ header.age or '미입력' }}세, {{ header.basis_date_display }})</span></div>
+
+    <!-- 제목 -->
+    <h1 style="font-size:48px;font-weight:700;color:#10233F;margin:0;margin-bottom:40px;letter-spacing:-.02em">간편보장분석</h1>
   </div>
-  <div class="cover-title">간편보장분석</div>
-  <div class="cover-info">{{ header.name }}님을 위한<br/>(보험나이: {{ header.age or '미입력' }}세, {{ header.basis_date_display }})</div>
-  <div class="cover-meta">
-    <div class="cover-meta-row">
-      <strong>소속</strong>
-      <span>토스인슈어런스</span>
+
+  <!-- 메타정보 (하단) -->
+  <div style="width:100%;max-width:400px;border-top:1px solid #E3E7EE;border-bottom:1px solid #E3E7EE;padding:24px 0">
+    <div style="display:flex;justify-content:space-between;padding:12px 0;font-size:13px">
+      <strong style="color:#10233F;font-weight:600;min-width:60px">소속</strong>
+      <span style="color:#5B6B82;text-align:right">토스인슈어런스</span>
     </div>
-    <div class="cover-meta-row">
-      <strong>이름</strong>
-      <span>{{ header.name }}</span>
+    <div style="display:flex;justify-content:space-between;padding:12px 0;font-size:13px">
+      <strong style="color:#10233F;font-weight:600;min-width:60px">이름</strong>
+      <span style="color:#5B6B82;text-align:right">{{ header.name }}</span>
     </div>
-    <div class="cover-meta-row">
-      <strong>발행일자</strong>
-      <span>{{ header.basis_date_display }}</span>
+    <div style="display:flex;justify-content:space-between;padding:12px 0;font-size:13px">
+      <strong style="color:#10233F;font-weight:600;min-width:60px">발행일자</strong>
+      <span style="color:#5B6B82;text-align:right">{{ header.basis_date_display }}</span>
     </div>
   </div>
 </div>

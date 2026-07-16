@@ -221,6 +221,7 @@ def _build_insights(
 ) -> list[dict]:
     insights = []
 
+    # 1. 만기 도래 계약 분석
     maturing = sorted(
         (c for c in contracts if c["badge"] and "만기" in c["badge"]),
         key=lambda c: c["end_date_iso"],
@@ -238,9 +239,10 @@ def _build_insights(
             }
         )
 
+    # 2. 섹션별 보장 공백 분석
     for sec in sections:
         gap_rows = [r for r in sec.rows if r.status == "gap"]
-        if len(gap_rows) >= 2:
+        if len(gap_rows) >= 1:  # 1개 이상으로 변경 (이전: 2개 이상)
             labels = ", ".join(r.label for r in gap_rows[:4])
             insights.append(
                 {
@@ -250,6 +252,7 @@ def _build_insights(
                 }
             )
 
+    # 3. 사망보장 구조 분석
     death_sec = next((s for s in sections if "사망" in s.title), None)
     if death_sec:
         by_label = {r.label: r for r in death_sec.rows}
@@ -271,6 +274,7 @@ def _build_insights(
                     }
                 )
 
+    # 4. 실손 보험 갱신 관리
     renewing_indemnity = [c for c in contracts if c["premium_display"] == "주계약 합산" and c["badge"]]
     if renewing_indemnity:
         c = renewing_indemnity[0]
@@ -286,6 +290,7 @@ def _build_insights(
             }
         )
 
+    # 5. 보험료 구조 분석
     total_premium = sum(c["premium_won"] or 0 for c in contracts)
     top_contracts = sorted((c for c in contracts if c["premium_won"]), key=lambda c: -c["premium_won"])[:2]
     if top_contracts and total_premium:
@@ -299,6 +304,21 @@ def _build_insights(
                 "text": (
                     f"{names} 계약의 보험료 비중이 전체의 {pct}%를 차지합니다. 만기가 도래하는 계약의 "
                     f"보험료를 만기 후 보완 설계 재원으로 전환하면 총 지출 증가 없이 공백을 메울 수 있습니다."
+                ),
+            }
+        )
+
+    # 6. 기본 리포트 - insights가 없으면 최소한 기본 분석 추가
+    if not insights:
+        ok_count = sum(len([r for r in sec.rows if r.status == "ok"]) for sec in sections)
+        total_rows = sum(len(sec.rows) for sec in sections)
+        insights.append(
+            {
+                "urgent": False,
+                "title": "현재 보장 현황 분석",
+                "text": (
+                    f"총 {total_rows}개 항목 중 {ok_count}개 항목이 적정하게 보장되고 있습니다. "
+                    f"보장 상태를 주기적으로 검토하여 변화하는 생활 상황과 리스크에 대응하는 것이 중요합니다."
                 ),
             }
         )

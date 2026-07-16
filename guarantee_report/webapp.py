@@ -728,10 +728,11 @@ h1{{font-size:24px;margin-bottom:28px}}
     modified_insights = []
     insights_count = int(request.form.get("insights_count", 0))
     for idx in range(insights_count):
-        if not request.form.get(f"insight_deleted_{idx}"):
+        if request.form.get(f"insight_deleted_{idx}") != "1":
+            default_insight = insights[idx] if idx < len(insights) else {}
             modified_insights.append({
-                "title": request.form.get(f"insight_title_{idx}", insights[idx].get("title")),
-                "text": request.form.get(f"insight_text_{idx}", insights[idx].get("text")),
+                "title": request.form.get(f"insight_title_{idx}", default_insight.get("title", "")),
+                "text": request.form.get(f"insight_text_{idx}", default_insight.get("text", "")),
                 "urgent": bool(request.form.get(f"insight_urgent_{idx}")),
             })
 
