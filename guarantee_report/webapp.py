@@ -682,6 +682,9 @@ h1{{font-size:24px;margin-bottom:28px}}
         return html
 
     # POST: 수정된 데이터로 최종 저장
+    recommendations = data.get("recommendations", [])
+    insights = data.get("insights", [])
+
     # 추천 항목 처리
     modified_recommendations = []
     for idx, reco in enumerate(recommendations):
