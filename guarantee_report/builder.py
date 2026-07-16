@@ -88,6 +88,11 @@ def _build_contracts(parsed: ParsedReport, brand_registry: BrandRegistry) -> lis
 
         detail_line = f"{period_str} · {pay_str}{progress} · 주요 담보: {top_str}{more}"
 
+        # 총 보험료 및 잔여 보험료 계산
+        total_premium_won = (total_months * premium) if total_months else None
+        remaining_months = max(0, total_months - elapsed_months) if total_months else None
+        remaining_premium_won = (remaining_months * premium) if remaining_months is not None else None
+
         # 이 계약과 (company, start, end)가 일치하는 실손 항목을 매칭
         for idx, ind in enumerate(parsed.indemnity_items):
             if ind.company == company and ind.start == items[0].start and ind.end == items[0].end:
@@ -106,7 +111,13 @@ def _build_contracts(parsed: ParsedReport, brand_registry: BrandRegistry) -> lis
                 "detail": detail_line,
                 "premium_won": premium,
                 "premium_display": f"{premium:,}원",
+                "total_premium_display": f"{total_premium_won:,}원" if total_premium_won is not None else "정보 없음",
+                "remaining_premium_display": f"{remaining_premium_won:,}원" if remaining_premium_won is not None else "정보 없음",
                 "is_complete": is_complete,
+                "coverages": [
+                    {"name": cat, "amount": f"{_fmt_man(amt)}"}
+                    for cat, amt in top
+                ],
             }
         )
 
@@ -144,6 +155,13 @@ def _build_contracts(parsed: ParsedReport, brand_registry: BrandRegistry) -> lis
                 "detail": detail_line,
                 "premium_won": None,
                 "premium_display": "주계약 합산",
+                "total_premium_display": "정보 없음",
+                "remaining_premium_display": "정보 없음",
+                "is_complete": False,
+                "coverages": [
+                    {"name": i.coverage_name, "amount": f"{_fmt_man(i.amount_won / 10000)}"}
+                    for i in items
+                ],
             }
         )
 
