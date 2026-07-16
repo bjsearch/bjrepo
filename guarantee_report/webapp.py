@@ -655,24 +655,29 @@ h1{{font-size:24px;margin-bottom:28px}}
 """
 
         for idx, insight in enumerate(insights):
+            checked = "checked" if insight.get("_included", True) else ""
             urgent_badge = '<span class="urgent-badge">긴급</span>' if insight.get("urgent") else ""
             urgent_checked = "checked" if insight.get("urgent") else ""
             html += f"""
     <div class="item">
-      <div class="form-group">
-        <label>제목 {urgent_badge}</label>
-        <input type="text" name="insight_title_{idx}" value="{insight.get('title', '')}">
-      </div>
-      <div class="form-group">
-        <label>내용</label>
-        <textarea name="insight_text_{idx}">{insight.get('text', '')}</textarea>
-      </div>
       <div class="checkbox-group">
-        <input type="checkbox" name="insight_urgent_{idx}" value="1" {urgent_checked}>
-        <label>긴급</label>
+        <input type="checkbox" name="insight_include_{idx}" value="1" {checked} id="insight_{idx}">
+        <label for="insight_{idx}">진단 {idx+1} - 포함하기</label>
       </div>
-      <button type="button" class="btn btn-danger" onclick="document.querySelector('[name=insight_deleted_{idx}]').value='1'; this.parentElement.parentElement.style.opacity='0.5'">삭제</button>
-      <input type="hidden" name="insight_deleted_{idx}" value="0">
+      <div style="display:{'block' if insight.get('_included', True) else 'none'}">
+        <div class="form-group">
+          <label for="insight_title_{idx}">제목 {urgent_badge}</label>
+          <input type="text" name="insight_title_{idx}" value="{insight.get('title', '')}">
+        </div>
+        <div class="form-group">
+          <label for="insight_text_{idx}">내용</label>
+          <textarea name="insight_text_{idx}">{insight.get('text', '')}</textarea>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" name="insight_urgent_{idx}" value="1" {urgent_checked}>
+          <label>긴급</label>
+        </div>
+      </div>
     </div>
 """
 
@@ -728,7 +733,7 @@ h1{{font-size:24px;margin-bottom:28px}}
     modified_insights = []
     insights_count = int(request.form.get("insights_count", 0))
     for idx in range(insights_count):
-        if request.form.get(f"insight_deleted_{idx}") != "1":
+        if request.form.get(f"insight_include_{idx}"):
             default_insight = insights[idx] if idx < len(insights) else {}
             modified_insights.append({
                 "title": request.form.get(f"insight_title_{idx}", default_insight.get("title", "")),
