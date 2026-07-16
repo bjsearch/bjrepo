@@ -712,7 +712,7 @@ function addNewInsightPanel() {{
   panel.innerHTML = `
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
       <span style="font-size:13px;font-weight:600">새 항목 ${{panelNumber}}</span>
-      <button type="button" class="btn btn-danger" onclick="removeNewInsightPanel(${{idx}})">- 제거</button>
+      <button type="button" class="btn btn-secondary" onclick="removeNewInsightPanel(${{idx}})">제거</button>
       <div class="checkbox-group" style="margin:0">
         <input type="checkbox" name="new_insight_urgent_${{idx}}" value="1" id="new_urgent_${{idx}}" style="accent-color:#FF9500">
         <label for="new_urgent_${{idx}}" style="margin:0;background:#FF9500;color:#fff;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:600">긴급</label>
