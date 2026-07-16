@@ -385,6 +385,7 @@ UPLOAD_PAGE = """
   {% if error %}<div class="err">{{ error }}</div>{% endif %}
 
   <form action="/generate" method="post" enctype="multipart/form-data" id="f">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
     <label class="drop" id="drop">
       <input type="file" name="pdf" accept="application/pdf" id="file" required>
       <div id="label">PDF 파일을 여기로 끌어놓거나 클릭해서 선택하세요</div>
@@ -520,7 +521,7 @@ def logout():
 
 @app.get("/")
 def index():
-    return render_template_string(UPLOAD_PAGE, error=None, user=current_user())
+    return render_template_string(UPLOAD_PAGE, error=None, user=current_user(), csrf_token=_get_csrf_token())
 
 
 @app.post("/generate")
@@ -530,9 +531,9 @@ def generate():
     user = current_user()
     f = request.files.get("pdf")
     if not f or not f.filename:
-        return render_template_string(UPLOAD_PAGE, error="PDF 파일을 선택해주세요.", user=user), 400
+        return render_template_string(UPLOAD_PAGE, error="PDF 파일을 선택해주세요.", user=user, csrf_token=_get_csrf_token()), 400
     if not f.filename.lower().endswith(".pdf"):
-        return render_template_string(UPLOAD_PAGE, error="PDF 파일만 업로드할 수 있습니다.", user=user), 400
+        return render_template_string(UPLOAD_PAGE, error="PDF 파일만 업로드할 수 있습니다.", user=user, csrf_token=_get_csrf_token()), 400
 
     tmp_path = None
     try:
@@ -543,9 +544,9 @@ def generate():
         parsed = parse_pdf(tmp_path)
         data = build_report_data(parsed)
     except ReportParseError as e:
-        return render_template_string(UPLOAD_PAGE, error=str(e), user=user), 400
+        return render_template_string(UPLOAD_PAGE, error=str(e), user=user, csrf_token=_get_csrf_token()), 400
     except Exception as e:  # noqa: BLE001 — 사용자에게 원인 안내
-        return render_template_string(UPLOAD_PAGE, error=f"리포트 생성 중 오류가 발생했습니다: {e}", user=user), 500
+        return render_template_string(UPLOAD_PAGE, error=f"리포트 생성 중 오류가 발생했습니다: {e}", user=user, csrf_token=_get_csrf_token()), 500
     finally:
         if tmp_path and os.path.exists(tmp_path):
             os.remove(tmp_path)
@@ -578,6 +579,7 @@ def edit_report(draft_id: str):
         recommendations = data.get("recommendations", [])
         insights = data.get("insights", [])
         header = data.get("header", {})
+        csrf_token = _get_csrf_token()
 
         html = f"""<!DOCTYPE html>
 <html lang="ko">
@@ -615,6 +617,7 @@ h1{{font-size:24px;margin-bottom:28px}}
 <h1>{header.get('name', '')}님 리포트 편집</h1>
 
 <form method="POST">
+  <input type="hidden" name="_csrf_token" value="{csrf_token}">
   <div class="section">
     <h2>1. 보완 추천 (최대 3개)</h2>
     <p style="font-size:12px;color:#5B6B82;margin-bottom:16px">완성된 리포트에 포함할 추천 항목을 선택하고 내용을 수정하세요.</p>
