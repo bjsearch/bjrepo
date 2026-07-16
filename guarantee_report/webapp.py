@@ -16,14 +16,16 @@ import hmac
 import os
 import re
 import secrets
+import subprocess
 import tempfile
 import time
 from collections import Counter
 from functools import wraps
 from urllib.parse import quote
 
-from flask import Flask, request, render_template_string, Response, redirect, url_for, abort, session
+from flask import Flask, request, render_template_string, Response, redirect, url_for, abort, session, jsonify
 from werkzeug.middleware.proxy_fix import ProxyFix
+from werkzeug.utils import secure_filename
 
 from . import chatbot, storage
 from .builder import build_report_data
@@ -1043,6 +1045,197 @@ def handle_500(e):
     traceback.print_exc()
     original = getattr(e, "original_exception", None) or e
     return render_template_string(ERROR_PAGE, message=str(original) or "알 수 없는 오류"), 500
+
+
+IMAGES_DIR = os.path.join(os.path.dirname(__file__), "static", "images")
+
+
+@app.route("/upload-images", methods=["GET", "POST"])
+def upload_images():
+    if request.method == "GET":
+        return render_template_string("""
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이미지 업로드</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto; background: #f5f5f5; }
+        .container { max-width: 600px; margin: 60px auto; padding: 40px; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        h1 { font-size: 24px; margin-bottom: 8px; color: #10233F; }
+        .subtitle { color: #666; margin-bottom: 32px; font-size: 14px; }
+        .upload-zone { border: 2px dashed #ddd; border-radius: 8px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.2s; }
+        .upload-zone:hover { border-color: #4A90FF; background: #f9faff; }
+        .upload-zone.dragover { border-color: #4A90FF; background: #f0f4ff; }
+        .upload-icon { font-size: 48px; margin-bottom: 16px; }
+        .upload-text { color: #666; margin-bottom: 8px; }
+        .upload-hint { font-size: 12px; color: #999; }
+        input[type="file"] { display: none; }
+        .button-group { margin-top: 24px; display: flex; gap: 12px; }
+        button { flex: 1; padding: 12px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn-primary { background: #4A90FF; color: white; }
+        .btn-primary:hover { background: #3a7ee6; }
+        .btn-secondary { background: #f0f0f0; color: #333; }
+        .btn-secondary:hover { background: #e0e0e0; }
+        .status { margin-top: 24px; padding: 16px; border-radius: 6px; display: none; }
+        .status.success { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+        .status.error { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+        .file-list { margin-top: 24px; }
+        .file-item { padding: 12px; background: #f9f9f9; border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+        .file-item .filename { color: #333; font-weight: 500; }
+        .file-item .size { color: #999; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖼️ 이미지 업로드</h1>
+        <div class="subtitle">frontpage.png와 toss-logo.png를 업로드하세요</div>
+
+        <form id="uploadForm" enctype="multipart/form-data">
+            <div class="upload-zone" id="uploadZone">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">파일을 드래그하거나 클릭해서 선택</div>
+                <div class="upload-hint">PNG 이미지만 지원 (최대 10MB)</div>
+                <input type="file" id="fileInput" name="files" multiple accept=".png">
+            </div>
+
+            <div class="file-list" id="fileList"></div>
+
+            <div class="button-group">
+                <button type="button" class="btn-secondary" onclick="document.getElementById('fileInput').click()">파일 선택</button>
+                <button type="submit" class="btn-primary">업로드</button>
+            </div>
+        </form>
+
+        <div id="status" class="status"></div>
+    </div>
+
+    <script>
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const uploadForm = document.getElementById('uploadForm');
+        const fileList = document.getElementById('fileList');
+        const status = document.getElementById('status');
+        let selectedFiles = [];
+
+        uploadZone.addEventListener('click', () => fileInput.click());
+
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            fileInput.files = e.dataTransfer.files;
+            updateFileList();
+        });
+
+        fileInput.addEventListener('change', updateFileList);
+
+        function updateFileList() {
+            selectedFiles = Array.from(fileInput.files);
+            fileList.innerHTML = selectedFiles.map(f => `
+                <div class="file-item">
+                    <span class="filename">📄 ${f.name}</span>
+                    <span class="size">${(f.size / 1024).toFixed(1)} KB</span>
+                </div>
+            `).join('');
+        }
+
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (selectedFiles.length === 0) {
+                showStatus('파일을 선택해주세요', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            selectedFiles.forEach(f => formData.append('files', f));
+
+            const btn = uploadForm.querySelector('[type="submit"]');
+            btn.disabled = true;
+            btn.textContent = '업로드 중...';
+
+            try {
+                const response = await fetch('/upload-images', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showStatus('✅ ' + data.message, 'success');
+                    setTimeout(() => {
+                        showStatus('페이지를 새로고침하세요', 'success');
+                    }, 1000);
+                } else {
+                    showStatus('❌ ' + data.error, 'error');
+                }
+            } catch (err) {
+                showStatus('❌ 업로드 실패: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '업로드';
+            }
+        });
+
+        function showStatus(message, type) {
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
+        """)
+
+    # POST: 파일 저장
+    if "files" not in request.files:
+        return jsonify({"error": "파일을 선택해주세요"}), 400
+
+    files = request.files.getlist("files")
+    if not files:
+        return jsonify({"error": "파일을 선택해주세요"}), 400
+
+    os.makedirs(IMAGES_DIR, exist_ok=True)
+    saved_files = []
+
+    for file in files:
+        if not file.filename or not file.filename.lower().endswith(".png"):
+            continue
+
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(IMAGES_DIR, filename)
+        file.save(filepath)
+        saved_files.append(filename)
+
+    if not saved_files:
+        return jsonify({"error": "PNG 파일을 선택해주세요"}), 400
+
+    try:
+        os.chdir(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+        subprocess.run(["git", "add", "guarantee_report/static/images/"], check=True, capture_output=True)
+        subprocess.run([
+            "git", "commit", "-m",
+            f"Add images: {', '.join(saved_files)}"
+        ], check=True, capture_output=True)
+        subprocess.run(["git", "push", "-u", "origin", "claude/guarantee-analysis-html-report-ouk5ho"], check=True, capture_output=True)
+    except subprocess.CalledProcessError as e:
+        return jsonify({"error": f"Git 업로드 실패: {e.stderr.decode()}"}), 500
+
+    return jsonify({
+        "message": f"{len(saved_files)}개 이미지가 업로드되었습니다: {', '.join(saved_files)}"
+    })
 
 
 def main():
