@@ -331,7 +331,7 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 <div class="kpis">
   <div class="kpi hl"><div class="label">월 납입 보험료</div><div class="value num">{{ kpis.monthly_premium }}<span class="unit">원</span></div></div>
   <div class="kpi"><div class="label">총 보험료</div><div class="value num">{{ kpis.grand_total_man }}<span class="unit">만원</span></div></div>
-  <div class="kpi"><div class="label">잔여보험료</div><div class="value num">{{ kpis.scheduled_total_man }}<span class="unit">만원</span></div></div>
+  <div class="kpi" style="background:white"><div class="label">잔여보험료</div><div class="value num" style="color:red">{{ kpis.scheduled_total_man }}<span class="unit">만원</span></div></div>
   <div class="kpi"><div class="label">진단 결과</div><div class="value" style="font-size:14px;line-height:1.6"><span class="chip ok">적정 {{ kpis.ok_count }}</span> <span class="chip warn">주의·부족 {{ kpis.warn_count }}</span> <span class="chip gap">미가입 {{ kpis.gap_count }}</span></div></div>
 </div>
 </div>
@@ -531,9 +531,9 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
           <div class="label" style="font-size:12px">총 보험료</div>
           <div class="value num" style="font-size:18px">{{ c.total_premium_display or '정보 없음' }}</div>
         </div>
-        <div class="kpi" style="border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:#FFE8E8">
+        <div class="kpi" style="border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:white">
           <div class="label" style="font-size:12px">잔여 보험료</div>
-          <div class="value num" style="font-size:18px">{{ c.remaining_premium_display or '정보 없음' }}</div>
+          <div class="value num" style="font-size:18px;color:red">{{ c.remaining_premium_display or '정보 없음' }}</div>
         </div>
       </div>
     </div>
