@@ -656,46 +656,36 @@ h1{{font-size:24px;margin-bottom:28px}}
 
         for idx, insight in enumerate(insights):
             checked = "checked" if insight.get("_included", True) else ""
-            urgent_badge = '<span class="urgent-badge">긴급</span>' if insight.get("urgent") else ""
             urgent_checked = "checked" if insight.get("urgent") else ""
+            urgent_badge = '<span class="urgent-badge" style="background:#FBEDED;color:#C93030">긴급</span>' if insight.get("urgent") else ""
             html += f"""
     <div class="item">
-      <div class="checkbox-group">
-        <input type="checkbox" name="insight_include_{idx}" value="1" {checked} id="insight_{idx}">
-        <label for="insight_{idx}">진단 {idx+1} - 포함하기</label>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <div class="checkbox-group" style="margin:0">
+          <input type="checkbox" name="insight_include_{idx}" value="1" {checked} id="insight_{idx}">
+          <label for="insight_{idx}" style="margin:0">진단 {idx+1} - 포함하기</label>
+        </div>
+        <div class="checkbox-group" style="margin:0">
+          <input type="checkbox" name="insight_urgent_{idx}" value="1" {urgent_checked} id="insight_urgent_{idx}">
+          <label for="insight_urgent_{idx}" style="margin:0;background:#C93030;color:#fff;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:600">긴급</label>
+        </div>
       </div>
       <div style="display:{'block' if insight.get('_included', True) else 'none'}">
         <div class="form-group">
-          <label for="insight_title_{idx}">제목 {urgent_badge}</label>
+          <label for="insight_title_{idx}">제목</label>
           <input type="text" name="insight_title_{idx}" value="{insight.get('title', '')}">
         </div>
         <div class="form-group">
           <label for="insight_text_{idx}">내용</label>
           <textarea name="insight_text_{idx}">{insight.get('text', '')}</textarea>
         </div>
-        <div class="checkbox-group">
-          <input type="checkbox" name="insight_urgent_{idx}" value="1" {urgent_checked}>
-          <label>긴급</label>
-        </div>
       </div>
     </div>
 """
 
         html += f"""
-    <div style="margin-top:16px;padding:12px;background:#EDF3FE;border-radius:8px">
-      <div class="form-group">
-        <label>새 항목 추가 - 제목</label>
-        <input type="text" name="new_insight_title" placeholder="새 항목의 제목을 입력하세요">
-      </div>
-      <div class="form-group">
-        <label>내용</label>
-        <textarea name="new_insight_text" placeholder="새 항목의 내용을 입력하세요"></textarea>
-      </div>
-      <div class="checkbox-group">
-        <input type="checkbox" name="new_insight_urgent" value="1">
-        <label>긴급</label>
-      </div>
-    </div>
+    <div id="new-insights-container"></div>
+    <button type="button" class="btn btn-secondary" style="margin-top:16px" onclick="addNewInsightPanel()">+ 새 항목 추가</button>
   </div>
 
   <div class="action-bar">
@@ -705,8 +695,50 @@ h1{{font-size:24px;margin-bottom:28px}}
 
   <input type="hidden" name="draft_id" value="{draft_id}">
   <input type="hidden" name="insights_count" value="{len(insights)}">
+  <input type="hidden" name="new_insights_count" value="0" id="new_insights_count">
 </form>
 </div>
+
+<script>
+let newInsightCount = 0;
+function addNewInsightPanel() {{
+  const container = document.getElementById('new-insights-container');
+  const idx = newInsightCount++;
+  const panel = document.createElement('div');
+  panel.className = 'item';
+  panel.style.marginTop = '16px';
+  panel.style.background = '#EDF3FE';
+  panel.id = `new-insight-panel-${{idx}}`;
+  panel.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <span style="font-size:13px;font-weight:600">새 항목 ${{idx+1}}</span>
+      <button type="button" class="btn btn-danger" onclick="removeNewInsightPanel(${{idx}})">- 제거</button>
+    </div>
+    <div class="form-group">
+      <label>제목</label>
+      <input type="text" name="new_insight_title_${{idx}}" placeholder="새 항목의 제목을 입력하세요">
+    </div>
+    <div class="form-group">
+      <label>내용</label>
+      <textarea name="new_insight_text_${{idx}}" placeholder="새 항목의 내용을 입력하세요"></textarea>
+    </div>
+    <div class="checkbox-group">
+      <input type="checkbox" name="new_insight_urgent_${{idx}}" value="1">
+      <label style="background:#C93030;color:#fff;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:600">긴급</label>
+    </div>
+  `;
+  container.appendChild(panel);
+  document.getElementById('new_insights_count').value = newInsightCount;
+}}
+function removeNewInsightPanel(idx) {{
+  const panel = document.getElementById(`new-insight-panel-${{idx}}`);
+  if (panel) {{
+    panel.remove();
+    document.getElementById('new_insights_count').value = Math.max(0, parseInt(document.getElementById('new_insights_count').value) - 1);
+  }}
+}}
+</script>
+
 </body>
 </html>
 """
@@ -741,15 +773,17 @@ h1{{font-size:24px;margin-bottom:28px}}
                 "urgent": bool(request.form.get(f"insight_urgent_{idx}")),
             })
 
-    # 새 항목 추가
-    new_title = request.form.get("new_insight_title", "").strip()
-    new_text = request.form.get("new_insight_text", "").strip()
-    if new_title or new_text:
-        modified_insights.append({
-            "title": new_title,
-            "text": new_text,
-            "urgent": bool(request.form.get("new_insight_urgent")),
-        })
+    # 새 항목 추가 (동적으로 추가된 여러 개 처리)
+    new_insights_count = int(request.form.get("new_insights_count", 0))
+    for idx in range(new_insights_count):
+        new_title = request.form.get(f"new_insight_title_{idx}", "").strip()
+        new_text = request.form.get(f"new_insight_text_{idx}", "").strip()
+        if new_title or new_text:
+            modified_insights.append({
+                "title": new_title,
+                "text": new_text,
+                "urgent": bool(request.form.get(f"new_insight_urgent_{idx}")),
+            })
 
     # 데이터 업데이트
     data["recommendations"] = modified_recommendations

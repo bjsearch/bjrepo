@@ -603,7 +603,7 @@ async function shareReport(){
   if (window.Kakao && window.Kakao.isInitialized && window.Kakao.isInitialized()) {
     window.Kakao.Share.sendDefault({
       objectType: 'text',
-      text: title,
+      text: title + '\n\n' + url,
       link: {mobileWebUrl: url, webUrl: url},
     });
     return;
