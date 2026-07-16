@@ -616,19 +616,19 @@ h1{{font-size:24px;margin-bottom:28px}}
 <div class="container">
 <h1>{header.get('name', '')}님 리포트 편집</h1>
 
-<form method="POST" action="/edit-report/{draft_id}">
+<form method="POST">
   <input type="hidden" name="_csrf_token" value="{csrf_token}">
-  <div class="section" style="background:#FAFBFC">
+  <div class="section">
     <h2>1. 보완 추천 (최대 3개)</h2>
     <p style="font-size:12px;color:#5B6B82;margin-bottom:16px">완성된 리포트에 포함할 추천 항목을 선택하고 내용을 수정하세요.</p>
 """
         for idx, reco in enumerate(recommendations):
             checked = "checked" if reco.get("_included", True) else ""
             html += f"""
-    <div class="item" style="position:relative">
+    <div class="item">
       <div class="checkbox-group">
-        <input type="checkbox" name="reco_include_{idx}" value="1" {checked} id="reco_{idx}" style="accent-color:#FF9500">
-        <label for="reco_{idx}" style="margin:0">추천 {reco.get('rank', idx+1)} - 포함하기</label>
+        <input type="checkbox" name="reco_include_{idx}" value="1" {checked} id="reco_{idx}">
+        <label for="reco_{idx}">추천 {reco.get('rank', idx+1)} - 포함하기</label>
       </div>
       <div style="display:{'block' if reco.get('_included', True) else 'none'}">
         <div class="form-group">
@@ -649,7 +649,7 @@ h1{{font-size:24px;margin-bottom:28px}}
 
         html += """  </div>
 
-  <div class="section" style="background:#F5F8FC">
+  <div class="section">
     <h2>2. 핵심 진단 및 제언</h2>
     <p style="font-size:12px;color:#5B6B82;margin-bottom:16px">항목을 수정하거나 새로 추가할 수 있습니다.</p>
 """
@@ -658,10 +658,10 @@ h1{{font-size:24px;margin-bottom:28px}}
             checked = "checked" if insight.get("_included", True) else ""
             urgent_checked = "checked" if insight.get("urgent") else ""
             html += f"""
-    <div class="item" style="position:relative;padding-bottom:50px">
+    <div class="item">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
         <div class="checkbox-group" style="margin:0">
-          <input type="checkbox" name="insight_include_{idx}" value="1" {checked} id="insight_{idx}" style="accent-color:#FF9500">
+          <input type="checkbox" name="insight_include_{idx}" value="1" {checked} id="insight_{idx}">
           <label for="insight_{idx}" style="margin:0">진단 {idx+1} - 포함하기</label>
         </div>
         <div class="checkbox-group" style="margin:0">
@@ -679,8 +679,6 @@ h1{{font-size:24px;margin-bottom:28px}}
           <textarea name="insight_text_{idx}">{insight.get('text', '')}</textarea>
         </div>
       </div>
-      <button type="button" class="btn btn-secondary" style="position:absolute;bottom:12px;right:12px;padding:6px 12px;font-size:12px" onclick="removeInsightPanel(this, {idx})">제거</button>
-      <input type="hidden" name="insight_deleted_{idx}" id="insight_deleted_{idx}" value="0">
     </div>
 """
 
@@ -702,21 +700,6 @@ h1{{font-size:24px;margin-bottom:28px}}
 
 <script>
 let newInsightCount = 0;
-function removeInsightPanel(btn, idx) {{
-  const panel = btn.closest('.item');
-  panel.style.display = 'none';
-  const input = document.getElementById(`insight_deleted_${{idx}}`);
-  if (!input) {{
-    const hiddenInput = document.createElement('input');
-    hiddenInput.type = 'hidden';
-    hiddenInput.name = `insight_deleted_${{idx}}`;
-    hiddenInput.id = `insight_deleted_${{idx}}`;
-    hiddenInput.value = '1';
-    btn.parentNode.appendChild(hiddenInput);
-  }} else {{
-    input.value = '1';
-  }}
-}}
 function addNewInsightPanel() {{
   const container = document.getElementById('new-insights-container');
   const panelNumber = container.querySelectorAll('[id^="new-insight-panel-"]').length + 1;
@@ -729,7 +712,7 @@ function addNewInsightPanel() {{
   panel.innerHTML = `
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
       <span style="font-size:13px;font-weight:600">새 항목 ${{panelNumber}}</span>
-      <button type="button" class="btn btn-secondary" onclick="removeNewInsightPanel(${{idx}})">제거</button>
+      <button type="button" class="btn btn-danger" onclick="removeNewInsightPanel(${{idx}})">- 제거</button>
       <div class="checkbox-group" style="margin:0">
         <input type="checkbox" name="new_insight_urgent_${{idx}}" value="1" id="new_urgent_${{idx}}">
         <label for="new_urgent_${{idx}}" style="margin:0;background:#FF9500;color:#fff;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:600">긴급</label>
@@ -782,7 +765,7 @@ function removeNewInsightPanel(idx) {{
     modified_insights = []
     insights_count = int(request.form.get("insights_count", 0))
     for idx in range(insights_count):
-        if request.form.get(f"insight_include_{idx}") and request.form.get(f"insight_deleted_{idx}") != "1":
+        if request.form.get(f"insight_include_{idx}"):
             default_insight = insights[idx] if idx < len(insights) else {}
             modified_insights.append({
                 "title": request.form.get(f"insight_title_{idx}", default_insight.get("title", "")),
