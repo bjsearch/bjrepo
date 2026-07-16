@@ -665,7 +665,7 @@ h1{{font-size:24px;margin-bottom:28px}}
           <label for="insight_{idx}" style="margin:0">진단 {idx+1} - 포함하기</label>
         </div>
         <div class="checkbox-group" style="margin:0">
-          <input type="checkbox" name="insight_urgent_{idx}" value="1" {urgent_checked} id="insight_urgent_{idx}">
+          <input type="checkbox" name="insight_urgent_{idx}" value="1" {urgent_checked} id="insight_urgent_{idx}" style="accent-color:#FF9500">
           <label for="insight_urgent_{idx}" style="margin:0;background:#FF9500;color:#fff;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:600">긴급</label>
         </div>
       </div>
@@ -714,7 +714,7 @@ function addNewInsightPanel() {{
       <span style="font-size:13px;font-weight:600">새 항목 ${{panelNumber}}</span>
       <button type="button" class="btn btn-danger" onclick="removeNewInsightPanel(${{idx}})">- 제거</button>
       <div class="checkbox-group" style="margin:0">
-        <input type="checkbox" name="new_insight_urgent_${{idx}}" value="1" id="new_urgent_${{idx}}">
+        <input type="checkbox" name="new_insight_urgent_${{idx}}" value="1" id="new_urgent_${{idx}}" style="accent-color:#FF9500">
         <label for="new_urgent_${{idx}}" style="margin:0;background:#FF9500;color:#fff;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:600">긴급</label>
       </div>
     </div>
