@@ -226,8 +226,88 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 <div class="page">
 
 <!-- 첫번째 페이지: 표지 -->
-<div class="cover" style="min-height:100vh;background:#fff;page-break-after:always">
-  <img src="{{ url_for('static', filename='images/frontpage.png') }}" alt="Guarantee Analysis Report" style="width:100%;height:100vh;object-fit:cover;display:block">
+<div class="cover" style="position:relative;padding:60px 48px;min-height:100vh;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;background:#fff">
+  <!-- Toss Insurance 로고 (우측 상단) -->
+  <div style="position:absolute;top:48px;right:48px;display:flex;align-items:center;gap:8px">
+    <svg viewBox="0 0 32 32" width="32" height="32">
+      <defs>
+        <linearGradient id="toss-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#4A90FF;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#1D5BD8;stop-opacity:1" />
+        </linearGradient>
+      </defs>
+      <!-- 왼쪽 반원 -->
+      <path d="M 8 8 Q 8 16 16 16 L 16 8 Z" fill="url(#toss-gradient)"/>
+      <!-- 오른쪽 반원 -->
+      <path d="M 16 16 Q 24 16 24 24 L 16 24 Z" fill="url(#toss-gradient)"/>
+    </svg>
+    <span style="font-size:14px;font-weight:700;color:#10233F;letter-spacing:.03em">toss insurance</span>
+  </div>
+
+  <!-- 메인 콘텐츠 -->
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;width:100%;padding:80px 0">
+    <!-- 제목 -->
+    <h1 style="font-size:56px;font-weight:700;color:#10233F;margin:0;margin-bottom:12px;letter-spacing:-.02em">간편보장분석</h1>
+
+    <!-- 고객명 -->
+    <div style="font-size:16px;color:#5B6B82;margin-bottom:60px">
+      <span style="font-weight:600">{{ header.name }}</span>님을 위한 보장분석 리포트
+    </div>
+
+    <!-- 가족/블록 일러스트 -->
+    <svg viewBox="0 0 380 280" xmlns="http://www.w3.org/2000/svg" style="width:320px;height:240px;margin-bottom:60px;opacity:0.95">
+      <defs>
+        <linearGradient id="hand-grad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#F5D4C0"/><stop offset="1" stop-color="#E8BCA8"/>
+        </linearGradient>
+      </defs>
+      <!-- 손 -->
+      <ellipse cx="80" cy="200" rx="35" ry="45" fill="url(#hand-grad)"/>
+      <path d="M 50 180 Q 45 150 55 130" stroke="#D9A890" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M 70 170 Q 68 135 75 110" stroke="#D9A890" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M 90 175 Q 92 140 100 115" stroke="#D9A890" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M 110 185 Q 115 155 120 130" stroke="#D9A890" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <!-- 나무 블록 -->
+      <g>
+        <rect x="140" y="210" width="60" height="40" fill="#8B6F47" stroke="#6B5436" stroke-width="2"/>
+        <rect x="210" y="210" width="60" height="40" fill="#A0826D" stroke="#805C42" stroke-width="2"/>
+        <rect x="155" y="160" width="60" height="40" fill="#B8956A" stroke="#8B6F47" stroke-width="2"/>
+        <rect x="225" y="160" width="60" height="40" fill="#C4A57B" stroke="#A0826D" stroke-width="2"/>
+        <rect x="170" y="110" width="60" height="40" fill="#D4AF85" stroke="#B8956A" stroke-width="2"/>
+      </g>
+      <!-- 사람들 -->
+      <g>
+        <circle cx="250" cy="65" r="18" fill="#F5D4C0"/><circle cx="240" cy="48" r="12" fill="#D9A890"/>
+        <circle cx="245" cy="75" r="3" fill="#333"/><circle cx="255" cy="75" r="3" fill="#333"/>
+        <path d="M 248 85 Q 250 92 252 98" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <circle cx="310" cy="80" r="15" fill="#F5D4C0"/><circle cx="302" cy="66" r="10" fill="#D9A890"/>
+        <circle cx="306" cy="88" r="2.5" fill="#333"/><circle cx="314" cy="88" r="2.5" fill="#333"/>
+        <path d="M 309 97 Q 310 103 311 108" stroke="#333" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        <circle cx="270" cy="50" r="17" fill="#F5D4C0"/><circle cx="280" cy="35" r="11" fill="#D9A890"/>
+        <circle cx="265" cy="57" r="2.8" fill="#333"/><circle cx="275" cy="57" r="2.8" fill="#333"/>
+        <path d="M 272 67 Q 274 74 276 80" stroke="#333" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+        <path d="M 245 92 Q 248 96 252 92" stroke="#333" stroke-width="1.5" fill="none" stroke-linecap="round" opacity=".7"/>
+        <path d="M 306 102 Q 308 105 312 102" stroke="#333" stroke-width="1" fill="none" stroke-linecap="round" opacity=".7"/>
+        <path d="M 272 78 Q 274 82 276 78" stroke="#333" stroke-width="1.3" fill="none" stroke-linecap="round" opacity=".7"/>
+      </g>
+    </svg>
+  </div>
+
+  <!-- 메타정보 (하단) -->
+  <div style="width:100%;padding:28px 0;border-top:1px solid #E3E7EE;display:flex;justify-content:space-between;align-items:center">
+    <div>
+      <div style="font-size:12px;color:#5B6B82;margin-bottom:6px">분석 기준</div>
+      <div style="font-size:14px;font-weight:600;color:#10233F">{{ header.basis_date_display }}</div>
+    </div>
+    <div style="text-align:center">
+      <div style="font-size:12px;color:#5B6B82;margin-bottom:6px">보험나이</div>
+      <div style="font-size:14px;font-weight:600;color:#10233F">{{ header.age or '미입력' }}세</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:12px;color:#5B6B82;margin-bottom:6px">총 계약</div>
+      <div style="font-size:14px;font-weight:600;color:#10233F">{{ header.total_contracts }}건</div>
+    </div>
+  </div>
 </div>
 
 <!-- 두번째 페이지: 계약현황 -->
