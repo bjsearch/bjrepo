@@ -59,6 +59,13 @@ if not _secret:
         flush=True,
     )
 app.secret_key = _secret
+# 세션 보안 설정
+app.config.update(
+    SESSION_COOKIE_SECURE=True,  # HTTPS only
+    SESSION_COOKIE_HTTPONLY=True,  # JavaScript 접근 불가
+    SESSION_COOKIE_SAMESITE="Lax",  # CSRF 방지
+    PERMANENT_SESSION_LIFETIME=3600,  # 1시간 타임아웃
+)
 
 # 임시 리포트 데이터 캐시 (UUID → 리포트 데이터)
 _draft_reports = {}
@@ -67,6 +74,20 @@ _draft_reports = {}
 def _generate_draft_id() -> str:
     """임시 리포트 ID 생성"""
     return secrets.token_urlsafe(16)
+
+
+def _get_csrf_token() -> str:
+    """세션에서 CSRF 토큰 가져오거나 생성"""
+    if "_csrf_token" not in session:
+        session["_csrf_token"] = secrets.token_urlsafe(32)
+    return session["_csrf_token"]
+
+
+def _check_csrf_token() -> bool:
+    """POST 요청의 CSRF 토큰 검증"""
+    token = request.form.get("_csrf_token", "")
+    session_token = session.get("_csrf_token", "")
+    return token and session_token and hmac.compare_digest(token, session_token)
 
 
 if not TEAM_PASSWORD:
@@ -504,6 +525,8 @@ def index():
 
 @app.post("/generate")
 def generate():
+    if not _check_csrf_token():
+        abort(403)
     user = current_user()
     f = request.files.get("pdf")
     if not f or not f.filename:
@@ -682,6 +705,9 @@ h1{{font-size:24px;margin-bottom:28px}}
         return html
 
     # POST: 수정된 데이터로 최종 저장
+    if not _check_csrf_token():
+        abort(403)
+
     recommendations = data.get("recommendations", [])
     insights = data.get("insights", [])
 
@@ -775,6 +801,8 @@ def view_report(report_id: int):
 
 @app.post("/reports/<int:report_id>/delete")
 def delete_report(report_id: int):
+    if not _check_csrf_token():
+        abort(403)
     user = current_user()
     meta = storage.get_report_meta(report_id)
     if meta and _can_access(meta, user):
@@ -784,6 +812,8 @@ def delete_report(report_id: int):
 
 @app.post("/reports/<int:report_id>/share")
 def create_share_link(report_id: int):
+    if not _check_csrf_token() and request.headers.get("Accept") != "application/json":
+        abort(403)
     user = current_user()
     meta = storage.get_report_meta(report_id)
     if not meta or not _can_access(meta, user):
@@ -797,6 +827,8 @@ def create_share_link(report_id: int):
 
 @app.post("/reports/<int:report_id>/unshare")
 def revoke_share_link(report_id: int):
+    if not _check_csrf_token():
+        abort(403)
     user = current_user()
     meta = storage.get_report_meta(report_id)
     if not meta or not _can_access(meta, user):

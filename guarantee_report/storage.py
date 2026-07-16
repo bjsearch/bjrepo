@@ -240,7 +240,12 @@ def get_report(report_id: int) -> dict | None:
         cur = conn.cursor()
         cur.execute(_q("SELECT data_json FROM guarantee_reports WHERE id = ?"), (report_id,))
         row = cur.fetchone()
-        return json.loads(row["data_json"]) if row else None
+        if not row:
+            return None
+        try:
+            return json.loads(row["data_json"])
+        except (json.JSONDecodeError, ValueError):
+            return None  # 손상된 JSON은 안전하게 None 반환
 
 
 def get_report_meta(report_id: int) -> dict | None:
@@ -258,7 +263,13 @@ def get_all_report_data() -> list[dict]:
     with _connect() as conn:
         cur = conn.cursor()
         cur.execute("SELECT data_json FROM guarantee_reports ORDER BY created_at DESC")
-        return [json.loads(r["data_json"]) for r in cur.fetchall()]
+        results = []
+        for r in cur.fetchall():
+            try:
+                results.append(json.loads(r["data_json"]))
+            except (json.JSONDecodeError, ValueError):
+                continue  # 손상된 JSON은 건너뛰기
+        return results
 
 
 def delete_report(report_id: int) -> None:
@@ -303,7 +314,12 @@ def get_report_by_share_token(token: str) -> dict | None:
         cur = conn.cursor()
         cur.execute(_q("SELECT data_json FROM guarantee_reports WHERE share_token = ?"), (token,))
         row = cur.fetchone()
-        return json.loads(row["data_json"]) if row else None
+        if not row:
+            return None
+        try:
+            return json.loads(row["data_json"])
+        except (json.JSONDecodeError, ValueError):
+            return None
 
 
 def get_owner_phone_for_token(token: str) -> str | None:
