@@ -364,18 +364,6 @@ UPLOAD_PAGE = """
   .overlay .bar{width:220px;height:6px;background:rgba(255,255,255,.2);border-radius:99px;overflow:hidden}
   .overlay .bar .fill{height:100%;width:0%;background:#fff;border-radius:99px;transition:width .5s ease}
   .overlay .hint2{color:rgba(255,255,255,.6);font-size:12px}
-  .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:100}
-  .modal.open{display:flex}
-  .modal-overlay{position:absolute;inset:0;background:rgba(16,35,63,.5);backdrop-filter:blur(2px)}
-  .modal-content{position:relative;background:#fff;border-radius:16px;width:90%;max-width:900px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(16,35,63,.3)}
-  .modal-header{display:flex;align-items:center;justify-content:space-between;padding:24px 28px;border-bottom:1px solid var(--line)}
-  .modal-header h2{margin:0;font-size:20px}
-  .modal-close{background:none;border:none;font-size:28px;cursor:pointer;color:var(--sub);line-height:1}
-  .modal-close:hover{color:var(--ink)}
-  .modal-body{flex:1;overflow-y:auto;padding:24px 28px}
-  .loading-spinner{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:40px}
-  .spinner{width:48px;height:48px;border:4px solid #e3e7ee;border-top-color:#1d5bd8;border-radius:50%;animation:spin .8s linear infinite}
-  @keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -443,22 +431,6 @@ UPLOAD_PAGE = """
   <div class="hint2">보통 5~20초 정도 걸려요. 창을 닫지 마세요.</div>
 </div>
 
-<div class="modal" id="editModal">
-  <div class="modal-overlay" onclick="closeEditModal()"></div>
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2>리포트 수정</h2>
-      <button type="button" class="modal-close" onclick="closeEditModal()">×</button>
-    </div>
-    <div class="modal-body" id="modalBody">
-      <div class="loading-spinner">
-        <div class="spinner"></div>
-        <div>로딩 중...</div>
-      </div>
-    </div>
-  </div>
-</div>
-
 <script>
   const drop = document.getElementById('drop');
   const input = document.getElementById('file');
@@ -475,110 +447,23 @@ UPLOAD_PAGE = """
   const statusEl = document.getElementById('status');
   const fillEl = document.getElementById('fill');
   const submitBtn = document.getElementById('submitBtn');
-  const editModal = document.getElementById('editModal');
-  const modalBody = document.getElementById('modalBody');
   const steps = ['PDF 업로드 중...', '보장 항목 표 추출 중...', '보장 매트릭스 계산 중...', '리포트 조립 중...', '거의 다 됐어요...'];
 
-  function closeEditModal(){
-    editModal.classList.remove('open');
-  }
-
-  window.closeEditModal = closeEditModal;
-
-  form.addEventListener('submit', async (e) => {
+  form.addEventListener('submit', () => {
     if (!input.files.length) return;
-    e.preventDefault();
-
     submitBtn.disabled = true;
     submitBtn.textContent = '생성 중...';
     overlay.classList.add('show');
-
     let stepIdx = 0, progress = 8;
     statusEl.textContent = steps[0];
     fillEl.style.width = progress + '%';
-
-    const progressInterval = setInterval(() => {
+    setInterval(() => {
       stepIdx = Math.min(stepIdx + 1, steps.length - 1);
       statusEl.textContent = steps[stepIdx];
       progress = Math.min(progress + Math.random() * 18 + 10, 92);
       fillEl.style.width = progress + '%';
     }, 1400);
-
-    try {
-      const formData = new FormData(form);
-      const resp = await fetch('/generate', {
-        method: 'POST',
-        body: formData,
-        headers: {'Accept': 'application/json'}
-      });
-      const data = await resp.json();
-
-      clearInterval(progressInterval);
-      fillEl.style.width = '100%';
-      statusEl.textContent = '완료됐어요!';
-
-      setTimeout(() => {
-        overlay.classList.remove('show');
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'HTML 리포트 생성';
-
-        // Modal 열기
-        editModal.classList.add('open');
-        modalBody.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><div>편집 화면 준비 중...</div></div>';
-
-        // 편집 페이지 로드
-        fetch(`/edit-report/${data.draft_id}`)
-          .then(r => r.text())
-          .then(html => {
-            // HTML에서 form 부분만 추출해서 표시
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            const container = doc.querySelector('.container');
-            if (container) {
-              modalBody.innerHTML = container.innerHTML;
-              // Modal 내 form submit 이벤트 추가
-              const editForm = modalBody.querySelector('form');
-              if (editForm) {
-                editForm.addEventListener('submit', handleEditFormSubmit);
-              }
-            }
-          });
-      }, 800);
-    } catch (err) {
-      clearInterval(progressInterval);
-      overlay.classList.remove('show');
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'HTML 리포트 생성';
-      alert('리포트 생성 중 오류가 발생했습니다: ' + err.message);
-    }
   });
-
-  function handleEditFormSubmit(e){
-    e.preventDefault();
-    const editForm = e.target;
-
-    // 로딩 오버레이 표시
-    const loadingHtml = '<div class="loading-spinner"><div class="spinner"></div><div>저장 중...</div></div>';
-    const originalContent = modalBody.innerHTML;
-    modalBody.innerHTML = loadingHtml;
-
-    const formData = new FormData(editForm);
-    fetch(editForm.action, {
-      method: 'POST',
-      body: formData
-    })
-    .then(r => {
-      if (r.redirected) {
-        window.location.href = r.url;
-      } else {
-        throw new Error('저장 실패');
-      }
-    })
-    .catch(err => {
-      modalBody.innerHTML = originalContent;
-      alert('저장 중 오류가 발생했습니다: ' + err.message);
-    });
-  }
 </script>
 </body>
 </html>
@@ -666,7 +551,7 @@ def generate():
         if tmp_path and os.path.exists(tmp_path):
             os.remove(tmp_path)
 
-    # 임시 리포트 저장
+    # 임시 리포트 저장 후 수정 페이지로 이동
     draft_id = _generate_draft_id()
     _draft_reports[draft_id] = {
         "data": data,
@@ -674,11 +559,6 @@ def generate():
         "user_name": user["name"],
         "created_at": time.time(),
     }
-
-    # JSON으로 draft_id 반환 (Modal에서 사용)
-    if request.headers.get("Accept") == "application/json" or request.args.get("json"):
-        return {"draft_id": draft_id}
-
     return redirect(url_for("edit_report", draft_id=draft_id))
 
 
