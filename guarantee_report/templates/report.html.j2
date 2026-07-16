@@ -404,19 +404,6 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 <div class="caption">{{ header.name }} 님의 내일을 든든하게<small>가족과 함께하는 보장 점검 리포트</small></div>
 </div>
 
-<div class="brands">
-  {% for b in brands_legend %}
-  <span class="brand">{{ b.logo_html|safe }}<b>{{ b.name }}</b>&nbsp;{{ b.count_label }}</span>
-  {% endfor %}
-</div>
-
-<div class="kpis">
-  <div class="kpi hl"><div class="label">월 납입 보험료</div><div class="value num">{{ kpis.monthly_premium }}<span class="unit">원</span></div></div>
-  <div class="kpi"><div class="label">납입 완료 / 예정</div><div class="value num" style="font-size:16px;line-height:1.9">{{ kpis.paid_total_man }}만 / {{ kpis.scheduled_total_man }}만<span class="unit">원</span></div></div>
-  <div class="kpi"><div class="label">총 보험료</div><div class="value num">{{ kpis.grand_total_man }}<span class="unit">만원</span></div></div>
-  <div class="kpi"><div class="label">진단 결과</div><div class="value" style="font-size:14px;line-height:1.6"><span class="chip ok">적정 {{ kpis.ok_count }}</span> <span class="chip warn">주의·부족 {{ kpis.warn_count }}</span> <span class="chip gap">미가입 {{ kpis.gap_count }}</span></div></div>
-</div>
-
 <section class="section-page">
   <h2><span class="no">01</span>계약 현황 — 보험사별</h2>
   <div class="sec-note">{{ brands_legend|length }}개 보험사 {{ header.total_contracts }}건 유지 중 · 카드 색상은 각 보험사 브랜드 컬러 기준</div>
