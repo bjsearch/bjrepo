@@ -86,7 +86,7 @@ def _build_contracts(parsed: ParsedReport, brand_registry: BrandRegistry) -> lis
         pay_str = f"{pay_years}년납" if pay_years else items[0].pay_method
         progress = f" ({elapsed_months}/{total_months}회, ~{complete_year}년)" if total_months else ""
 
-        detail_line = f"{period_str} · {pay_str}{progress}\n주요 담보: {top_str}{more}"
+        detail_line = f"{period_str}\n· {pay_str}{progress}\n주요 담보:\n· {top_str.replace(' · ', '\n· ')}{more}"
 
         # 총 보험료 및 잔여 보험료 계산
         total_premium_won = (total_months * premium) if total_months else None
