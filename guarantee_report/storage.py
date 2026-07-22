@@ -234,25 +234,31 @@ def list_reports(created_by_user_id: int | None = None) -> list[dict]:
         return [dict(r) for r in cur.fetchall()]
 
 
-def get_report(report_id: int) -> dict | None:
+def get_report(report_id: int, user_id: int | None = None) -> dict | None:
     _ensure_init()
     with _connect() as conn:
         cur = conn.cursor()
-        cur.execute(_q("SELECT data_json FROM guarantee_reports WHERE id = ?"), (report_id,))
+        if user_id is not None:
+            cur.execute(_q("SELECT data_json FROM guarantee_reports WHERE id = ? AND created_by_user_id = ?"), (report_id, user_id))
+        else:
+            cur.execute(_q("SELECT data_json FROM guarantee_reports WHERE id = ?"), (report_id,))
         row = cur.fetchone()
         if not row:
             return None
         try:
             return json.loads(row["data_json"])
         except (json.JSONDecodeError, ValueError):
-            return None  # 손상된 JSON은 안전하게 None 반환
+            return None
 
 
-def get_report_meta(report_id: int) -> dict | None:
+def get_report_meta(report_id: int, user_id: int | None = None) -> dict | None:
     _ensure_init()
     with _connect() as conn:
         cur = conn.cursor()
-        cur.execute(_q(f"SELECT {_SUMMARY_COLS} FROM guarantee_reports WHERE id = ?"), (report_id,))
+        if user_id is not None:
+            cur.execute(_q(f"SELECT {_SUMMARY_COLS} FROM guarantee_reports WHERE id = ? AND created_by_user_id = ?"), (report_id, user_id))
+        else:
+            cur.execute(_q(f"SELECT {_SUMMARY_COLS} FROM guarantee_reports WHERE id = ?"), (report_id,))
         row = cur.fetchone()
         return dict(row) if row else None
 

@@ -31,6 +31,7 @@ from . import chatbot, storage
 from .builder import build_report_data
 from .compare import build_comparison
 from .parser import ReportParseError, parse_pdf
+from .excel_parser import parse_excel as parse_excel_file
 from .render import render_html, render_template
 
 app = Flask(__name__)
@@ -389,9 +390,9 @@ UPLOAD_PAGE = """
   <form action="/generate" method="post" enctype="multipart/form-data" id="f">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
     <label class="drop" id="drop">
-      <input type="file" name="pdf" accept="application/pdf" id="file" required>
-      <div id="label">PDF 파일을 여기로 끌어놓거나 클릭해서 선택하세요</div>
-      <div class="hint">보험신용정보 통합조회 결과서 (.pdf) · 최대 20MB</div>
+      <input type="file" name="file" accept=".pdf,.xlsx" id="file" required>
+      <div id="label">PDF 또는 Excel 파일을 여기로 끌어놓거나 클릭해서 선택하세요</div>
+      <div class="hint">보험신용정보 통합조회 결과서 (.pdf) 또는 보험정보 (.xlsx) · 최대 20MB</div>
       <div class="filename" id="fname"></div>
     </label>
     <button type="submit" id="submitBtn">HTML 리포트 생성</button>
@@ -531,20 +532,32 @@ def generate():
     if not _check_csrf_token():
         abort(403)
     user = current_user()
-    f = request.files.get("pdf")
+    f = request.files.get("file")
     if not f or not f.filename:
-        return render_template_string(UPLOAD_PAGE, error="PDF 파일을 선택해주세요.", user=user, csrf_token=_get_csrf_token()), 400
-    if not f.filename.lower().endswith(".pdf"):
-        return render_template_string(UPLOAD_PAGE, error="PDF 파일만 업로드할 수 있습니다.", user=user, csrf_token=_get_csrf_token()), 400
+        return render_template_string(UPLOAD_PAGE, error="파일을 선택해주세요.", user=user, csrf_token=_get_csrf_token()), 400
+
+    filename_lower = f.filename.lower()
+    is_pdf = filename_lower.endswith(".pdf")
+    is_xlsx = filename_lower.endswith(".xlsx")
+
+    if not (is_pdf or is_xlsx):
+        return render_template_string(UPLOAD_PAGE, error="PDF 또는 Excel 파일만 업로드할 수 있습니다.", user=user, csrf_token=_get_csrf_token()), 400
 
     tmp_path = None
     try:
-        fd, tmp_path = tempfile.mkstemp(suffix=".pdf")
-        with os.fdopen(fd, "wb") as tmp:
-            f.save(tmp)
-
-        parsed = parse_pdf(tmp_path)
-        data = build_report_data(parsed)
+        if is_pdf:
+            fd, tmp_path = tempfile.mkstemp(suffix=".pdf")
+            with os.fdopen(fd, "wb") as tmp:
+                f.save(tmp)
+            parsed = parse_pdf(tmp_path)
+            data = build_report_data(parsed)
+        else:  # is_xlsx
+            fd, tmp_path = tempfile.mkstemp(suffix=".xlsx")
+            with os.fdopen(fd, "wb") as tmp:
+                f.save(tmp)
+            excel_result = parse_excel_file(tmp_path)
+            # Excel 데이터를 PDF 파서와 호환되는 형식으로 변환
+            data = build_report_data(excel_result)
     except ReportParseError as e:
         return render_template_string(UPLOAD_PAGE, error=str(e), user=user, csrf_token=_get_csrf_token()), 400
     except Exception as e:  # noqa: BLE001 — 사용자에게 원인 안내
