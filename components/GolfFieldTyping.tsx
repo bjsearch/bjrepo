@@ -21,6 +21,7 @@ interface GameState {
   gameStarted: boolean;
   timeLeft: number;
   isGameOver: boolean;
+  hintIndex: number;
 }
 
 export default function GolfFieldTyping() {
@@ -35,6 +36,7 @@ export default function GolfFieldTyping() {
     gameStarted: false,
     timeLeft: 60,
     isGameOver: false,
+    hintIndex: 0,
   });
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -71,6 +73,7 @@ export default function GolfFieldTyping() {
         streak: 0,
         totalCorrect: 0,
         totalAttempts: 0,
+        hintIndex: 0,
       });
       setTimeout(() => inputRef.current?.focus(), 0);
     }
@@ -83,8 +86,18 @@ export default function GolfFieldTyping() {
         ...prev,
         currentCourse: course,
         userInput: "",
+        hintIndex: 0,
       }));
       setTimeout(() => inputRef.current?.focus(), 0);
+    }
+  };
+
+  const showNextHint = () => {
+    if (gameState.currentCourse && gameState.hintIndex < gameState.currentCourse.hints.length) {
+      setGameState((prev) => ({
+        ...prev,
+        hintIndex: prev.hintIndex + 1,
+      }));
     }
   };
 
@@ -205,13 +218,21 @@ export default function GolfFieldTyping() {
           </div>
 
           <div className="bg-white rounded-lg shadow-lg p-6 text-center text-gray-600">
-            <p className="mb-2">💡 게임 방법:</p>
-            <ul className="text-left space-y-1 text-sm">
+            <p className="mb-3">💡 게임 방법:</p>
+            <ul className="text-left space-y-1 text-sm mb-4">
               <li>• 지도에 표시된 골프장의 이름을 정확히 타이핑하세요</li>
               <li>• 정확하면 100점 + 연속 보너스를 얻습니다</li>
               <li>• 60초 안에 가능한 한 많은 골프장을 맞춰보세요</li>
               <li>• 각 정답마다 새로운 골프장이 나타납니다</li>
             </ul>
+            <div className="border-t pt-3">
+              <p className="text-xs font-semibold text-blue-600 mb-2">🎯 새로운 기능:</p>
+              <ul className="text-left space-y-1 text-xs text-gray-600">
+                <li>✨ 각 골프장의 특징 및 역사 정보 제공</li>
+                <li>✨ 단계별 힌트로 어려운 골프장도 맞춰보기 가능</li>
+                <li>✨ 골프장 개설 연도 및 상세 설명 표시</li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>
@@ -326,15 +347,39 @@ export default function GolfFieldTyping() {
           <div className="bg-white rounded-lg shadow-lg p-6 flex flex-col">
             <div className="mb-4">
               <p className="text-sm text-gray-600 mb-2">지역: {gameState.selectedRegion}</p>
-              <div className="bg-green-50 p-4 rounded-lg">
+              <div className="bg-green-50 p-4 rounded-lg mb-4">
                 <p className="text-sm text-gray-700 mb-2">이 골프장은:</p>
                 <p className="text-xl font-bold text-green-700">
                   {gameState.currentCourse?.name}
                 </p>
                 <p className="text-xs text-gray-600 mt-2">
                   {gameState.currentCourse?.province} •{" "}
-                  {gameState.currentCourse?.holes}홀
+                  {gameState.currentCourse?.holes}홀 • {gameState.currentCourse?.established}년 개설
                 </p>
+              </div>
+
+              {/* 힌트 섹션 */}
+              <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-400">
+                <p className="text-xs font-semibold text-blue-900 mb-2">💡 정보 & 힌트</p>
+                <p className="text-sm text-blue-800 mb-3">{gameState.currentCourse?.description}</p>
+
+                {gameState.hintIndex > 0 && (
+                  <div className="space-y-1 mb-3">
+                    {gameState.currentCourse?.hints.slice(0, gameState.hintIndex).map((hint, i) => (
+                      <div key={i} className="text-sm text-blue-700 bg-white bg-opacity-50 p-2 rounded">
+                        ✓ {hint}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <button
+                  onClick={showNextHint}
+                  disabled={!gameState.currentCourse || gameState.hintIndex >= gameState.currentCourse.hints.length}
+                  className="w-full text-xs bg-blue-400 hover:bg-blue-500 disabled:opacity-50 disabled:bg-gray-400 text-white font-semibold py-1 px-2 rounded transition-all"
+                >
+                  {gameState.hintIndex === 0 ? "힌트 보기" : "다음 힌트"}
+                </button>
               </div>
             </div>
 
