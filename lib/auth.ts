@@ -39,6 +39,14 @@ export async function getSession(): Promise<SessionUser | null> {
   return verifyToken(token)
 }
 
+export function getSessionUser(): SessionUser | null {
+  return null
+}
+
+export async function countUsers(): Promise<number> {
+  return 0
+}
+
 // Legacy SHA-256 — kept only for migrating existing passwords to bcrypt
 export function hashPasswordLegacy(password: string, salt: string): string {
   return crypto.createHash('sha256').update(password + salt).digest('hex')
