@@ -101,86 +101,13 @@ def parse_excel(file_path: str) -> ExcelParseResult:
     """Excel 파일을 파싱해서 보험 정보를 추출한다."""
     # 모든 Excel 파일을 ZIP 기반 파싱으로 처리 (색상 오류 완전 우회)
     try:
-        return _parse_excel_manual(file_path, None)
+        result = _parse_excel_manual(file_path, None)
+        # 파싱 결과 검증: 고객명이 "미입력"이고 상품이 없으면 다른 형식 시도
+        if result.customer_name == "미입력" and not result.insurance_products:
+            result = _parse_excel_alternative(file_path)
+        return result
     except Exception as e:
         raise ReportParseError(f"Excel 파일을 읽을 수 없습니다: {str(e)[:100]}")
-
-    customer_name = "미입력"
-    gender = None
-    birth_date = None
-    basis_date = None
-    handler = "사용자"
-
-    # "고객정보" 시트가 있으면 읽기
-    if "고객정보" in excel_file.sheet_names:
-        try:
-            df = pd.read_excel(file_path, sheet_name="고객정보", header=None, engine='openpyxl')
-        except:
-            df = None
-
-        if df is not None and not df.empty:
-            customer_name = _safe_value(df.iloc[0, 0]) or "미입력"
-            gender = _safe_value(df.iloc[0, 1]) if len(df.columns) > 1 else None
-            birth_str = _safe_value(df.iloc[0, 2]) if len(df.columns) > 2 else None
-            basis_str = _safe_value(df.iloc[0, 3]) if len(df.columns) > 3 else None
-            handler_val = _safe_value(df.iloc[0, 4]) if len(df.columns) > 4 else None
-
-            if birth_str:
-                birth_date = _parse_date(birth_str)
-            if basis_str:
-                basis_date = _parse_date(basis_str)
-            if handler_val:
-                handler = handler_val
-
-    # "보험상품" 시트가 있으면 읽기
-    insurance_products = []
-    if "보험상품" in excel_file.sheet_names:
-        try:
-            df = pd.read_excel(file_path, sheet_name="보험상품", header=None, engine='openpyxl')
-        except:
-            df = None
-
-        if df is not None and not df.empty:
-            insurance_products = _extract_products_from_df(df)
-
-    # 보험상품이 없으면, 첫 번째 시트에서 자동 감지 시도
-    if not insurance_products and len(excel_file.sheet_names) > 0:
-        sheet_name = excel_file.sheet_names[0]
-        try:
-            df = pd.read_excel(file_path, sheet_name=sheet_name, header=None, engine='openpyxl')
-        except:
-            df = None
-
-        if df is not None and not df.empty:
-            insurance_products = _extract_products_from_df(df)
-
-    # 보험상품이 여전히 없으면 에러
-    if not insurance_products:
-        return ExcelParseResult(
-            customer_name=customer_name,
-            gender=gender,
-            birth_date=birth_date,
-            basis_date=basis_date,
-            handler=handler,
-            insurance_products=[{
-                "company": "미입력",
-                "product_name": "데이터 없음",
-                "contract_date": "",
-                "monthly_premium": 0,
-                "total_premium": 0,
-                "coverages": [{"name": "지원되지 않는 Excel 형식", "amount": 0}],
-                "contract_end": "9999-12-31"
-            }]
-        )
-
-    return ExcelParseResult(
-        customer_name=customer_name,
-        gender=gender,
-        birth_date=birth_date,
-        basis_date=basis_date,
-        handler=handler,
-        insurance_products=insurance_products
-    )
 
 
 def _extract_products_from_df(df) -> list[dict]:
@@ -458,6 +385,164 @@ def _parse_coverages(coverage_str: str | None) -> list[dict]:
                 coverages.append({"name": name, "amount": amount})
 
     return coverages
+
+
+def _parse_excel_alternative(file_path: str) -> ExcelParseResult:
+    """보고서 형식 Excel 파싱 (행에 항목명, 열에 각 상품 데이터)"""
+    import zipfile
+    import xml.etree.ElementTree as ET
+
+    with zipfile.ZipFile(file_path, 'r') as zf:
+        # 공유 문자열 로드
+        shared_strings = []
+        try:
+            ss_xml = zf.read('xl/sharedStrings.xml')
+            ss_root = ET.fromstring(ss_xml)
+            for si in ss_root.iter():
+                if si.tag.endswith('}si'):
+                    for t in si.iter():
+                        if t.tag.endswith('}t'):
+                            shared_strings.append(t.text or '')
+                            break
+        except KeyError:
+            pass
+
+        # 첫 번째 시트 찾기
+        try:
+            workbook_xml = zf.read('xl/workbook.xml')
+            root = ET.fromstring(workbook_xml)
+            sheets = {}
+            for sheet_elem in root.iter():
+                if sheet_elem.tag.endswith('sheet'):
+                    name = sheet_elem.get('name', '')
+                    rid = sheet_elem.get('{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id', '')
+                    if name and rid:
+                        sheets[name] = rid
+
+            rels_xml = zf.read('xl/_rels/workbook.xml.rels')
+            rels_root = ET.fromstring(rels_xml)
+            sheet_files = {}
+            for rel in rels_root.iter():
+                if rel.tag.endswith('Relationship'):
+                    rel_id = rel.get('Id', '')
+                    target = rel.get('Target', '')
+                    if rel_id and target.endswith('.xml'):
+                        sheet_files[rel_id] = target
+        except:
+            raise ReportParseError("Excel 파일 구조를 읽을 수 없습니다")
+
+        customer_name = "미입력"
+        gender = None
+        birth_date = None
+        basis_date = None
+        handler = "사용자"
+        insurance_products = []
+
+        # 첫 번째 시트 파싱
+        first_sheet = list(sheets.items())[0] if sheets else None
+        if first_sheet:
+            sheet_name, rid = first_sheet
+            if rid in sheet_files:
+                target = sheet_files[rid]
+                sheet_path = target if target.startswith('/') else 'xl/' + target
+                sheet_path = sheet_path.lstrip('/')
+
+                try:
+                    sheet_xml = zf.read(sheet_path)
+                    sheet_root = ET.fromstring(sheet_xml)
+
+                    # 셀 데이터 추출
+                    cells = {}
+                    for c in sheet_root.iter():
+                        if c.tag.endswith('}c'):
+                            r = c.get('r', '')
+                            cell_type = c.get('t', '')
+                            value = None
+
+                            for child in c:
+                                if child.tag.endswith('}v'):
+                                    value = child.text
+                                    break
+                                elif child.tag.endswith('}is'):
+                                    for sub in child:
+                                        if sub.tag.endswith('}t'):
+                                            value = sub.text
+                                            break
+                                    if value:
+                                        break
+
+                            if cell_type == 's' and value and value.isdigit():
+                                idx = int(value)
+                                if idx < len(shared_strings):
+                                    value = shared_strings[idx]
+
+                            if r and value:
+                                cells[r] = value
+
+                    # 보고서 형식에서 고객명 추출 (B2에서 "xxx님의 보장분석..." 형식)
+                    if 'B2' in cells:
+                        title = cells['B2']
+                        if '님' in title:
+                            customer_name = title.split('님')[0].strip()
+
+                    # 각 열(E, F, G 등)을 하나의 상품으로 처리
+                    # 행 6에서 상품명이 있는 열 찾기
+                    product_cols = set()
+                    for cell_ref in cells:
+                        match = re.match(r'([A-Z]+)(\d+)', cell_ref)
+                        if match:
+                            col = match.group(1)
+                            row = int(match.group(2))
+                            # 행 6(보험명) 또는 행 7(보험사명)에 데이터가 있으면 해당 열이 상품 열
+                            if row in [6, 7] and col in ['E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M']:
+                                product_cols.add(col)
+
+                    # 각 상품별로 데이터 추출
+                    for col in sorted(product_cols):
+                        company = cells.get(f'{col}7', '')
+                        product_name = cells.get(f'{col}6', '')
+
+                        if company or product_name:
+                            contract_date = cells.get(f'{col}8', '')
+                            monthly_premium_str = cells.get(f'{col}17', '')
+                            monthly_premium = _parse_number(monthly_premium_str)
+                            total_premium_str = cells.get(f'{col}20', '')
+                            total_premium = _parse_number(total_premium_str)
+                            remaining_premium_str = cells.get(f'{col}19', '')
+                            remaining_premium = _parse_number(remaining_premium_str)
+                            contract_end = cells.get(f'{col}15', '')
+
+                            product = {
+                                "company": company or "보험사 미입력",
+                                "product_name": product_name or "상품명 미입력",
+                                "contract_date": contract_date,
+                                "monthly_premium": monthly_premium,
+                                "total_premium": total_premium,
+                                "remaining_premium": remaining_premium,
+                                "coverages": [],
+                                "contract_end": contract_end or "9999-12-31"
+                            }
+                            insurance_products.append(product)
+
+                except Exception:
+                    pass
+
+    return ExcelParseResult(
+        customer_name=customer_name,
+        gender=gender,
+        birth_date=birth_date,
+        basis_date=basis_date,
+        handler=handler,
+        insurance_products=insurance_products if insurance_products else [{
+            "company": "미입력",
+            "product_name": "데이터 없음",
+            "contract_date": "",
+            "monthly_premium": 0,
+            "total_premium": 0,
+            "coverages": [{"name": "데이터 추출 실패", "amount": 0}],
+            "contract_end": "9999-12-31"
+        }]
+    )
 
 
 class ReportParseError(Exception):
