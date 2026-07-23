@@ -240,6 +240,20 @@ def _parse_excel_manual(file_path: str, sheet_names: list = None) -> ExcelParseR
 
     # Excel을 ZIP으로 열기 (xlsx는 ZIP 형식)
     with zipfile.ZipFile(file_path, 'r') as zf:
+        # 공유 문자열(SharedStrings) 로드
+        shared_strings = []
+        try:
+            ss_xml = zf.read('xl/sharedStrings.xml')
+            ss_root = ET.fromstring(ss_xml)
+            for si in ss_root.iter():
+                if si.tag.endswith('}si'):
+                    for t in si.iter():
+                        if t.tag.endswith('}t'):
+                            shared_strings.append(t.text or '')
+                            break
+        except KeyError:
+            pass  # SharedStrings.xml이 없어도 괜찮음 (인라인 문자열만 사용)
+
         # 워크북 정보 읽기
         try:
             workbook_xml = zf.read('xl/workbook.xml')
@@ -297,7 +311,9 @@ def _parse_excel_manual(file_path: str, sheet_names: list = None) -> ExcelParseR
                 for c in sheet_root.iter():
                     if c.tag.endswith('}c'):
                         r = c.get('r', '')  # 셀 참조 (A1, B2 등)
+                        cell_type = c.get('t', '')  # 셀 타입 (s=shared string, n=numeric, 등)
                         value = None
+
                         for child in c:
                             if child.tag.endswith('}v'):
                                 value = child.text
@@ -310,6 +326,13 @@ def _parse_excel_manual(file_path: str, sheet_names: list = None) -> ExcelParseR
                                         break
                                 if value:
                                     break
+
+                        # 공유 문자열 타입인 경우 인덱스를 실제 문자열로 변환
+                        if cell_type == 's' and value and value.isdigit():
+                            idx = int(value)
+                            if idx < len(shared_strings):
+                                value = shared_strings[idx]
+
                         if r and value:
                             cells[r] = value
 
