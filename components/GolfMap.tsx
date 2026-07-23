@@ -210,7 +210,7 @@ export default function GolfMap({
             {highlightedCourse.name}
           </p>
           <p className="text-xs text-gray-600">
-            위치: {highlightedCourse.province} • {highlightedCourse.holes}홀
+            위치: {highlightedCourse.region} • {highlightedCourse.holes}홀
           </p>
         </div>
       )}

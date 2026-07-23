@@ -22,6 +22,7 @@ interface GameState {
   timeLeft: number;
   isGameOver: boolean;
   hintIndex: number;
+  usedCourseIds: Set<string>;
 }
 
 export default function GolfFieldTyping() {
@@ -32,15 +33,27 @@ export default function GolfFieldTyping() {
     streak: 0,
     totalCorrect: 0,
     totalAttempts: 0,
-    selectedRegion: "서울/경기",
+    selectedRegion: "강원",
     gameStarted: false,
     timeLeft: 60,
     isGameOver: false,
     hintIndex: 0,
+    usedCourseIds: new Set(),
   });
 
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const getUnusedCourse = (region: string, usedIds: Set<string>): GolfCourse | undefined => {
+    const regionCourses = getCoursesByRegion(region);
+    const availableCourses = regionCourses.filter(c => !usedIds.has(c.id));
+
+    if (availableCourses.length === 0) {
+      return undefined;
+    }
+
+    return availableCourses[Math.floor(Math.random() * availableCourses.length)];
+  };
 
   useEffect(() => {
     if (gameState.gameStarted && !gameState.isGameOver) {
@@ -60,8 +73,10 @@ export default function GolfFieldTyping() {
   }, [gameState.gameStarted, gameState.isGameOver]);
 
   const startGame = () => {
-    const course = getRandomCourseFromRegion(gameState.selectedRegion);
+    const usedIds = new Set<string>();
+    const course = getUnusedCourse(gameState.selectedRegion, usedIds);
     if (course) {
+      usedIds.add(course.id);
       setGameState({
         ...gameState,
         currentCourse: course,
@@ -74,21 +89,29 @@ export default function GolfFieldTyping() {
         totalCorrect: 0,
         totalAttempts: 0,
         hintIndex: 0,
+        usedCourseIds: usedIds,
       });
       setTimeout(() => inputRef.current?.focus(), 0);
     }
   };
 
   const nextCourse = () => {
-    const course = getRandomCourseFromRegion(gameState.selectedRegion);
+    const course = getUnusedCourse(gameState.selectedRegion, gameState.usedCourseIds);
     if (course) {
-      setGameState((prev) => ({
-        ...prev,
-        currentCourse: course,
-        userInput: "",
-        hintIndex: 0,
-      }));
+      setGameState((prev) => {
+        const newUsedIds = new Set(prev.usedCourseIds);
+        newUsedIds.add(course.id);
+        return {
+          ...prev,
+          currentCourse: course,
+          userInput: "",
+          hintIndex: 0,
+          usedCourseIds: newUsedIds,
+        };
+      });
       setTimeout(() => inputRef.current?.focus(), 0);
+    } else {
+      endGame();
     }
   };
 
@@ -353,7 +376,7 @@ export default function GolfFieldTyping() {
                   {gameState.currentCourse?.name}
                 </p>
                 <p className="text-xs text-gray-600 mt-2">
-                  {gameState.currentCourse?.province} •{" "}
+                  {gameState.currentCourse?.region} •{" "}
                   {gameState.currentCourse?.holes}홀 • {gameState.currentCourse?.established}년 개설
                 </p>
               </div>
