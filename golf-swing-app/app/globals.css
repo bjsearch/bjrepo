@@ -1,0 +1,185 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ===== Swing Animation ===== */
+@keyframes swingArm {
+  0%   { transform: rotate(0deg); }
+  35%  { transform: rotate(80deg); }
+  50%  { transform: rotate(-60deg); }
+  65%  { transform: rotate(-60deg); }
+  100% { transform: rotate(0deg); }
+}
+.loader-swing-arm {
+  transform-origin: 85px 80px;
+  animation: swingArm 2.4s ease-in-out infinite;
+}
+
+@keyframes ballHit {
+  0%, 48% { transform: translate(0,0); opacity: 1; }
+  55% { transform: translate(15px,-20px); opacity: 0.6; }
+  65% { transform: translate(40px,-50px); opacity: 0; }
+  66%, 100% { transform: translate(0,0); opacity: 1; }
+}
+.loader-ball {
+  transform-box: fill-box; transform-origin: center;
+  animation: ballHit 2.4s ease-in-out infinite;
+}
+.loader-ball-shadow {
+  transform-box: fill-box; transform-origin: center;
+  animation: ballHit 2.4s ease-in-out infinite;
+}
+
+@keyframes bodyBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+.loader-golfer-body {
+  animation: bodyBob 2.4s ease-in-out infinite;
+}
+
+@keyframes trailFade {
+  0%, 50% { opacity: 0; }
+  55% { opacity: 0.8; }
+  75% { opacity: 0; }
+  100% { opacity: 0; }
+}
+.loader-ball-trail {
+  animation: trailFade 2.4s ease-in-out infinite;
+}
+
+@keyframes sparkFlash {
+  0%, 46% { opacity: 0; transform: scale(0); }
+  50% { opacity: 1; transform: scale(1.2); }
+  60% { opacity: 0; transform: scale(0.5); }
+  100% { opacity: 0; transform: scale(0); }
+}
+.loader-impact-spark {
+  transform-box: fill-box; transform-origin: center;
+  animation: sparkFlash 2.4s ease-in-out infinite;
+}
+
+/* ===== Putt Animation ===== */
+@keyframes puttSwing {
+  0%   { transform: rotate(0deg); }
+  30%  { transform: rotate(-15deg); }
+  50%  { transform: rotate(10deg); }
+  70%  { transform: rotate(10deg); }
+  100% { transform: rotate(0deg); }
+}
+.loader-putter-arm {
+  transform-origin: 60px 88px;
+  animation: puttSwing 2s ease-in-out infinite;
+}
+.loader-putter-body {
+  animation: bodyBob 2s ease-in-out infinite;
+}
+
+@keyframes puttRoll {
+  0%, 45% { transform: translateX(0); opacity: 1; }
+  80% { transform: translateX(100px); opacity: 0.8; }
+  85% { transform: translateX(106px); opacity: 0; }
+  86%, 100% { transform: translateX(0); opacity: 1; }
+}
+.loader-putt-ball {
+  transform-box: fill-box; transform-origin: center;
+  animation: puttRoll 2s ease-in-out infinite;
+}
+
+@keyframes puttTrail {
+  0%, 45% { opacity: 0; }
+  55% { opacity: 0.6; }
+  80% { opacity: 0; }
+  100% { opacity: 0; }
+}
+.loader-putt-trail {
+  animation: puttTrail 2s ease-in-out infinite;
+}
+
+@keyframes flagWave {
+  0%, 100% { transform: scaleX(1); }
+  50% { transform: scaleX(0.85); }
+}
+.loader-flag {
+  transform-box: fill-box; transform-origin: left center;
+  animation: flagWave 1.5s ease-in-out infinite;
+}
+
+/* ===== Drive Animation ===== */
+@keyframes driverSwing {
+  0%   { transform: rotate(0deg); }
+  30%  { transform: rotate(90deg); }
+  50%  { transform: rotate(-70deg); }
+  65%  { transform: rotate(-70deg); }
+  100% { transform: rotate(0deg); }
+}
+.loader-driver-swing {
+  transform-origin: 90px 75px;
+  animation: driverSwing 2.8s ease-in-out infinite;
+}
+.loader-driver-body {
+  animation: bodyBob 2.8s ease-in-out infinite;
+}
+
+@keyframes driveBall {
+  0%, 48% { transform: translate(0,0); opacity: 1; }
+  55% { transform: translate(30px,-30px); opacity: 0.7; }
+  70% { transform: translate(80px,-80px); opacity: 0; }
+  71%, 100% { transform: translate(0,0); opacity: 1; }
+}
+.loader-drive-ball {
+  transform-box: fill-box; transform-origin: center;
+  animation: driveBall 2.8s ease-in-out infinite;
+}
+
+@keyframes driveFlight {
+  0%, 50% { opacity: 0; }
+  60% { opacity: 1; }
+  85% { opacity: 0; }
+  100% { opacity: 0; }
+}
+.loader-drive-flight {
+  animation: driveFlight 2.8s ease-in-out infinite;
+}
+
+@keyframes distanceReveal {
+  0%, 65% { opacity: 0; }
+  75% { opacity: 1; }
+  90% { opacity: 0; }
+  100% { opacity: 0; }
+}
+.loader-distance-text {
+  animation: distanceReveal 2.8s ease-in-out infinite;
+}
+
+@keyframes powerBurst {
+  0%, 46% { opacity: 0; transform: scale(0); }
+  50% { opacity: 1; transform: scale(1.3); }
+  62% { opacity: 0; transform: scale(0.6); }
+  100% { opacity: 0; transform: scale(0); }
+}
+.loader-power-burst {
+  transform-box: fill-box; transform-origin: center;
+  animation: powerBurst 2.8s ease-in-out infinite;
+}
