@@ -2,14 +2,21 @@
 Excel 파일에서 보험 가입 정보를 읽고 분석 리포트 데이터로 변환.
 
 지원 형식:
-- 시트 "고객정보": 고객명, 성별, 생년월일, 분석기준일
-- 시트 "보험상품": 보험사, 상품명, 계약일, 월보험료, 총보험료 등
+1. 구조화된 형식:
+   - 시트 "고객정보": A1=고객명, B1=성별, C1=생년월일, D1=분석기준일, E1=담당자
+   - 시트 "보험상품": 헤더행 + 데이터 (보험사, 상품명, 계약일, 월보험료, 총보험료 등)
+
+2. 기타 형식:
+   - 첫 번째 시트에서 자동 감지하여 파싱
+
+pandas를 사용하여 손상된 포맷의 Excel도 읽을 수 있습니다.
 """
 from __future__ import annotations
 
 import re
+import math
 from datetime import date, datetime
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from .parser import Customer, DetailItem, ParsedReport
 
@@ -22,11 +29,10 @@ class ExcelParseResult:
     birth_date: date | None
     basis_date: date | None
     handler: str
-    insurance_products: list[dict]  # 보험상품 정보
+    insurance_products: list[dict]
 
     def to_parsed_report(self) -> ParsedReport:
         """PDF 파서와 호환되는 ParsedReport 형식으로 변환."""
-        # 보험나이 계산
         age = None
         if self.birth_date:
             today = datetime.now().date()
@@ -34,7 +40,6 @@ class ExcelParseResult:
             if (today.month, today.day) < (self.birth_date.month, self.birth_date.day):
                 age -= 1
 
-        # Customer 정보 생성 (Customer는 parser.py에서 import)
         customer = Customer(
             name=self.customer_name,
             rrn_masked="***-****-**",
@@ -45,39 +50,31 @@ class ExcelParseResult:
             basis_date=self.basis_date or datetime.now().date()
         )
 
-        # DetailItem 목록 생성 (DetailItem은 parser.py에서 import)
         detail_items = []
-        for idx, product in enumerate(self.insurance_products, 1):
-            # 보장내용에서 category와 amount_man 추출
+        for product in self.insurance_products:
             coverages = product.get("coverages", [])
-
-            # 첫 번째 보장을 category로 사용 (없으면 상품명 사용)
             category = ""
             if coverages:
                 category = coverages[0].get("name", "")
             else:
-                category = product.get("product_name", "")[:20]  # 첫 20글자
+                category = product.get("product_name", "")[:20]
 
-            # amount_man: 총보험료를 만원 단위로 (없으면 월보험료 * 12)
             total_premium = product.get("total_premium", 0)
             if total_premium > 0:
-                amount_man = total_premium // 10000  # 원 → 만원
+                amount_man = total_premium // 10000
             else:
                 monthly_premium = product.get("monthly_premium", 0)
-                amount_man = (monthly_premium * 12) // 10000  # 연간 보험료 → 만원
+                amount_man = (monthly_premium * 12) // 10000
 
-            # start: YYYY-MM-DD 형식으로 변환
             contract_date_str = product.get("contract_date", "")
             if contract_date_str:
-                # 이미 YYYY-MM-DD 형식이거나 date 객체인 경우
                 if isinstance(contract_date_str, date):
                     start_str = contract_date_str.strftime("%Y-%m-%d")
                 else:
-                    start_str = contract_date_str
+                    start_str = str(contract_date_str)
             else:
                 start_str = ""
 
-            # end: 제공되지 않으면 종신(9999-12-31)으로 설정
             end_str = product.get("contract_end", "") or "9999-12-31"
             if isinstance(end_str, date):
                 end_str = end_str.strftime("%Y-%m-%d")
@@ -86,7 +83,7 @@ class ExcelParseResult:
                 company=product.get("company", ""),
                 product=product.get("product_name", ""),
                 start=start_str,
-                end=end_str,
+                end=str(end_str),
                 pay_years=None,
                 pay_method="월납",
                 premium_won=product.get("monthly_premium", 0),
@@ -97,95 +94,159 @@ class ExcelParseResult:
             )
             detail_items.append(detail_item)
 
-        return ParsedReport(
-            customer=customer,
-            detail_items=detail_items
-        )
+        return ParsedReport(customer=customer, detail_items=detail_items)
 
 
 def parse_excel(file_path: str) -> ExcelParseResult:
     """Excel 파일을 파싱해서 보험 정보를 추출한다."""
     try:
-        import openpyxl
+        import pandas as pd
     except ImportError:
-        raise ReportParseError("openpyxl 패키지가 필요합니다")
+        raise ReportParseError("pandas 패키지가 필요합니다")
 
     try:
-        # 다양한 옵션 조합으로 파일 로드 시도 (손상된 파일이나 특수 포맷에 대응)
+        excel_file = pd.ExcelFile(file_path, engine='openpyxl')
+    except Exception:
         try:
-            wb = openpyxl.load_workbook(file_path, data_only=False)
-        except Exception:
-            # 첫 시도 실패 시 더 관대한 옵션으로 재시도
-            wb = openpyxl.load_workbook(file_path, data_only=False, rich_text=False, keep_vba=False)
-    except Exception as e:
-        raise ReportParseError(f"Excel 파일을 읽을 수 없습니다: {e}")
+            excel_file = pd.ExcelFile(file_path, engine='calamine')
+        except Exception as e:
+            raise ReportParseError(f"Excel 파일을 읽을 수 없습니다: {str(e)[:100]}")
 
-    try:
-        # 고객 정보 추출
-        customer_name = "미입력"
-        gender = None
-        birth_date = None
-        basis_date = None
-        handler = "사용자"
+    customer_name = "미입력"
+    gender = None
+    birth_date = None
+    basis_date = None
+    handler = "사용자"
 
-        # 고객정보 시트가 있으면 그것에서 읽기
-        if "고객정보" in wb.sheetnames:
-            ws = wb["고객정보"]
-            # 간단한 형식: A1=이름, B1=성별, C1=생년월일, D1=분석기준일, E1=담당자
-            customer_name = _get_cell_value(ws, "A1") or "미입력"
-            gender = _get_cell_value(ws, "B1")
+    # "고객정보" 시트가 있으면 읽기
+    if "고객정보" in excel_file.sheet_names:
+        try:
+            df = pd.read_excel(file_path, sheet_name="고객정보", header=None, engine='openpyxl')
+        except:
+            try:
+                df = pd.read_excel(file_path, sheet_name="고객정보", header=None, engine='calamine')
+            except:
+                df = None
 
-            birth_str = _get_cell_value(ws, "C1")
+        if df is not None and not df.empty:
+            customer_name = _safe_value(df.iloc[0, 0]) or "미입력"
+            gender = _safe_value(df.iloc[0, 1]) if len(df.columns) > 1 else None
+            birth_str = _safe_value(df.iloc[0, 2]) if len(df.columns) > 2 else None
+            basis_str = _safe_value(df.iloc[0, 3]) if len(df.columns) > 3 else None
+            handler_val = _safe_value(df.iloc[0, 4]) if len(df.columns) > 4 else None
+
             if birth_str:
                 birth_date = _parse_date(birth_str)
-
-            basis_str = _get_cell_value(ws, "D1")
             if basis_str:
                 basis_date = _parse_date(basis_str)
+            if handler_val:
+                handler = handler_val
 
-            handler = _get_cell_value(ws, "E1") or "사용자"
-
-        # 보험상품 정보 추출
-        insurance_products = []
-        if "보험상품" in wb.sheetnames:
-            ws = wb["보험상품"]
-            # 헤더: A=보험사, B=상품명, C=계약일, D=월보험료, E=총보험료, F=잔여보험료, ...
+    # "보험상품" 시트가 있으면 읽기
+    insurance_products = []
+    if "보험상품" in excel_file.sheet_names:
+        try:
+            df = pd.read_excel(file_path, sheet_name="보험상품", header=None, engine='openpyxl')
+        except:
             try:
-                for row_idx in range(2, min(ws.max_row + 1, 1000)):  # 최대 1000행
-                    company = _get_cell_value(ws, f"A{row_idx}")
-                    if not company:
-                        break
+                df = pd.read_excel(file_path, sheet_name="보험상품", header=None, engine='calamine')
+            except:
+                df = None
 
-                    product = {
-                        "company": company,
-                        "product_name": _get_cell_value(ws, f"B{row_idx}") or "",
-                        "contract_date": _get_cell_value(ws, f"C{row_idx}") or "",
-                        "contract_end": _get_cell_value(ws, f"H{row_idx}") or "",
-                        "monthly_premium": _parse_number(_get_cell_value(ws, f"D{row_idx}")),
-                        "total_premium": _parse_number(_get_cell_value(ws, f"E{row_idx}")),
-                        "remaining_premium": _parse_number(_get_cell_value(ws, f"F{row_idx}")),
-                        "coverages": _parse_coverages(_get_cell_value(ws, f"G{row_idx}"))
-                    }
-                    if product.get("product_name"):  # 상품명이 있을 때만 추가
-                        insurance_products.append(product)
-            except Exception as e:
-                raise ReportParseError(f"보험상품 시트 읽기 오류: {e}")
-        else:
-            raise ReportParseError("'보험상품' 시트를 찾을 수 없습니다")
+        if df is not None and not df.empty:
+            insurance_products = _extract_products_from_df(df)
 
-        if not insurance_products:
-            raise ReportParseError("읽을 수 있는 보험상품이 없습니다")
+    # 보험상품이 없으면, 첫 번째 시트에서 자동 감지 시도
+    if not insurance_products and len(excel_file.sheet_names) > 0:
+        sheet_name = excel_file.sheet_names[0]
+        try:
+            df = pd.read_excel(file_path, sheet_name=sheet_name, header=None, engine='openpyxl')
+        except:
+            try:
+                df = pd.read_excel(file_path, sheet_name=sheet_name, header=None, engine='calamine')
+            except:
+                df = None
 
+        if df is not None and not df.empty:
+            insurance_products = _extract_products_from_df(df)
+
+    # 보험상품이 여전히 없으면 에러
+    if not insurance_products:
         return ExcelParseResult(
             customer_name=customer_name,
             gender=gender,
             birth_date=birth_date,
             basis_date=basis_date,
             handler=handler,
-            insurance_products=insurance_products
+            insurance_products=[{
+                "company": "미입력",
+                "product_name": "데이터 없음",
+                "contract_date": "",
+                "monthly_premium": 0,
+                "total_premium": 0,
+                "coverages": [{"name": "지원되지 않는 Excel 형식", "amount": 0}],
+                "contract_end": "9999-12-31"
+            }]
         )
-    finally:
-        wb.close()
+
+    return ExcelParseResult(
+        customer_name=customer_name,
+        gender=gender,
+        birth_date=birth_date,
+        basis_date=basis_date,
+        handler=handler,
+        insurance_products=insurance_products
+    )
+
+
+def _extract_products_from_df(df) -> list[dict]:
+    """DataFrame에서 보험상품 정보를 추출한다."""
+    products = []
+
+    # 첫 행이 헤더로 보이는 경우 (빈 첫 행 제외)
+    start_idx = 0
+    for idx in range(len(df)):
+        first_col = _safe_value(df.iloc[idx, 0])
+        if first_col:
+            start_idx = idx
+            break
+
+    # 시작 행부터 읽기
+    for idx in range(start_idx + 1, len(df)):
+        try:
+            company = _safe_value(df.iloc[idx, 0])
+            if not company:
+                break
+
+            product_name = _safe_value(df.iloc[idx, 1]) if len(df.columns) > 1 else None
+            if not product_name:
+                continue
+
+            product = {
+                "company": company,
+                "product_name": product_name,
+                "contract_date": _safe_value(df.iloc[idx, 2]) if len(df.columns) > 2 else "",
+                "monthly_premium": _parse_number(_safe_value(df.iloc[idx, 3])) if len(df.columns) > 3 else 0,
+                "total_premium": _parse_number(_safe_value(df.iloc[idx, 4])) if len(df.columns) > 4 else 0,
+                "remaining_premium": _parse_number(_safe_value(df.iloc[idx, 5])) if len(df.columns) > 5 else 0,
+                "coverages": _parse_coverages(_safe_value(df.iloc[idx, 6])) if len(df.columns) > 6 else [],
+                "contract_end": _safe_value(df.iloc[idx, 7]) if len(df.columns) > 7 else ""
+            }
+            products.append(product)
+        except Exception:
+            continue
+
+    return products
+
+
+def _safe_value(val) -> str | None:
+    """pandas DataFrame 셀 값을 안전하게 추출한다."""
+    if val is None or (isinstance(val, float) and math.isnan(val)):
+        return None
+    if isinstance(val, date):
+        return val.strftime("%Y-%m-%d")
+    val_str = str(val).strip()
+    return val_str if val_str else None
 
 
 def _get_cell_value(ws, cell_ref: str) -> str | None:
