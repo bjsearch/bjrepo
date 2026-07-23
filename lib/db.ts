@@ -3,7 +3,7 @@ import { DiaryEntry } from './types'
 import { hashPassword, hashPasswordLegacy, verifyPassword, generateSalt } from './auth'
 import { GeoInfo } from './geo'
 
-export const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'psyche8310'
+export const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'psyche8310@gmail.com'
 
 async function ensureTable() {
   await sql`
