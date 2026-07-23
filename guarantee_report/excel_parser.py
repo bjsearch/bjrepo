@@ -99,25 +99,11 @@ class ExcelParseResult:
 
 def parse_excel(file_path: str) -> ExcelParseResult:
     """Excel 파일을 파싱해서 보험 정보를 추출한다."""
+    # 모든 Excel 파일을 ZIP 기반 파싱으로 처리 (색상 오류 완전 우회)
     try:
-        import pandas as pd
-    except ImportError:
-        raise ReportParseError("pandas 패키지가 필요합니다")
-
-    try:
-        # data_only=True로 값만 읽음 (포맷/스타일 무시)
-        excel_file = pd.ExcelFile(file_path, engine='openpyxl')
+        return _parse_excel_manual(file_path, None)
     except Exception as e:
-        # 스타일 파싱 오류 무시하고 재시도
-        try:
-            import openpyxl
-            wb = openpyxl.load_workbook(file_path, data_only=True)
-            sheet_names = wb.sheetnames
-            wb.close()
-            # pandas가 실패했으면 수동 파싱으로 진행
-            return _parse_excel_manual(file_path, sheet_names)
-        except:
-            raise ReportParseError(f"Excel 파일을 읽을 수 없습니다: {str(e)[:100]}")
+        raise ReportParseError(f"Excel 파일을 읽을 수 없습니다: {str(e)[:100]}")
 
     customer_name = "미입력"
     gender = None
@@ -247,192 +233,125 @@ def _safe_value(val) -> str | None:
     return val_str if val_str else None
 
 
-def _parse_excel_manual(file_path: str, sheet_names: list) -> ExcelParseResult:
-    """ZIP 기반 Excel 파싱 (스타일 무시)"""
+def _parse_excel_manual(file_path: str, sheet_names: list = None) -> ExcelParseResult:
+    """ZIP 기반 Excel 파싱 (스타일 무시, 모든 색상 오류 우회)"""
     import zipfile
     import xml.etree.ElementTree as ET
-    from io import BytesIO
 
-    try:
-        # Excel을 ZIP으로 열기 (xlsx는 ZIP 형식)
-        with zipfile.ZipFile(file_path, 'r') as zf:
-            # 워크북 정보 읽기
+    # Excel을 ZIP으로 열기 (xlsx는 ZIP 형식)
+    with zipfile.ZipFile(file_path, 'r') as zf:
+        # 워크북 정보 읽기
+        try:
             workbook_xml = zf.read('xl/workbook.xml')
-            root = ET.fromstring(workbook_xml)
+        except KeyError:
+            raise ReportParseError("유효한 Excel 파일이 아닙니다")
 
-            # 네임스페이스
-            ns = {'': 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
+        root = ET.fromstring(workbook_xml)
 
-            # 시트 목록
-            sheets = {}
-            for sheet_elem in root.findall('.//sheet', ns):
+        # 시트 목록 추출
+        sheets = {}
+        for sheet_elem in root.iter():
+            if sheet_elem.tag.endswith('sheet'):
                 name = sheet_elem.get('name', '')
+                # r:id 속성에서 관계 ID 추출
                 rid = sheet_elem.get('{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id', '')
-                sheets[name] = rid
+                if name and rid:
+                    sheets[name] = rid
 
-            # 관계 정보 (rel ID -> 파일명 매핑)
-            rels_xml = zf.read('xl/_rels/workbook.xml.rels')
-            rels_root = ET.fromstring(rels_xml)
-            sheet_files = {}
-            for rel in rels_root.findall('.//{http://schemas.openxmlformats.org/package/2006/relationships}Relationship'):
+        # 관계 정보 (rel ID -> 파일명 매핑)
+        rels_xml = zf.read('xl/_rels/workbook.xml.rels')
+        rels_root = ET.fromstring(rels_xml)
+        sheet_files = {}
+        for rel in rels_root.iter():
+            if rel.tag.endswith('Relationship'):
                 rel_id = rel.get('Id', '')
                 target = rel.get('Target', '')
-                if target.endswith('.xml'):
+                if rel_id and target.endswith('.xml'):
                     sheet_files[rel_id] = target
 
-            # 고객 정보와 보험상품 추출
-            customer_name = "미입력"
-            gender = None
-            birth_date = None
-            basis_date = None
-            handler = "사용자"
-            insurance_products = []
+        # 고객 정보와 보험상품 추출
+        customer_name = "미입력"
+        gender = None
+        birth_date = None
+        basis_date = None
+        handler = "사용자"
+        insurance_products = []
 
-            # 각 시트 읽기
-            for sheet_name in sheets:
-                rid = sheets[sheet_name]
-                if rid in sheet_files:
-                    sheet_path = 'xl/' + sheet_files[rid]
-                    try:
-                        sheet_xml = zf.read(sheet_path)
-                        sheet_root = ET.fromstring(sheet_xml)
-
-                        # 셀 데이터 추출
-                        cells = {}
-                        for c in sheet_root.findall('.//{http://schemas.openxmlformats.org/spreadsheetml/2006/main}c'):
-                            r = c.get('r', '')  # 셀 참조 (A1, B2 등)
-                            v_elem = c.find('{http://schemas.openxmlformats.org/spreadsheetml/2006/main}v')
-                            value = v_elem.text if v_elem is not None else None
-                            if value:
-                                cells[r] = value
-
-                        # 고객정보 시트인 경우
-                        if sheet_name == "고객정보" or sheet_name == "고객 정보":
-                            customer_name = cells.get('A1', "미입력")
-                            gender = cells.get('B1')
-                            birth_str = cells.get('C1')
-                            basis_str = cells.get('D1')
-                            handler_val = cells.get('E1')
-
-                            if birth_str:
-                                birth_date = _parse_date(birth_str)
-                            if basis_str:
-                                basis_date = _parse_date(basis_str)
-                            if handler_val:
-                                handler = handler_val
-
-                        # 보험상품 시트인 경우
-                        elif sheet_name == "보험상품":
-                            row = 2
-                            while True:
-                                company = cells.get(f'A{row}')
-                                if not company:
-                                    break
-
-                                product_name = cells.get(f'B{row}')
-                                if not product_name:
-                                    row += 1
-                                    continue
-
-                                product = {
-                                    "company": company,
-                                    "product_name": product_name,
-                                    "contract_date": cells.get(f'C{row}', ''),
-                                    "monthly_premium": _parse_number(cells.get(f'D{row}')),
-                                    "total_premium": _parse_number(cells.get(f'E{row}')),
-                                    "remaining_premium": _parse_number(cells.get(f'F{row}')),
-                                    "coverages": _parse_coverages(cells.get(f'G{row}')),
-                                    "contract_end": cells.get(f'H{row}', '')
-                                }
-                                insurance_products.append(product)
-                                row += 1
-                    except:
-                        continue
-
-        return ExcelParseResult(
-            customer_name=customer_name,
-            gender=gender,
-            birth_date=birth_date,
-            basis_date=basis_date,
-            handler=handler,
-            insurance_products=insurance_products
-        )
-
-    except Exception as e:
-        raise ReportParseError(f"Excel 파일을 읽을 수 없습니다: {str(e)[:100]}")
-
-    customer_name = "미입력"
-    gender = None
-    birth_date = None
-    basis_date = None
-    handler = "사용자"
-
-    # 고객정보 시트 읽기
-    if "고객정보" in wb.sheetnames:
-        ws = wb["고객정보"]
-        customer_name = _get_cell_value_openpyxl(ws, "A1") or "미입력"
-        gender = _get_cell_value_openpyxl(ws, "B1")
-        birth_str = _get_cell_value_openpyxl(ws, "C1")
-        basis_str = _get_cell_value_openpyxl(ws, "D1")
-        handler_val = _get_cell_value_openpyxl(ws, "E1")
-
-        if birth_str:
-            birth_date = _parse_date(birth_str)
-        if basis_str:
-            basis_date = _parse_date(basis_str)
-        if handler_val:
-            handler = handler_val
-
-    # 보험상품 시트 읽기
-    insurance_products = []
-    if "보험상품" in wb.sheetnames:
-        ws = wb["보험상품"]
-        for row_idx in range(2, min(ws.max_row + 1, 1000)):
-            company = _get_cell_value_openpyxl(ws, f"A{row_idx}")
-            if not company:
-                break
-
-            product_name = _get_cell_value_openpyxl(ws, f"B{row_idx}") or ""
-            if not product_name:
+        # 각 시트 읽기
+        for sheet_name in sheets:
+            rid = sheets[sheet_name]
+            if rid not in sheet_files:
                 continue
 
-            product = {
-                "company": company,
-                "product_name": product_name,
-                "contract_date": _get_cell_value_openpyxl(ws, f"C{row_idx}") or "",
-                "monthly_premium": _parse_number(_get_cell_value_openpyxl(ws, f"D{row_idx}")),
-                "total_premium": _parse_number(_get_cell_value_openpyxl(ws, f"E{row_idx}")),
-                "remaining_premium": _parse_number(_get_cell_value_openpyxl(ws, f"F{row_idx}")) if ws.max_column >= 6 else 0,
-                "coverages": _parse_coverages(_get_cell_value_openpyxl(ws, f"G{row_idx}")) if ws.max_column >= 7 else [],
-                "contract_end": _get_cell_value_openpyxl(ws, f"H{row_idx}") if ws.max_column >= 8 else ""
-            }
-            insurance_products.append(product)
+            target = sheet_files[rid]
+            # 경로가 '/'로 시작하면 그대로, 아니면 'xl/' 앞에 붙이기
+            sheet_path = target if target.startswith('/') else 'xl/' + target
+            # '/'로 시작하는 경우 제거
+            sheet_path = sheet_path.lstrip('/')
+            try:
+                sheet_xml = zf.read(sheet_path)
+                sheet_root = ET.fromstring(sheet_xml)
 
-    wb.close()
+                # 셀 데이터 추출
+                cells = {}
+                for c in sheet_root.iter():
+                    if c.tag.endswith('}c'):
+                        r = c.get('r', '')  # 셀 참조 (A1, B2 등)
+                        value = None
+                        for child in c:
+                            if child.tag.endswith('}v'):
+                                value = child.text
+                                break
+                            elif child.tag.endswith('}is'):
+                                # InlineString 타입 셀
+                                for sub in child:
+                                    if sub.tag.endswith('}t'):
+                                        value = sub.text
+                                        break
+                                if value:
+                                    break
+                        if r and value:
+                            cells[r] = value
 
-    if not insurance_products:
-        # 첫 시트에서 자동 감지 시도
-        if len(wb.sheetnames) > 0:
-            sheet_name = wb.sheetnames[0]
-            ws = wb[sheet_name]
-            for row_idx in range(2, min(ws.max_row + 1, 1000)):
-                company = _get_cell_value_openpyxl(ws, f"A{row_idx}")
-                if not company:
-                    break
-                product_name = _get_cell_value_openpyxl(ws, f"B{row_idx}") or ""
-                if not product_name:
-                    continue
-                product = {
-                    "company": company,
-                    "product_name": product_name,
-                    "contract_date": _get_cell_value_openpyxl(ws, f"C{row_idx}") or "",
-                    "monthly_premium": _parse_number(_get_cell_value_openpyxl(ws, f"D{row_idx}")),
-                    "total_premium": _parse_number(_get_cell_value_openpyxl(ws, f"E{row_idx}")),
-                    "remaining_premium": _parse_number(_get_cell_value_openpyxl(ws, f"F{row_idx}")) if ws.max_column >= 6 else 0,
-                    "coverages": _parse_coverages(_get_cell_value_openpyxl(ws, f"G{row_idx}")) if ws.max_column >= 7 else [],
-                    "contract_end": _get_cell_value_openpyxl(ws, f"H{row_idx}") if ws.max_column >= 8 else ""
-                }
-                insurance_products.append(product)
+                # 고객정보 시트인 경우
+                if sheet_name == "고객정보":
+                    customer_name = cells.get('A1', "미입력")
+                    gender = cells.get('B1')
+                    birth_str = cells.get('C1')
+                    basis_str = cells.get('D1')
+                    handler_val = cells.get('E1')
+
+                    if birth_str:
+                        birth_date = _parse_date(birth_str)
+                    if basis_str:
+                        basis_date = _parse_date(basis_str)
+                    if handler_val:
+                        handler = handler_val
+
+                # 보험상품 시트인 경우
+                elif sheet_name == "보험상품":
+                    row = 2
+                    while row <= 1000:  # 최대 1000행
+                        company = cells.get(f'A{row}')
+                        if not company:
+                            break
+
+                        product_name = cells.get(f'B{row}')
+                        if product_name:
+                            product = {
+                                "company": company,
+                                "product_name": product_name,
+                                "contract_date": cells.get(f'C{row}', ''),
+                                "monthly_premium": _parse_number(cells.get(f'D{row}')),
+                                "total_premium": _parse_number(cells.get(f'E{row}')),
+                                "remaining_premium": _parse_number(cells.get(f'F{row}')),
+                                "coverages": _parse_coverages(cells.get(f'G{row}')),
+                                "contract_end": cells.get(f'H{row}', '')
+                            }
+                            insurance_products.append(product)
+                        row += 1
+            except Exception as e:
+                continue
 
     return ExcelParseResult(
         customer_name=customer_name,
@@ -442,34 +361,6 @@ def _parse_excel_manual(file_path: str, sheet_names: list) -> ExcelParseResult:
         handler=handler,
         insurance_products=insurance_products
     )
-
-
-def _get_cell_value_openpyxl(ws, cell_ref: str) -> str | None:
-    """openpyxl 셀 값을 안전하게 추출한다."""
-    try:
-        cell = ws[cell_ref]
-        value = cell.value
-        if value is None:
-            return None
-        if isinstance(value, date):
-            return value.strftime("%Y-%m-%d")
-        return str(value).strip() if str(value).strip() else None
-    except:
-        return None
-
-
-def _get_cell_value(ws, cell_ref: str) -> str | None:
-    """셀 값을 안전하게 가져온다."""
-    try:
-        cell = ws[cell_ref]
-        value = cell.value
-        if value is None:
-            return None
-        if isinstance(value, date):
-            return value.strftime("%Y-%m-%d")
-        return str(value).strip()
-    except:
-        return None
 
 
 def _parse_date(date_str: str | None) -> date | None:
