@@ -105,11 +105,18 @@ def parse_excel(file_path: str) -> ExcelParseResult:
         raise ReportParseError("pandas 패키지가 필요합니다")
 
     try:
+        # data_only=True로 값만 읽음 (포맷/스타일 무시)
         excel_file = pd.ExcelFile(file_path, engine='openpyxl')
-    except Exception:
+    except Exception as e:
+        # 스타일 파싱 오류 무시하고 재시도
         try:
-            excel_file = pd.ExcelFile(file_path, engine='calamine')
-        except Exception as e:
+            import openpyxl
+            wb = openpyxl.load_workbook(file_path, data_only=True)
+            sheet_names = wb.sheetnames
+            wb.close()
+            # pandas가 실패했으면 수동 파싱으로 진행
+            return _parse_excel_manual(file_path, sheet_names)
+        except:
             raise ReportParseError(f"Excel 파일을 읽을 수 없습니다: {str(e)[:100]}")
 
     customer_name = "미입력"
@@ -123,10 +130,7 @@ def parse_excel(file_path: str) -> ExcelParseResult:
         try:
             df = pd.read_excel(file_path, sheet_name="고객정보", header=None, engine='openpyxl')
         except:
-            try:
-                df = pd.read_excel(file_path, sheet_name="고객정보", header=None, engine='calamine')
-            except:
-                df = None
+            df = None
 
         if df is not None and not df.empty:
             customer_name = _safe_value(df.iloc[0, 0]) or "미입력"
@@ -148,10 +152,7 @@ def parse_excel(file_path: str) -> ExcelParseResult:
         try:
             df = pd.read_excel(file_path, sheet_name="보험상품", header=None, engine='openpyxl')
         except:
-            try:
-                df = pd.read_excel(file_path, sheet_name="보험상품", header=None, engine='calamine')
-            except:
-                df = None
+            df = None
 
         if df is not None and not df.empty:
             insurance_products = _extract_products_from_df(df)
@@ -162,10 +163,7 @@ def parse_excel(file_path: str) -> ExcelParseResult:
         try:
             df = pd.read_excel(file_path, sheet_name=sheet_name, header=None, engine='openpyxl')
         except:
-            try:
-                df = pd.read_excel(file_path, sheet_name=sheet_name, header=None, engine='calamine')
-            except:
-                df = None
+            df = None
 
         if df is not None and not df.empty:
             insurance_products = _extract_products_from_df(df)
@@ -247,6 +245,112 @@ def _safe_value(val) -> str | None:
         return val.strftime("%Y-%m-%d")
     val_str = str(val).strip()
     return val_str if val_str else None
+
+
+def _parse_excel_manual(file_path: str, sheet_names: list) -> ExcelParseResult:
+    """openpyxl을 사용한 수동 파싱 (스타일 오류 무시)"""
+    import openpyxl
+
+    try:
+        wb = openpyxl.load_workbook(file_path, data_only=True, keep_vba=False)
+    except:
+        wb = openpyxl.load_workbook(file_path, read_only=True, data_only=True)
+
+    customer_name = "미입력"
+    gender = None
+    birth_date = None
+    basis_date = None
+    handler = "사용자"
+
+    # 고객정보 시트 읽기
+    if "고객정보" in wb.sheetnames:
+        ws = wb["고객정보"]
+        customer_name = _get_cell_value_openpyxl(ws, "A1") or "미입력"
+        gender = _get_cell_value_openpyxl(ws, "B1")
+        birth_str = _get_cell_value_openpyxl(ws, "C1")
+        basis_str = _get_cell_value_openpyxl(ws, "D1")
+        handler_val = _get_cell_value_openpyxl(ws, "E1")
+
+        if birth_str:
+            birth_date = _parse_date(birth_str)
+        if basis_str:
+            basis_date = _parse_date(basis_str)
+        if handler_val:
+            handler = handler_val
+
+    # 보험상품 시트 읽기
+    insurance_products = []
+    if "보험상품" in wb.sheetnames:
+        ws = wb["보험상품"]
+        for row_idx in range(2, min(ws.max_row + 1, 1000)):
+            company = _get_cell_value_openpyxl(ws, f"A{row_idx}")
+            if not company:
+                break
+
+            product_name = _get_cell_value_openpyxl(ws, f"B{row_idx}") or ""
+            if not product_name:
+                continue
+
+            product = {
+                "company": company,
+                "product_name": product_name,
+                "contract_date": _get_cell_value_openpyxl(ws, f"C{row_idx}") or "",
+                "monthly_premium": _parse_number(_get_cell_value_openpyxl(ws, f"D{row_idx}")),
+                "total_premium": _parse_number(_get_cell_value_openpyxl(ws, f"E{row_idx}")),
+                "remaining_premium": _parse_number(_get_cell_value_openpyxl(ws, f"F{row_idx}")) if ws.max_column >= 6 else 0,
+                "coverages": _parse_coverages(_get_cell_value_openpyxl(ws, f"G{row_idx}")) if ws.max_column >= 7 else [],
+                "contract_end": _get_cell_value_openpyxl(ws, f"H{row_idx}") if ws.max_column >= 8 else ""
+            }
+            insurance_products.append(product)
+
+    wb.close()
+
+    if not insurance_products:
+        # 첫 시트에서 자동 감지 시도
+        if len(wb.sheetnames) > 0:
+            sheet_name = wb.sheetnames[0]
+            ws = wb[sheet_name]
+            for row_idx in range(2, min(ws.max_row + 1, 1000)):
+                company = _get_cell_value_openpyxl(ws, f"A{row_idx}")
+                if not company:
+                    break
+                product_name = _get_cell_value_openpyxl(ws, f"B{row_idx}") or ""
+                if not product_name:
+                    continue
+                product = {
+                    "company": company,
+                    "product_name": product_name,
+                    "contract_date": _get_cell_value_openpyxl(ws, f"C{row_idx}") or "",
+                    "monthly_premium": _parse_number(_get_cell_value_openpyxl(ws, f"D{row_idx}")),
+                    "total_premium": _parse_number(_get_cell_value_openpyxl(ws, f"E{row_idx}")),
+                    "remaining_premium": _parse_number(_get_cell_value_openpyxl(ws, f"F{row_idx}")) if ws.max_column >= 6 else 0,
+                    "coverages": _parse_coverages(_get_cell_value_openpyxl(ws, f"G{row_idx}")) if ws.max_column >= 7 else [],
+                    "contract_end": _get_cell_value_openpyxl(ws, f"H{row_idx}") if ws.max_column >= 8 else ""
+                }
+                insurance_products.append(product)
+
+    return ExcelParseResult(
+        customer_name=customer_name,
+        gender=gender,
+        birth_date=birth_date,
+        basis_date=basis_date,
+        handler=handler,
+        insurance_products=insurance_products
+    )
+
+
+def _get_cell_value_openpyxl(ws, cell_ref: str) -> str | None:
+    """openpyxl 셀 값을 안전하게 추출한다."""
+    try:
+        cell = ws[cell_ref]
+        value = cell.value
+        if value is None:
+            return None
+        if isinstance(value, date):
+            return value.strftime("%Y-%m-%d")
+        return str(value).strip() if str(value).strip() else None
+    except:
+        return None
 
 
 def _get_cell_value(ws, cell_ref: str) -> str | None:
