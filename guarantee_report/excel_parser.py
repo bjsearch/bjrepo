@@ -9,7 +9,43 @@ from __future__ import annotations
 
 import re
 from datetime import date, datetime
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+
+@dataclass
+class Customer:
+    """고객 정보 (PDF 파서와 호환)."""
+    name: str
+    rrn_masked: str = "***-****-**"
+    birth_date: date | None = None
+    gender: str | None = None
+    age_insurance: int | None = None
+    handler: str = "사용자"
+    basis_date: date | None = None
+
+
+@dataclass
+class DetailItem:
+    """정액담보 상세내역 (PDF 파서와 호환)."""
+    seq: int
+    company: str
+    product_name: str
+    contract_from: str
+    contract_to: str
+    monthly_premium: int
+    total_premium: int
+    remaining_premium: int
+    top_coverages: str
+    more: str = ""
+
+
+@dataclass
+class ParsedReport:
+    """파싱된 리포트 (PDF 파서와 호환)."""
+    customer: Customer
+    indemnity_items: list = field(default_factory=list)
+    category_totals: list = field(default_factory=list)
+    detail_items: list[DetailItem] = field(default_factory=list)
 
 
 @dataclass
@@ -22,14 +58,8 @@ class ExcelParseResult:
     handler: str
     insurance_products: list[dict]  # 보험상품 정보
 
-    def to_pdf_data(self) -> dict:
-        """PDF 파서와 호환되는 데이터 형식으로 변환."""
-        import json
-        from datetime import datetime as dt
-
-        birth_display = self.birth_date.strftime("%Y년 %m월 %d일") if self.birth_date else "미입력"
-        basis_display = self.basis_date.strftime("%Y년 %m월 %d일") if self.basis_date else datetime.now().strftime("%Y년 %m월 %d일")
-
+    def to_parsed_report(self) -> ParsedReport:
+        """PDF 파서와 호환되는 ParsedReport 형식으로 변환."""
         # 보험나이 계산
         age = None
         if self.birth_date:
@@ -38,15 +68,41 @@ class ExcelParseResult:
             if (today.month, today.day) < (self.birth_date.month, self.birth_date.day):
                 age -= 1
 
-        return {
-            "customer_name": self.customer_name,
-            "gender": self.gender or "미입력",
-            "birth_date": birth_display,
-            "basis_date": basis_display,
-            "age": age,
-            "handler": self.handler,
-            "insurance_products": self.insurance_products
-        }
+        # Customer 정보 생성
+        customer = Customer(
+            name=self.customer_name,
+            birth_date=self.birth_date,
+            gender=self.gender,
+            age_insurance=age,
+            handler=self.handler,
+            basis_date=self.basis_date or datetime.now().date()
+        )
+
+        # DetailItem 목록 생성
+        detail_items = []
+        for idx, product in enumerate(self.insurance_products, 1):
+            coverages = product.get("coverages", [])
+            top_coverages = "·  " + "\n·  ".join(
+                f"{c['name']} {c['amount']:,d}만원" for c in coverages[:5]
+            ) if coverages else ""
+
+            detail_item = DetailItem(
+                seq=idx,
+                company=product.get("company", ""),
+                product_name=product.get("product_name", ""),
+                contract_from=product.get("contract_date", ""),
+                contract_to="",  # Excel에서 제공하지 않으면 빈 문자열
+                monthly_premium=product.get("monthly_premium", 0),
+                total_premium=product.get("total_premium", 0),
+                remaining_premium=product.get("remaining_premium", 0),
+                top_coverages=top_coverages
+            )
+            detail_items.append(detail_item)
+
+        return ParsedReport(
+            customer=customer,
+            detail_items=detail_items
+        )
 
 
 def parse_excel(file_path: str) -> ExcelParseResult:

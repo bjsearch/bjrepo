@@ -557,7 +557,8 @@ def generate():
                 f.save(tmp)
             excel_result = parse_excel_file(tmp_path)
             # Excel 데이터를 PDF 파서와 호환되는 형식으로 변환
-            data = build_report_data(excel_result)
+            parsed_report = excel_result.to_parsed_report()
+            data = build_report_data(parsed_report)
     except ReportParseError as e:
         return render_template_string(UPLOAD_PAGE, error=str(e), user=user, csrf_token=_get_csrf_token()), 400
     except Exception as e:  # noqa: BLE001 — 사용자에게 원인 안내
