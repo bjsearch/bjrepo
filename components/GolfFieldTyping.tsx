@@ -22,6 +22,8 @@ interface GameState {
   timeLeft: number;
   isGameOver: boolean;
   hintIndex: number;
+  usedCourseIds: Set<string>;
+  playedCourses: GolfCourse[];
 }
 
 export default function GolfFieldTyping() {
@@ -32,15 +34,28 @@ export default function GolfFieldTyping() {
     streak: 0,
     totalCorrect: 0,
     totalAttempts: 0,
-    selectedRegion: "서울/경기",
+    selectedRegion: "강원",
     gameStarted: false,
     timeLeft: 60,
     isGameOver: false,
     hintIndex: 0,
+    usedCourseIds: new Set(),
+    playedCourses: [],
   });
 
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const getUnusedCourse = (region: string, usedIds: Set<string>): GolfCourse | undefined => {
+    const regionCourses = getCoursesByRegion(region);
+    const availableCourses = regionCourses.filter(c => !usedIds.has(c.id));
+
+    if (availableCourses.length === 0) {
+      return undefined;
+    }
+
+    return availableCourses[Math.floor(Math.random() * availableCourses.length)];
+  };
 
   useEffect(() => {
     if (gameState.gameStarted && !gameState.isGameOver) {
@@ -60,8 +75,10 @@ export default function GolfFieldTyping() {
   }, [gameState.gameStarted, gameState.isGameOver]);
 
   const startGame = () => {
-    const course = getRandomCourseFromRegion(gameState.selectedRegion);
+    const usedIds = new Set<string>();
+    const course = getUnusedCourse(gameState.selectedRegion, usedIds);
     if (course) {
+      usedIds.add(course.id);
       setGameState({
         ...gameState,
         currentCourse: course,
@@ -74,21 +91,31 @@ export default function GolfFieldTyping() {
         totalCorrect: 0,
         totalAttempts: 0,
         hintIndex: 0,
+        usedCourseIds: usedIds,
+        playedCourses: [course],
       });
       setTimeout(() => inputRef.current?.focus(), 0);
     }
   };
 
   const nextCourse = () => {
-    const course = getRandomCourseFromRegion(gameState.selectedRegion);
+    const course = getUnusedCourse(gameState.selectedRegion, gameState.usedCourseIds);
     if (course) {
-      setGameState((prev) => ({
-        ...prev,
-        currentCourse: course,
-        userInput: "",
-        hintIndex: 0,
-      }));
+      setGameState((prev) => {
+        const newUsedIds = new Set(prev.usedCourseIds);
+        newUsedIds.add(course.id);
+        return {
+          ...prev,
+          currentCourse: course,
+          userInput: "",
+          hintIndex: 0,
+          usedCourseIds: newUsedIds,
+          playedCourses: [...prev.playedCourses, course],
+        };
+      });
       setTimeout(() => inputRef.current?.focus(), 0);
+    } else {
+      endGame();
     }
   };
 
@@ -242,52 +269,62 @@ export default function GolfFieldTyping() {
   if (gameState.isGameOver) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-4">
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold text-green-900 mb-2">
               게임 끝! 🏌️
             </h1>
           </div>
 
-          <div className="bg-white rounded-lg shadow-lg p-8">
-            <div className="grid grid-cols-2 gap-4 mb-8">
-              <div className="bg-yellow-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-600">최종 점수</p>
-                <p className="text-3xl font-bold text-yellow-600">
-                  {gameState.score}
-                </p>
-              </div>
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-600">정답</p>
-                <p className="text-3xl font-bold text-blue-600">
-                  {gameState.totalCorrect}/{gameState.totalAttempts}
-                </p>
-              </div>
-              <div className="bg-purple-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-600">정확도</p>
-                <p className="text-3xl font-bold text-purple-600">
-                  {accuracy}%
-                </p>
-              </div>
-              <div className="bg-green-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-600">최대 연속</p>
-                <p className="text-3xl font-bold text-green-600">
-                  {gameState.streak}
-                </p>
-              </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* 지도 */}
+            <div className="lg:col-span-2 bg-white rounded-lg shadow-lg overflow-hidden">
+              <MapComponent
+                courses={golfCourses}
+                playedCourses={gameState.playedCourses}
+              />
             </div>
 
-            <button
-              onClick={() =>
-                setGameState((prev) => ({
-                  ...prev,
-                  isGameOver: false,
-                }))
-              }
-              className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg transition-all text-lg"
-            >
-              다시 플레이 🔄
-            </button>
+            {/* 통계 */}
+            <div className="space-y-4">
+              <div className="bg-white rounded-lg shadow-lg p-6 space-y-4">
+                <div className="bg-yellow-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600">최종 점수</p>
+                  <p className="text-3xl font-bold text-yellow-600">
+                    {gameState.score}
+                  </p>
+                </div>
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600">정답</p>
+                  <p className="text-3xl font-bold text-blue-600">
+                    {gameState.totalCorrect}/{gameState.totalAttempts}
+                  </p>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600">정확도</p>
+                  <p className="text-3xl font-bold text-purple-600">
+                    {accuracy}%
+                  </p>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600">최대 연속</p>
+                  <p className="text-3xl font-bold text-green-600">
+                    {gameState.streak}
+                  </p>
+                </div>
+                <button
+                  onClick={() =>
+                    setGameState((prev) => ({
+                      ...prev,
+                      isGameOver: false,
+                    }))
+                  }
+                  className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg transition-all text-lg"
+                >
+                  다시 플레이 🔄
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -353,7 +390,7 @@ export default function GolfFieldTyping() {
                   {gameState.currentCourse?.name}
                 </p>
                 <p className="text-xs text-gray-600 mt-2">
-                  {gameState.currentCourse?.province} •{" "}
+                  {gameState.currentCourse?.region} •{" "}
                   {gameState.currentCourse?.holes}홀 • {gameState.currentCourse?.established}년 개설
                 </p>
               </div>

@@ -6,11 +6,13 @@ import { GolfCourse } from "@/lib/golfCourses";
 interface GolfMapProps {
   courses: GolfCourse[];
   highlightedCourseId?: string;
+  playedCourses?: GolfCourse[];
 }
 
 export default function GolfMap({
   courses,
   highlightedCourseId,
+  playedCourses,
 }: GolfMapProps) {
   // 한반도 좌표 범위
   const minLat = 33.0;
@@ -66,11 +68,39 @@ export default function GolfMap({
           </defs>
           <rect width={width} height={height} fill="url(#grid)" />
 
+          {/* 플레이한 골프장들 연결선 */}
+          {playedCourses && playedCourses.length > 1 && (
+            <g>
+              {playedCourses.map((course, idx) => {
+                if (idx === playedCourses.length - 1) return null;
+                const x1 = lngToX(course.lng);
+                const y1 = latToY(course.lat);
+                const nextCourse = playedCourses[idx + 1];
+                const x2 = lngToX(nextCourse.lng);
+                const y2 = latToY(nextCourse.lat);
+                return (
+                  <line
+                    key={`path-${idx}`}
+                    x1={x1}
+                    y1={y1}
+                    x2={x2}
+                    y2={y2}
+                    stroke="#3b82f6"
+                    strokeWidth="2"
+                    opacity="0.6"
+                    strokeDasharray="5,5"
+                  />
+                );
+              })}
+            </g>
+          )}
+
           {/* 모든 골프장 마커 */}
           {courses.map((course) => {
             const x = lngToX(course.lng);
             const y = latToY(course.lat);
             const isHighlighted = course.id === highlightedCourseId;
+            const isPlayed = playedCourses?.some(c => c.id === course.id);
 
             return (
               <g key={course.id}>
@@ -107,6 +137,8 @@ export default function GolfMap({
                   fill={
                     isHighlighted
                       ? "#ef4444"
+                      : isPlayed
+                      ? "#3b82f6"
                       : "#10b981"
                   }
                   opacity={isHighlighted ? 1 : 0.7}
@@ -202,6 +234,18 @@ export default function GolfMap({
           <div className="w-2 h-2 rounded-full bg-green-500"></div>
           <span>다른 골프장</span>
         </div>
+        {playedCourses && playedCourses.length > 0 && (
+          <>
+            <div className="flex items-center gap-2 text-sm">
+              <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+              <span>플레이한 골프장</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <div className="w-2 h-0.5 bg-blue-500" style={{width: "15px"}}></div>
+              <span>플레이 경로</span>
+            </div>
+          </>
+        )}
       </div>
 
       {highlightedCourse && (
