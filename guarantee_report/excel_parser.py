@@ -47,18 +47,36 @@ class ExcelParseResult:
 
         # DetailItem 목록 생성 (DetailItem은 parser.py에서 import)
         detail_items = []
-        for product in self.insurance_products:
+        for idx, product in enumerate(self.insurance_products, 1):
+            # 보장내용에서 category와 amount_man 추출
+            coverages = product.get("coverages", [])
+
+            # 첫 번째 보장을 category로 사용 (없으면 상품명 사용)
+            category = ""
+            if coverages:
+                category = coverages[0].get("name", "")
+            else:
+                category = product.get("product_name", "")[:20]  # 첫 20글자
+
+            # amount_man: 총보험료를 만원 단위로 (없으면 월보험료 * 12)
+            total_premium = product.get("total_premium", 0)
+            if total_premium > 0:
+                amount_man = total_premium // 10000  # 원 → 만원
+            else:
+                monthly_premium = product.get("monthly_premium", 0)
+                amount_man = (monthly_premium * 12) // 10000  # 연간 보험료 → 만원
+
             detail_item = DetailItem(
                 company=product.get("company", ""),
                 product=product.get("product_name", ""),
                 start=product.get("contract_date", ""),
                 end="",  # Excel에서 제공하지 않으면 빈 문자열
                 pay_years=None,
-                pay_method="",
+                pay_method="월납",
                 premium_won=product.get("monthly_premium", 0),
                 rider_name="",
-                category="",
-                amount_man=product.get("total_premium", 0),
+                category=category,
+                amount_man=int(amount_man) if amount_man > 0 else 0,
                 status=""
             )
             detail_items.append(detail_item)
