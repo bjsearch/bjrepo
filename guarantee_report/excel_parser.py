@@ -66,11 +66,27 @@ class ExcelParseResult:
                 monthly_premium = product.get("monthly_premium", 0)
                 amount_man = (monthly_premium * 12) // 10000  # 연간 보험료 → 만원
 
+            # start: YYYY-MM-DD 형식으로 변환
+            contract_date_str = product.get("contract_date", "")
+            if contract_date_str:
+                # 이미 YYYY-MM-DD 형식이거나 date 객체인 경우
+                if isinstance(contract_date_str, date):
+                    start_str = contract_date_str.strftime("%Y-%m-%d")
+                else:
+                    start_str = contract_date_str
+            else:
+                start_str = ""
+
+            # end: 제공되지 않으면 종신(9999-12-31)으로 설정
+            end_str = product.get("contract_end", "") or "9999-12-31"
+            if isinstance(end_str, date):
+                end_str = end_str.strftime("%Y-%m-%d")
+
             detail_item = DetailItem(
                 company=product.get("company", ""),
                 product=product.get("product_name", ""),
-                start=product.get("contract_date", ""),
-                end="",  # Excel에서 제공하지 않으면 빈 문자열
+                start=start_str,
+                end=end_str,
                 pay_years=None,
                 pay_method="월납",
                 premium_won=product.get("monthly_premium", 0),
@@ -134,6 +150,7 @@ def parse_excel(file_path: str) -> ExcelParseResult:
                 "company": company,
                 "product_name": _get_cell_value(ws, f"B{row_idx}") or "",
                 "contract_date": _get_cell_value(ws, f"C{row_idx}") or "",
+                "contract_end": _get_cell_value(ws, f"H{row_idx}") or "",  # 선택사항: 계약종료일
                 "monthly_premium": _parse_number(_get_cell_value(ws, f"D{row_idx}")),
                 "total_premium": _parse_number(_get_cell_value(ws, f"E{row_idx}")),
                 "remaining_premium": _parse_number(_get_cell_value(ws, f"F{row_idx}")),
