@@ -111,7 +111,12 @@ def parse_excel(file_path: str) -> ExcelParseResult:
         raise ReportParseError("openpyxl 패키지가 필요합니다")
 
     try:
-        wb = openpyxl.load_workbook(file_path, data_only=False)
+        # 다양한 옵션 조합으로 파일 로드 시도 (손상된 파일이나 특수 포맷에 대응)
+        try:
+            wb = openpyxl.load_workbook(file_path, data_only=False)
+        except Exception:
+            # 첫 시도 실패 시 더 관대한 옵션으로 재시도
+            wb = openpyxl.load_workbook(file_path, data_only=False, rich_text=False, keep_vba=False)
     except Exception as e:
         raise ReportParseError(f"Excel 파일을 읽을 수 없습니다: {e}")
 
