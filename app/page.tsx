@@ -9,6 +9,10 @@ import DiaryCalendar from '@/components/DiaryCalendar'
 import Dictionary from '@/components/Dictionary'
 import LoginPage from '@/components/LoginPage'
 import AdminView from '@/components/AdminView'
+import ReminderSettings from '@/components/ReminderSettings'
+import VoiceChat from '@/components/VoiceChat'
+import ProfileQuestions from '@/components/ProfileQuestions'
+import UserProgressChart from '@/components/UserProgressChart'
 import { DiaryEntry, AnalysisResult, YouTubeVideo } from '@/lib/types'
 import { SessionUser } from '@/lib/auth'
 
@@ -55,6 +59,12 @@ export default function Home() {
   const [user, setUser] = useState<SessionUser | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
   const [showAdmin, setShowAdmin] = useState(false)
+  const [showReminder, setShowReminder] = useState(false)
+  const [showVoiceChat, setShowVoiceChat] = useState(false)
+  const [showProfileQuestions, setShowProfileQuestions] = useState(false)
+  const [reminderMessage, setReminderMessage] = useState<string | null>(null)
+  const [reminderEnabled, setReminderEnabled] = useState(false)
+  const [hasProfileAnswers, setHasProfileAnswers] = useState(false)
 
   const [entries, setEntries] = useState<DiaryEntry[]>([])
   const [currentEntry, setCurrentEntry] = useState<DiaryEntry>(createEntryForDate(new Date()))
@@ -65,6 +75,7 @@ export default function Home() {
   const [analysisError, setAnalysisError] = useState<string | null>(null)
   const [view, setView] = useState<View>('editor')
   const [isLoadingEntries, setIsLoadingEntries] = useState(false)
+  const [acceptedSuggestions, setAcceptedSuggestions] = useState<string[]>([])
   const saveDebounceRef = useRef<ReturnType<typeof setTimeout>>()
 
   // Auth check on mount
@@ -77,6 +88,38 @@ export default function Home() {
       })
       .catch(() => setAuthLoading(false))
   }, [])
+
+  // Handle Kakao OAuth redirect result
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const kakao = params.get('kakao')
+    if (!kakao) return
+    setReminderMessage(
+      kakao === 'connected'
+        ? '카카오톡 계정이 연동되었어요!'
+        : '카카오톡 연동에 실패했어요. 다시 시도해주세요.'
+    )
+    setShowReminder(true)
+    params.delete('kakao')
+    const newSearch = params.toString()
+    window.history.replaceState({}, '', window.location.pathname + (newSearch ? `?${newSearch}` : ''))
+  }, [])
+
+  // Load reminder settings and profile status when user is set
+  useEffect(() => {
+    if (!user) return
+    fetch('/api/reminder')
+      .then(r => r.ok ? r.json() : null)
+      .then(settings => setReminderEnabled(!!settings?.enabled))
+      .catch(() => {})
+    fetch('/api/profile-questions')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const answers: string[] = data?.answers || []
+        setHasProfileAnswers(answers.some(a => a?.trim()))
+      })
+      .catch(() => {})
+  }, [user])
 
   // Load entries when user is set
   useEffect(() => {
@@ -96,7 +139,7 @@ export default function Home() {
 
   const updateEntry = useCallback(
     (content: string) => {
-      const updated: DiaryEntry = { ...currentEntry, content, updatedAt: new Date().toISOString() }
+      const updated: DiaryEntry = { ...currentEntry, content, updatedAt: new Date().toISOString(), aiHelpCount: acceptedSuggestions.length }
       setCurrentEntry(updated)
       setEntries((prev) => {
         const exists = prev.find((e) => e.id === updated.id)
@@ -121,7 +164,7 @@ export default function Home() {
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: currentEntry.content }),
+        body: JSON.stringify({ content: currentEntry.content, acceptedSuggestions }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Analysis failed')
@@ -227,6 +270,8 @@ export default function Home() {
 
   const showVideos = analysis && (videos.length > 0 || isLoadingVideos)
   const streak = calcStreak(entries)
+  const writtenCount = entries.filter(e => e.content.trim()).length
+  const VOICE_CHAT_MIN_ENTRIES = 20
 
   // Auth loading
   if (authLoading) {
@@ -240,6 +285,8 @@ export default function Home() {
   // Not logged in
   if (!user) return <LoginPage onLogin={setUser} />
 
+  const voiceChatUnlocked = writtenCount >= VOICE_CHAT_MIN_ENTRIES || user.role === 'admin'
+
   // Admin view
   if (showAdmin) return <AdminView onClose={() => setShowAdmin(false)} />
 
@@ -247,18 +294,18 @@ export default function Home() {
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
-              <span className="text-white text-lg">✍️</span>
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-base sm:text-lg">✍️</span>
             </div>
-            <div>
+            <div className="hidden sm:block">
               <h1 className="text-lg font-bold text-slate-800">English Writing App</h1>
               <p className="text-xs text-slate-400">AI-powered diary & writing coach</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             {streak > 0 && (
               <div className="hidden sm:flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-xl px-3 py-1.5">
                 <span className="text-sm">🔥</span>
@@ -266,28 +313,28 @@ export default function Home() {
               </div>
             )}
 
-            <div className="flex bg-slate-100 rounded-xl p-1">
+            <div className="flex bg-slate-100 rounded-xl p-0.5 sm:p-1">
               <button
                 onClick={() => setView('editor')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                   view === 'editor' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
-                Write
+                <span className="hidden sm:inline">Write</span>
               </button>
               <button
                 onClick={() => setView('calendar')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                   view === 'calendar' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                Calendar
+                <span className="hidden sm:inline">Calendar</span>
                 {entries.length > 0 && (
                   <span className="bg-indigo-100 text-indigo-600 rounded-full px-1.5 py-0.5 text-xs leading-none">
                     {entries.filter(e => e.content.trim()).length}
@@ -297,20 +344,69 @@ export default function Home() {
             </div>
 
             {/* User info + logout */}
-            <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200">
+            <div className="flex items-center gap-1 sm:gap-1.5 pl-1.5 sm:pl-2 border-l border-slate-200">
+              {voiceChatUnlocked ? (
+                <>
+                  <button
+                    onClick={() => setShowVoiceChat(true)}
+                    className="p-1.5 rounded-lg text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                    title="AI와 대화하기"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-14 0m7 7v3m-4 0h8M12 1a3 3 0 00-3 3v6a3 3 0 006 0V4a3 3 0 00-3-3z" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => setShowProfileQuestions(true)}
+                    className={`p-1.5 rounded-lg transition-colors ${
+                      hasProfileAnswers
+                        ? 'text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50'
+                        : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
+                    }`}
+                    title="AI에게 나를 소개하기"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                </>
+              ) : (
+                <div
+                  className="hidden sm:flex items-center gap-1 text-xs text-slate-400 px-2 py-1.5"
+                  title={`일기를 ${VOICE_CHAT_MIN_ENTRIES - writtenCount}개 더 쓰면 AI와 대화할 수 있어요`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-14 0m7 7v3m-4 0h8M12 1a3 3 0 00-3 3v6a3 3 0 006 0V4a3 3 0 00-3-3z" />
+                  </svg>
+                  <span>{writtenCount}/{VOICE_CHAT_MIN_ENTRIES}</span>
+                </div>
+              )}
+              <button
+                onClick={() => setShowReminder(true)}
+                className={`p-1.5 rounded-lg transition-colors ${
+                  reminderEnabled
+                    ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50'
+                    : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
+                }`}
+                title="알림 설정"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+              </button>
               {user.role === 'admin' && (
                 <button
                   onClick={() => setShowAdmin(true)}
-                  className="flex items-center gap-1.5 text-xs bg-rose-50 text-rose-600 border border-rose-200 px-2.5 py-1.5 rounded-lg hover:bg-rose-100 transition-colors font-medium"
+                  className="flex items-center gap-1 text-xs bg-rose-50 text-rose-600 border border-rose-200 px-1.5 sm:px-2.5 py-1.5 rounded-lg hover:bg-rose-100 transition-colors font-medium"
                 >
-                  🛡️ Admin
+                  🛡️ <span className="hidden sm:inline">Admin</span>
                 </button>
               )}
-              <div className="flex items-center gap-1.5 text-xs text-slate-500 px-2 py-1.5">
+              <div className="flex items-center text-xs text-slate-500 px-1 sm:px-2 py-1.5">
                 <div className="w-5 h-5 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold text-xs">
                   {user.username.charAt(0).toUpperCase()}
                 </div>
-                <span className="hidden sm:inline font-medium">{user.username}</span>
+                <span className="hidden sm:inline font-medium ml-1.5">{user.username}</span>
               </div>
               <button
                 onClick={handleLogout}
@@ -342,11 +438,25 @@ export default function Home() {
             {/* Calendar View */}
             {view === 'calendar' && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fadeIn">
-                <div className="lg:col-span-1">
+                <div className="lg:col-span-1 flex flex-col gap-4">
                   <DiaryCalendar entries={entries} currentEntry={currentEntry} onSelectDate={handleSelectDate} />
+                  <div className="hidden lg:block flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                    <h3 className="font-semibold text-slate-700 flex items-center gap-2 mb-3">
+                      <span>📈</span>
+                      <span>성취도 그래프</span>
+                    </h3>
+                    <UserProgressChart entries={entries} />
+                  </div>
                 </div>
                 <div className="lg:col-span-2 space-y-4">
                   <CalendarStats entries={entries} />
+                  <div className="lg:hidden bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                    <h3 className="font-semibold text-slate-700 flex items-center gap-2 mb-3">
+                      <span>📈</span>
+                      <span>성취도 그래프</span>
+                    </h3>
+                    <UserProgressChart entries={entries} />
+                  </div>
                   <RecentEntries entries={entries} onSelect={handleSelectEntry} onToday={handleTodayEntry} onDelete={handleDeleteEntry} />
                 </div>
               </div>
@@ -355,18 +465,19 @@ export default function Home() {
             {/* Editor View */}
             {view === 'editor' && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div>
+                <div className="space-y-4">
                   <DiaryEditor
                     entry={currentEntry}
                     onUpdate={updateEntry}
                     onAnalyze={handleAnalyze}
                     onDelete={entries.some(e => e.id === currentEntry.id) ? () => handleDeleteEntry(currentEntry) : undefined}
                     isAnalyzing={isAnalyzing}
+                    onAcceptedSuggestionsChange={setAcceptedSuggestions}
                   />
+                  <Dictionary />
                 </div>
                 <div className="space-y-4">
-                  <WritingAnalysis analysis={analysis} isLoading={isAnalyzing} error={analysisError} />
-                  <Dictionary />
+                  <WritingAnalysis analysis={analysis} isLoading={isAnalyzing} error={analysisError} date={currentEntry.date} />
                   {showVideos && (
                     <VideoRecommendations videos={videos} isLoading={isLoadingVideos} topics={analysis?.topics || []} />
                   )}
@@ -399,6 +510,18 @@ export default function Home() {
           </>
         )}
       </main>
+
+      {showReminder && (
+        <ReminderSettings
+          onClose={() => { setShowReminder(false); setReminderMessage(null) }}
+          initialMessage={reminderMessage}
+          onEnabledChange={setReminderEnabled}
+        />
+      )}
+
+      {showVoiceChat && <VoiceChat onClose={() => setShowVoiceChat(false)} />}
+
+      {showProfileQuestions && <ProfileQuestions onClose={() => setShowProfileQuestions(false)} onSaved={setHasProfileAnswers} />}
     </div>
   )
 }

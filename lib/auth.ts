@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
 import crypto from 'crypto'
+import bcrypt from 'bcryptjs'
 
 export interface SessionUser {
   userId: string
@@ -8,6 +9,9 @@ export interface SessionUser {
   role: 'user' | 'admin'
 }
 
+if (!process.env.JWT_SECRET) {
+  console.warn('[SECURITY] JWT_SECRET is not set. Using insecure default — do NOT use in production.')
+}
 const secret = new TextEncoder().encode(
   process.env.JWT_SECRET || 'dev-secret-change-in-production'
 )
@@ -35,10 +39,21 @@ export async function getSession(): Promise<SessionUser | null> {
   return verifyToken(token)
 }
 
-export function hashPassword(password: string, salt: string): string {
+// Legacy SHA-256 — kept only for migrating existing passwords to bcrypt
+export function hashPasswordLegacy(password: string, salt: string): string {
   return crypto.createHash('sha256').update(password + salt).digest('hex')
 }
 
 export function generateSalt(): string {
   return crypto.randomBytes(16).toString('hex')
+}
+
+const BCRYPT_ROUNDS = 12
+
+export async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, BCRYPT_ROUNDS)
+}
+
+export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  return bcrypt.compare(password, hash)
 }

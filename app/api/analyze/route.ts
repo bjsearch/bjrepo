@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { getSession } from '@/lib/auth'
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -14,6 +15,7 @@ Your analysis must be returned as valid JSON with this exact structure:
       "original": "exact text from the entry with error",
       "corrected": "corrected version",
       "explanation": "brief, clear explanation of the error and why the correction is better",
+      "explanation_ko": "왜 이렇게 고쳤는지 한국어로 쉽게 설명",
       "type": "grammar|spelling|punctuation|style"
     }
   ],
@@ -21,7 +23,8 @@ Your analysis must be returned as valid JSON with this exact structure:
     {
       "original": "original sentence from the entry",
       "improved": "more natural, fluent version",
-      "explanation": "why this version sounds more native"
+      "explanation": "why this version sounds more native",
+      "explanation_ko": "왜 이 표현이 더 자연스러운지 한국어로 쉽게 설명"
     }
   ],
   "modern_expressions": [
@@ -74,13 +77,21 @@ Rules:
 
 export async function POST(request: NextRequest) {
   try {
-    const { content } = await request.json()
+    const session = await getSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const { content, acceptedSuggestions } = await request.json()
 
     if (!content || content.trim().length < 10) {
       return NextResponse.json(
         { error: 'Please write at least a few sentences before analyzing.' },
         { status: 400 }
       )
+    }
+
+    let userMessage = `Please analyze this English diary entry and provide feedback:\n\n${content}`
+    if (Array.isArray(acceptedSuggestions) && acceptedSuggestions.length > 0) {
+      userMessage += `\n\n[NOTE: The following phrases were suggested by our AI autocomplete and accepted by the user. Do NOT mark these as grammar errors, do NOT include them in grammar_corrections, and do NOT suggest corrections for them in better_sentences. These are phrases our own system recommended, so criticizing them would be inconsistent:\n${acceptedSuggestions.map(s => `- "${s}"`).join('\n')}\n]`
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -92,7 +103,7 @@ export async function POST(request: NextRequest) {
       messages: [
         {
           role: 'user',
-          content: `Please analyze this English diary entry and provide feedback:\n\n${content}`,
+          content: userMessage,
         },
       ],
     }

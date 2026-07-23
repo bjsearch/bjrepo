@@ -10,11 +10,12 @@ interface Props {
   onAnalyze: () => void
   onDelete?: () => void
   isAnalyzing: boolean
+  onAcceptedSuggestionsChange?: (suggestions: string[]) => void
 }
 
 const hasKorean = (text: string) => /[가-힣ㄱ-ㅎㅏ-ㅣ]/.test(text)
 
-export default function DiaryEditor({ entry, onUpdate, onAnalyze, onDelete, isAnalyzing }: Props) {
+export default function DiaryEditor({ entry, onUpdate, onAnalyze, onDelete, isAnalyzing, onAcceptedSuggestionsChange }: Props) {
   const [content, setContent] = useState(entry.content)
   const [wordCount, setWordCount] = useState(0)
   const [charCount, setCharCount] = useState(0)
@@ -24,6 +25,7 @@ export default function DiaryEditor({ entry, onUpdate, onAnalyze, onDelete, isAn
   const [suggestion, setSuggestion] = useState('')
   const [isFetchingSuggestion, setIsFetchingSuggestion] = useState(false)
   const [autocompleteEnabled, setAutocompleteEnabled] = useState(true)
+  const acceptedSuggestionsRef = useRef<string[]>([])
 
   // Translation
   const [translation, setTranslation] = useState('')
@@ -42,7 +44,9 @@ export default function DiaryEditor({ entry, onUpdate, onAnalyze, onDelete, isAn
     setSuggestion('')
     setTranslation('')
     setShowTranslation(false)
-  }, [entry.id])
+    acceptedSuggestionsRef.current = []
+    onAcceptedSuggestionsChange?.([])
+  }, [entry.id, onAcceptedSuggestionsChange])
 
   useEffect(() => {
     const words = content.trim() ? content.trim().split(/\s+/).length : 0
@@ -138,6 +142,8 @@ export default function DiaryEditor({ entry, onUpdate, onAnalyze, onDelete, isAn
 
   const acceptSuggestion = () => {
     if (!suggestion) return
+    acceptedSuggestionsRef.current = [...acceptedSuggestionsRef.current, suggestion.trim()]
+    onAcceptedSuggestionsChange?.(acceptedSuggestionsRef.current)
     const separator = content && !content.match(/[\s\n]$/) ? ' ' : ''
     const newContent = content + separator + suggestion
     setContent(newContent)

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyUser } from '@/lib/db'
+import { verifyUser, recordLogin } from '@/lib/db'
 import { signToken } from '@/lib/auth'
+import { getGeoFromRequest } from '@/lib/geo'
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,6 +14,8 @@ export async function POST(req: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: '아이디 또는 비밀번호가 틀렸어요' }, { status: 401 })
     }
+
+    await recordLogin(user.userId, user.username, getGeoFromRequest(req))
 
     const token = await signToken(user)
     const res = NextResponse.json({ ok: true, user: { userId: user.userId, username: user.username, role: user.role } })

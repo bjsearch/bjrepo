@@ -33,7 +33,7 @@ export async function DELETE(req: NextRequest) {
     const session = await getSession()
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const { id } = await req.json()
-    await deleteEntry(id)
+    await deleteEntry(id, session.userId)
     return NextResponse.json({ ok: true })
   } catch (error) {
     console.error('DB DELETE error:', error)
