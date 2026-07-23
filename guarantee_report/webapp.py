@@ -552,16 +552,24 @@ def generate():
             parsed = parse_pdf(tmp_path)
             data = build_report_data(parsed)
         else:  # is_xlsx
-            fd, tmp_path = tempfile.mkstemp(suffix=".xlsx")
-            with os.fdopen(fd, "wb") as tmp:
-                f.save(tmp)
-            excel_result = parse_excel_file(tmp_path)
-            # Excel 데이터를 PDF 파서와 호환되는 형식으로 변환
-            parsed_report = excel_result.to_parsed_report()
-            data = build_report_data(parsed_report)
+            try:
+                fd, tmp_path = tempfile.mkstemp(suffix=".xlsx")
+                with os.fdopen(fd, "wb") as tmp:
+                    f.save(tmp)
+                excel_result = parse_excel_file(tmp_path)
+                # Excel 데이터를 PDF 파서와 호환되는 형식으로 변환
+                parsed_report = excel_result.to_parsed_report()
+                data = build_report_data(parsed_report)
+            except ImportError:
+                return render_template_string(UPLOAD_PAGE, error="Excel 지원이 설치되지 않았습니다", user=user, csrf_token=_get_csrf_token()), 500
+            except ReportParseError as e:
+                return render_template_string(UPLOAD_PAGE, error=f"Excel 파일 오류: {str(e)}", user=user, csrf_token=_get_csrf_token()), 400
     except ReportParseError as e:
         return render_template_string(UPLOAD_PAGE, error=str(e), user=user, csrf_token=_get_csrf_token()), 400
     except Exception as e:  # noqa: BLE001 — 사용자에게 원인 안내
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"[오류] 리포트 생성 중 문제 발생:\n{error_detail}", flush=True)
         return render_template_string(UPLOAD_PAGE, error=f"리포트 생성 중 오류가 발생했습니다: {e}", user=user, csrf_token=_get_csrf_token()), 500
     finally:
         if tmp_path and os.path.exists(tmp_path):
