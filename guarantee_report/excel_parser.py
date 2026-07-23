@@ -11,41 +11,7 @@ import re
 from datetime import date, datetime
 from dataclasses import dataclass, field
 
-
-@dataclass
-class Customer:
-    """고객 정보 (PDF 파서와 호환)."""
-    name: str
-    rrn_masked: str = "***-****-**"
-    birth_date: date | None = None
-    gender: str | None = None
-    age_insurance: int | None = None
-    handler: str = "사용자"
-    basis_date: date | None = None
-
-
-@dataclass
-class DetailItem:
-    """정액담보 상세내역 (PDF 파서와 호환)."""
-    seq: int
-    company: str
-    product_name: str
-    contract_from: str
-    contract_to: str
-    monthly_premium: int
-    total_premium: int
-    remaining_premium: int
-    top_coverages: str
-    more: str = ""
-
-
-@dataclass
-class ParsedReport:
-    """파싱된 리포트 (PDF 파서와 호환)."""
-    customer: Customer
-    indemnity_items: list = field(default_factory=list)
-    category_totals: list = field(default_factory=list)
-    detail_items: list[DetailItem] = field(default_factory=list)
+from .parser import Customer, DetailItem, ParsedReport
 
 
 @dataclass
@@ -68,9 +34,10 @@ class ExcelParseResult:
             if (today.month, today.day) < (self.birth_date.month, self.birth_date.day):
                 age -= 1
 
-        # Customer 정보 생성
+        # Customer 정보 생성 (Customer는 parser.py에서 import)
         customer = Customer(
             name=self.customer_name,
+            rrn_masked="***-****-**",
             birth_date=self.birth_date,
             gender=self.gender,
             age_insurance=age,
@@ -78,24 +45,21 @@ class ExcelParseResult:
             basis_date=self.basis_date or datetime.now().date()
         )
 
-        # DetailItem 목록 생성
+        # DetailItem 목록 생성 (DetailItem은 parser.py에서 import)
         detail_items = []
-        for idx, product in enumerate(self.insurance_products, 1):
-            coverages = product.get("coverages", [])
-            top_coverages = "·  " + "\n·  ".join(
-                f"{c['name']} {c['amount']:,d}만원" for c in coverages[:5]
-            ) if coverages else ""
-
+        for product in self.insurance_products:
             detail_item = DetailItem(
-                seq=idx,
                 company=product.get("company", ""),
-                product_name=product.get("product_name", ""),
-                contract_from=product.get("contract_date", ""),
-                contract_to="",  # Excel에서 제공하지 않으면 빈 문자열
-                monthly_premium=product.get("monthly_premium", 0),
-                total_premium=product.get("total_premium", 0),
-                remaining_premium=product.get("remaining_premium", 0),
-                top_coverages=top_coverages
+                product=product.get("product_name", ""),
+                start=product.get("contract_date", ""),
+                end="",  # Excel에서 제공하지 않으면 빈 문자열
+                pay_years=None,
+                pay_method="",
+                premium_won=product.get("monthly_premium", 0),
+                rider_name="",
+                category="",
+                amount_man=product.get("total_premium", 0),
+                status=""
             )
             detail_items.append(detail_item)
 
