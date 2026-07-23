@@ -108,66 +108,79 @@ def parse_excel(file_path: str) -> ExcelParseResult:
     try:
         import openpyxl
     except ImportError:
-        raise ImportError("openpyxl 패키지가 필요합니다. pip install openpyxl")
+        raise ReportParseError("openpyxl 패키지가 필요합니다")
 
-    wb = openpyxl.load_workbook(file_path)
+    try:
+        wb = openpyxl.load_workbook(file_path, data_only=False)
+    except Exception as e:
+        raise ReportParseError(f"Excel 파일을 읽을 수 없습니다: {e}")
 
-    # 고객 정보 추출
-    customer_name = "미입력"
-    gender = None
-    birth_date = None
-    basis_date = None
-    handler = "사용자"
+    try:
+        # 고객 정보 추출
+        customer_name = "미입력"
+        gender = None
+        birth_date = None
+        basis_date = None
+        handler = "사용자"
 
-    # 고객정보 시트가 있으면 그것에서 읽기
-    if "고객정보" in wb.sheetnames:
-        ws = wb["고객정보"]
-        # 간단한 형식: A1=이름, B1=성별, C1=생년월일, D1=분석기준일, E1=담당자
-        customer_name = _get_cell_value(ws, "A1") or "미입력"
-        gender = _get_cell_value(ws, "B1")
+        # 고객정보 시트가 있으면 그것에서 읽기
+        if "고객정보" in wb.sheetnames:
+            ws = wb["고객정보"]
+            # 간단한 형식: A1=이름, B1=성별, C1=생년월일, D1=분석기준일, E1=담당자
+            customer_name = _get_cell_value(ws, "A1") or "미입력"
+            gender = _get_cell_value(ws, "B1")
 
-        birth_str = _get_cell_value(ws, "C1")
-        if birth_str:
-            birth_date = _parse_date(birth_str)
+            birth_str = _get_cell_value(ws, "C1")
+            if birth_str:
+                birth_date = _parse_date(birth_str)
 
-        basis_str = _get_cell_value(ws, "D1")
-        if basis_str:
-            basis_date = _parse_date(basis_str)
+            basis_str = _get_cell_value(ws, "D1")
+            if basis_str:
+                basis_date = _parse_date(basis_str)
 
-        handler = _get_cell_value(ws, "E1") or "사용자"
+            handler = _get_cell_value(ws, "E1") or "사용자"
 
-    # 보험상품 정보 추출
-    insurance_products = []
-    if "보험상품" in wb.sheetnames:
-        ws = wb["보험상품"]
-        # 헤더: A=보험사, B=상품명, C=계약일, D=월보험료, E=총보험료, F=잔여보험료, ...
-        for row_idx in range(2, ws.max_row + 1):
-            company = _get_cell_value(ws, f"A{row_idx}")
-            if not company:
-                break
+        # 보험상품 정보 추출
+        insurance_products = []
+        if "보험상품" in wb.sheetnames:
+            ws = wb["보험상품"]
+            # 헤더: A=보험사, B=상품명, C=계약일, D=월보험료, E=총보험료, F=잔여보험료, ...
+            try:
+                for row_idx in range(2, min(ws.max_row + 1, 1000)):  # 최대 1000행
+                    company = _get_cell_value(ws, f"A{row_idx}")
+                    if not company:
+                        break
 
-            product = {
-                "company": company,
-                "product_name": _get_cell_value(ws, f"B{row_idx}") or "",
-                "contract_date": _get_cell_value(ws, f"C{row_idx}") or "",
-                "contract_end": _get_cell_value(ws, f"H{row_idx}") or "",  # 선택사항: 계약종료일
-                "monthly_premium": _parse_number(_get_cell_value(ws, f"D{row_idx}")),
-                "total_premium": _parse_number(_get_cell_value(ws, f"E{row_idx}")),
-                "remaining_premium": _parse_number(_get_cell_value(ws, f"F{row_idx}")),
-                "coverages": _parse_coverages(_get_cell_value(ws, f"G{row_idx}"))
-            }
-            insurance_products.append(product)
+                    product = {
+                        "company": company,
+                        "product_name": _get_cell_value(ws, f"B{row_idx}") or "",
+                        "contract_date": _get_cell_value(ws, f"C{row_idx}") or "",
+                        "contract_end": _get_cell_value(ws, f"H{row_idx}") or "",
+                        "monthly_premium": _parse_number(_get_cell_value(ws, f"D{row_idx}")),
+                        "total_premium": _parse_number(_get_cell_value(ws, f"E{row_idx}")),
+                        "remaining_premium": _parse_number(_get_cell_value(ws, f"F{row_idx}")),
+                        "coverages": _parse_coverages(_get_cell_value(ws, f"G{row_idx}"))
+                    }
+                    if product.get("product_name"):  # 상품명이 있을 때만 추가
+                        insurance_products.append(product)
+            except Exception as e:
+                raise ReportParseError(f"보험상품 시트 읽기 오류: {e}")
+        else:
+            raise ReportParseError("'보험상품' 시트를 찾을 수 없습니다")
 
-    wb.close()
+        if not insurance_products:
+            raise ReportParseError("읽을 수 있는 보험상품이 없습니다")
 
-    return ExcelParseResult(
-        customer_name=customer_name,
-        gender=gender,
-        birth_date=birth_date,
-        basis_date=basis_date,
-        handler=handler,
-        insurance_products=insurance_products
-    )
+        return ExcelParseResult(
+            customer_name=customer_name,
+            gender=gender,
+            birth_date=birth_date,
+            basis_date=basis_date,
+            handler=handler,
+            insurance_products=insurance_products
+        )
+    finally:
+        wb.close()
 
 
 def _get_cell_value(ws, cell_ref: str) -> str | None:
