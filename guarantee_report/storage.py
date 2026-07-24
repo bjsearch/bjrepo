@@ -21,6 +21,18 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 DB_PATH = os.environ.get("DB_PATH", os.path.join(os.path.dirname(__file__), "reports.db"))
 BACKEND = "postgres" if DATABASE_URL else "sqlite"
 
+
+def hash_password(password: str) -> str:
+    """비밀번호를 해시처리한다."""
+    from werkzeug.security import generate_password_hash
+    return generate_password_hash(password)
+
+
+def verify_password(password: str, password_hash: str) -> bool:
+    """비밀번호 해시를 검증한다."""
+    from werkzeug.security import check_password_hash
+    return check_password_hash(password_hash, password)
+
 _SCHEMA_POSTGRES = """
 CREATE TABLE IF NOT EXISTS guarantee_reports (
     id SERIAL PRIMARY KEY,
@@ -40,6 +52,7 @@ CREATE TABLE IF NOT EXISTS guarantee_users (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     phone TEXT NOT NULL UNIQUE,
+    password_hash TEXT,
     role TEXT NOT NULL DEFAULT 'user',
     created_at TEXT NOT NULL,
     last_login_at TEXT
@@ -65,6 +78,7 @@ CREATE TABLE IF NOT EXISTS guarantee_users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     phone TEXT NOT NULL UNIQUE,
+    password_hash TEXT,
     role TEXT NOT NULL DEFAULT 'user',
     created_at TEXT NOT NULL,
     last_login_at TEXT
@@ -122,6 +136,8 @@ def init_db() -> None:
         _add_column_if_missing(cur, "guarantee_reports", "created_by_name", "TEXT")
         _add_column_if_missing(cur, "guarantee_reports", "share_token", "TEXT")
         _add_column_if_missing(cur, "guarantee_reports", "age", "INTEGER")
+        # 사용자 비밀번호 컬럼 추가
+        _add_column_if_missing(cur, "guarantee_users", "password_hash", "TEXT")
     global _initialized
     _initialized = True
 
@@ -148,29 +164,43 @@ def _to_int(value) -> int | None:
 # --- 사용자 ---
 
 
-def upsert_user(name: str, phone: str, role: str) -> dict:
+def upsert_user(name: str, phone: str, role: str, password: str | None = None) -> dict:
     """전화번호를 키로 사용자 정보를 갱신(또는 신규 생성)하고, 항상 최신 역할을 반영한다."""
     _ensure_init()
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     with _connect() as conn:
         cur = conn.cursor()
-        cur.execute(_q("SELECT id FROM guarantee_users WHERE phone = ?"), (phone,))
+        cur.execute(_q("SELECT id, password_hash FROM guarantee_users WHERE phone = ?"), (phone,))
         existing = cur.fetchone()
         if existing:
             user_id = existing["id"]
+            # 기존 사용자: 비밀번호는 유지하고 이름/역할만 업데이트
+            password_hash = existing["password_hash"]
             cur.execute(
                 _q("UPDATE guarantee_users SET name = ?, role = ?, last_login_at = ? WHERE id = ?"),
                 (name, role, now, user_id),
             )
         else:
-            insert_sql = "INSERT INTO guarantee_users (name, phone, role, created_at, last_login_at) VALUES (?,?,?,?,?)"
+            # 신규 사용자: 비밀번호 해시 저장
+            password_hash = hash_password(password) if password else None
+            insert_sql = "INSERT INTO guarantee_users (name, phone, password_hash, role, created_at, last_login_at) VALUES (?,?,?,?,?,?)"
             if BACKEND == "postgres":
-                cur.execute(_q(insert_sql) + " RETURNING id", (name, phone, role, now, now))
+                cur.execute(_q(insert_sql) + " RETURNING id", (name, phone, password_hash, role, now, now))
                 user_id = cur.fetchone()["id"]
             else:
-                cur.execute(insert_sql, (name, phone, role, now, now))
+                cur.execute(insert_sql, (name, phone, password_hash, role, now, now))
                 user_id = cur.lastrowid
         return {"id": user_id, "name": name, "phone": phone, "role": role}
+
+
+def get_user_by_phone(phone: str) -> dict | None:
+    """휴대폰번호로 사용자를 조회한다."""
+    _ensure_init()
+    with _connect() as conn:
+        cur = conn.cursor()
+        cur.execute(_q("SELECT id, name, phone, password_hash, role FROM guarantee_users WHERE phone = ?"), (phone,))
+        row = cur.fetchone()
+        return dict(row) if row else None
 
 
 def list_users() -> list[dict]:

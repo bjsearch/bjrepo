@@ -201,7 +201,7 @@ LOGIN_PAGE = """
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http%3A//www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'><path%20d='M4%2021%20A16%2015%200%200%201%2036%2021%20Z'%20fill='%2310233F'/><rect%20x='9'%20y='21'%20width='4.4'%20height='6'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='17.8'%20y='21'%20width='4.4'%20height='10'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='26.6'%20y='21'%20width='4.4'%20height='14'%20rx='1.6'%20fill='%231D5BD8'/></svg>">
-<title>로그인 — 보장분석 리포트 생성기</title>
+<title>로그인 — 성우아빠의 보장분석 리포트 생성기</title>
 <style>
   :root{--ink:#10233F;--paper:#F6F7F9;--card:#FFFFFF;--line:#E3E7EE;--sub:#5B6B82;--ok:#1D5BD8;--gap:#C93030}
   *{box-sizing:border-box}
@@ -220,8 +220,8 @@ LOGIN_PAGE = """
 </head>
 <body>
 <div class="wrap">
-  <div class="brand-lockup">""" + LOGO_MARK + """<span class="wordmark">보장분석</span></div>
-  <h1>보장분석 리포트 생성기</h1>
+  <div class="brand-lockup">""" + LOGO_MARK + """<span class="wordmark">성우아빠의 보장분석</span></div>
+  <h1>성우아빠의 보장분석 리포트 생성기</h1>
   <p class="sub">이름과 휴대폰번호로 로그인하세요. 처음이면 자동으로 계정이 만들어집니다.</p>
   {% if error %}<div class="err">{{ error }}</div>{% endif %}
   <form method="post" action="/login">
@@ -268,7 +268,7 @@ SHARE_GATE_PAGE = """
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http%3A//www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'><path%20d='M4%2021%20A16%2015%200%200%201%2036%2021%20Z'%20fill='%2310233F'/><rect%20x='9'%20y='21'%20width='4.4'%20height='6'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='17.8'%20y='21'%20width='4.4'%20height='10'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='26.6'%20y='21'%20width='4.4'%20height='14'%20rx='1.6'%20fill='%231D5BD8'/></svg>">
-<title>보장분석 리포트 확인</title>
+<title>성우아빠의 보장분석 리포트 확인</title>
 <style>
   :root{--ink:#10233F;--paper:#F6F7F9;--card:#FFFFFF;--line:#E3E7EE;--sub:#5B6B82;--ok:#1D5BD8;--gap:#C93030}
   *{box-sizing:border-box}
@@ -287,8 +287,8 @@ SHARE_GATE_PAGE = """
 </head>
 <body>
 <div class="wrap">
-  <div class="brand-lockup">""" + LOGO_MARK + """<span class="wordmark">보장분석</span></div>
-  <h1>{{ customer_name }}님 보장분석 리포트</h1>
+  <div class="brand-lockup">""" + LOGO_MARK + """<span class="wordmark">성우아빠의 보장분석</span></div>
+  <h1>{{ customer_name }}님 성우아빠의 보장분석 리포트</h1>
   <p class="sub">본인 확인을 위해 이 리포트를 보내주신 담당자의 휴대폰번호를 입력해주세요.</p>
   {% if error %}<div class="err">{{ error }}</div>{% endif %}
   <form method="post">
@@ -328,7 +328,7 @@ UPLOAD_PAGE = """
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http%3A//www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'><path%20d='M4%2021%20A16%2015%200%200%201%2036%2021%20Z'%20fill='%2310233F'/><rect%20x='9'%20y='21'%20width='4.4'%20height='6'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='17.8'%20y='21'%20width='4.4'%20height='10'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='26.6'%20y='21'%20width='4.4'%20height='14'%20rx='1.6'%20fill='%231D5BD8'/></svg>">
-<title>보장분석 리포트 생성기</title>
+<title>성우아빠의 보장분석 리포트 생성기</title>
 <style>
   :root{--ink:#10233F;--paper:#F6F7F9;--card:#FFFFFF;--line:#E3E7EE;--sub:#5B6B82;--ok:#1D5BD8;--gap:#C93030}
   *{box-sizing:border-box}
@@ -336,6 +336,7 @@ UPLOAD_PAGE = """
   .wrap{max-width:520px;margin:0 auto}
   h1{font-size:24px;margin-bottom:6px}
   p.sub{color:var(--sub);font-size:14px;margin-bottom:28px}
+  .emphasis{background:#EDF3FE;border-left:4px solid #1D5BD8;padding:12px 14px;border-radius:6px;margin:12px 0;font-size:13px;color:var(--ink);font-weight:500;line-height:1.6}
   .drop{display:block;background:var(--card);border:2px dashed var(--line);border-radius:14px;padding:40px 24px;text-align:center;cursor:pointer;transition:border-color .15s}
   .drop.drag{border-color:var(--ok)}
   .drop input{display:none}
@@ -372,7 +373,7 @@ UPLOAD_PAGE = """
 <body>
 <div class="navbar">
   <div class="brand-group">
-    <a class="brand" href="/">""" + LOGO_MARK + """<span class="wordmark">보장분석</span></a>
+    <a class="brand" href="/">""" + LOGO_MARK + """<span class="wordmark">성우아빠의 보장분석</span></a>
   </div>
   <div class="menu">
     <span class="who">{{ user.name }}님{% if user.role == 'admin' %} · 관리자{% endif %}</span>
@@ -382,8 +383,9 @@ UPLOAD_PAGE = """
   </div>
 </div>
 <div class="wrap">
-  <h1>보장분석 리포트 생성기</h1>
-  <p class="sub">신용정보원 '보험신용정보 통합조회 결과서' PDF를 업로드하면 같은 디자인의 HTML 리포트를 생성하고 자동으로 저장합니다.</p>
+  <h1>성우아빠의 보장분석 리포트 생성기</h1>
+  <p class="sub">신용정보원 '보험신용정보 통합조회 결과서' PDF 또는 Excel 파일을 업로드하면 HTML 리포트를 생성하고 자동으로 저장합니다.</p>
+  <div class="emphasis">업로드 정보에 따라 PDF 업로드시 상세 리포트 생성이 가능하며, Excel 파일 업로드시 약식 리포트가 생성됩니다.</div>
 
   {% if error %}<div class="err">{{ error }}</div>{% endif %}
 
@@ -859,7 +861,7 @@ def view_report(report_id: int):
             "chat_enabled": bool(chatbot.ANTHROPIC_API_KEY),
         }
     )
-    filename = f"{data['header']['name']}_보장분석리포트.html"
+    filename = f"{data['header']['name']}_성우아빠의보장분석리포트.html"
     resp = Response(html, mimetype="text/html")
     # 한글 파일명은 latin-1 헤더 인코딩을 통과하지 못하므로 RFC 5987 인코딩 사용
     resp.headers["Content-Disposition"] = f"inline; filename*=UTF-8''{quote(filename)}"
