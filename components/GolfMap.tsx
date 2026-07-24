@@ -68,6 +68,47 @@ export default function GolfMap({
           </defs>
           <rect width={width} height={height} fill="url(#grid)" />
 
+          {/* 한국 지도 윤곽선 */}
+          <g opacity="0.3" stroke="#4ade80" strokeWidth="1.5" fill="none">
+            {/* 한반도 경계선 (간소화된 형태) */}
+            <path
+              d={`
+                M ${lngToX(127)} ${latToY(38.5)}
+                L ${lngToX(128)} ${latToY(38.3)}
+                L ${lngToX(128.5)} ${latToY(37.8)}
+                L ${lngToX(129)} ${latToY(37.2)}
+                L ${lngToX(129.5)} ${latToY(36.5)}
+                L ${lngToX(130)} ${latToY(35.5)}
+                L ${lngToX(129.8)} ${latToY(34.8)}
+                L ${lngToX(129)} ${latToY(34.5)}
+                L ${lngToX(128)} ${latToY(34.3)}
+                L ${lngToX(127.5)} ${latToY(33.2)}
+                L ${lngToX(126.5)} ${latToY(33)}
+                L ${lngToX(125.5)} ${latToY(33.5)}
+                L ${lngToX(125)} ${latToY(34)}
+                L ${lngToX(125.2)} ${latToY(35)}
+                L ${lngToX(125.5)} ${latToY(36)}
+                L ${lngToX(126)} ${latToY(37)}
+                L ${lngToX(126.5)} ${latToY(38)}
+                L ${lngToX(127)} ${latToY(38.5)}
+              `}
+            />
+          </g>
+
+          {/* 주요 도시 위치 표시 (선택사항) */}
+          <g opacity="0.2">
+            {/* 서울 */}
+            <circle cx={lngToX(126.98)} cy={latToY(37.57)} r="3" fill="#4ade80" />
+            {/* 부산 */}
+            <circle cx={lngToX(129.07)} cy={latToY(35.10)} r="3" fill="#4ade80" />
+            {/* 대구 */}
+            <circle cx={lngToX(128.60)} cy={latToY(35.87)} r="3" fill="#4ade80" />
+            {/* 인천 */}
+            <circle cx={lngToX(126.71)} cy={latToY(37.45)} r="3" fill="#4ade80" />
+            {/* 대전 */}
+            <circle cx={lngToX(127.42)} cy={latToY(36.35)} r="3" fill="#4ade80" />
+          </g>
+
           {/* 플레이한 골프장들 연결선 */}
           {playedCourses && playedCourses.length > 1 && (
             <g>
