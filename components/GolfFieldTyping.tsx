@@ -538,10 +538,10 @@ export default function GolfFieldTyping() {
 
               <button
                 onClick={handleWrongAnswer}
-                disabled={!gameState.userInput}
-                className="w-full bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-500 hover:to-gray-600 disabled:opacity-50 text-white font-bold py-3 px-4 rounded-xl transition-all mb-3 hover:scale-105 active:scale-95 shadow-lg"
+                className="w-full bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-500 hover:to-orange-600 text-white font-bold py-3 px-4 rounded-xl transition-all mb-3 hover:scale-105 active:scale-95 shadow-lg"
+                style={{ boxShadow: "0 0 20px rgba(234, 88, 12, 0.3)" }}
               >
-                ❓ 모르겠어요
+                ⏭️ 건너뛰기
               </button>
 
               <button
