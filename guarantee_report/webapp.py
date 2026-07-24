@@ -201,7 +201,7 @@ LOGIN_PAGE = """
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http%3A//www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'><path%20d='M4%2021%20A16%2015%200%200%201%2036%2021%20Z'%20fill='%2310233F'/><rect%20x='9'%20y='21'%20width='4.4'%20height='6'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='17.8'%20y='21'%20width='4.4'%20height='10'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='26.6'%20y='21'%20width='4.4'%20height='14'%20rx='1.6'%20fill='%231D5BD8'/></svg>">
-<title>로그인 — 성우아빠의 보장분석 리포트 생성기</title>
+<title>로그인 — Team DIN 보장분석기 리포트 생성기</title>
 <style>
   :root{--ink:#10233F;--paper:#F6F7F9;--card:#FFFFFF;--line:#E3E7EE;--sub:#5B6B82;--ok:#1D5BD8;--gap:#C93030}
   *{box-sizing:border-box}
@@ -220,8 +220,8 @@ LOGIN_PAGE = """
 </head>
 <body>
 <div class="wrap">
-  <div class="brand-lockup">""" + LOGO_MARK + """<span class="wordmark">성우아빠의 보장분석</span></div>
-  <h1>성우아빠의 보장분석 리포트 생성기</h1>
+  <div class="brand-lockup">""" + LOGO_MARK + """<span class="wordmark">Team DIN 보장분석기</span></div>
+  <h1>Team DIN 보장분석기 리포트 생성기</h1>
   <p class="sub">이름, 휴대폰번호, 비밀번호로 로그인하세요.</p>
   {% if error %}<div class="err">{{ error }}</div>{% endif %}
   <form method="post" action="/login">
@@ -270,7 +270,7 @@ SHARE_GATE_PAGE = """
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http%3A//www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'><path%20d='M4%2021%20A16%2015%200%200%201%2036%2021%20Z'%20fill='%2310233F'/><rect%20x='9'%20y='21'%20width='4.4'%20height='6'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='17.8'%20y='21'%20width='4.4'%20height='10'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='26.6'%20y='21'%20width='4.4'%20height='14'%20rx='1.6'%20fill='%231D5BD8'/></svg>">
-<title>성우아빠의 보장분석 리포트 확인</title>
+<title>Team DIN 보장분석기 리포트 확인</title>
 <style>
   :root{--ink:#10233F;--paper:#F6F7F9;--card:#FFFFFF;--line:#E3E7EE;--sub:#5B6B82;--ok:#1D5BD8;--gap:#C93030}
   *{box-sizing:border-box}
@@ -289,8 +289,8 @@ SHARE_GATE_PAGE = """
 </head>
 <body>
 <div class="wrap">
-  <div class="brand-lockup">""" + LOGO_MARK + """<span class="wordmark">성우아빠의 보장분석</span></div>
-  <h1>{{ customer_name }}님 성우아빠의 보장분석 리포트</h1>
+  <div class="brand-lockup">""" + LOGO_MARK + """<span class="wordmark">Team DIN 보장분석기</span></div>
+  <h1>{{ customer_name }}님 Team DIN 보장분석기 리포트</h1>
   <p class="sub">본인 확인을 위해 이 리포트를 보내주신 담당자의 휴대폰번호를 입력해주세요.</p>
   {% if error %}<div class="err">{{ error }}</div>{% endif %}
   <form method="post">
@@ -330,7 +330,7 @@ UPLOAD_PAGE = """
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http%3A//www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'><path%20d='M4%2021%20A16%2015%200%200%201%2036%2021%20Z'%20fill='%2310233F'/><rect%20x='9'%20y='21'%20width='4.4'%20height='6'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='17.8'%20y='21'%20width='4.4'%20height='10'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='26.6'%20y='21'%20width='4.4'%20height='14'%20rx='1.6'%20fill='%231D5BD8'/></svg>">
-<title>성우아빠의 보장분석 리포트 생성기</title>
+<title>Team DIN 보장분석기 리포트 생성기</title>
 <style>
   :root{--ink:#10233F;--paper:#F6F7F9;--card:#FFFFFF;--line:#E3E7EE;--sub:#5B6B82;--ok:#1D5BD8;--gap:#C93030}
   *{box-sizing:border-box}
@@ -375,7 +375,7 @@ UPLOAD_PAGE = """
 <body>
 <div class="navbar">
   <div class="brand-group">
-    <a class="brand" href="/">""" + LOGO_MARK + """<span class="wordmark">성우아빠의 보장분석</span></a>
+    <a class="brand" href="/">""" + LOGO_MARK + """<span class="wordmark">Team DIN 보장분석기</span></a>
   </div>
   <div class="menu">
     <span class="who">{{ user.name }}님{% if user.role == 'admin' %} · 관리자{% endif %}</span>
@@ -385,7 +385,7 @@ UPLOAD_PAGE = """
   </div>
 </div>
 <div class="wrap">
-  <h1>성우아빠의 보장분석 리포트 생성기</h1>
+  <h1>Team DIN 보장분석기 리포트 생성기</h1>
   <p class="sub">신용정보원 '보험신용정보 통합조회 결과서' PDF 또는 Excel 파일을 업로드하면 HTML 리포트를 생성하고 자동으로 저장합니다.</p>
   <div class="emphasis">업로드 정보에 따라 PDF 업로드시 상세 리포트 생성이 가능하며, Excel 파일 업로드시 약식 리포트가 생성됩니다.</div>
 
