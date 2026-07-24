@@ -365,7 +365,7 @@ def _parse_number(value: str | int | float | None) -> int:
 
 def _parse_coverages(coverage_str: str | None) -> list[dict]:
     """보장내용 문자열을 파싱한다. 예: "상해보장 1000만원, 질병보장 500만원" """
-    if not coverage_str:
+    if not coverage_str or not isinstance(coverage_str, str):
         return []
 
     coverages = []
@@ -482,7 +482,7 @@ def _parse_excel_alternative(file_path: str) -> ExcelParseResult:
                     # 보고서 형식에서 고객명 추출 (B2에서 "xxx님의 보장분석..." 형식)
                     if 'B2' in cells:
                         title = cells['B2']
-                        if '님' in title:
+                        if title and isinstance(title, str) and '님' in title:
                             customer_name = title.split('님')[0].strip()
 
                     # 각 열(E, F, G 등)을 하나의 상품으로 처리

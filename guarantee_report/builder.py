@@ -27,6 +27,8 @@ def _fmt_date_dot(d: date) -> str:
 
 def _parse_ymd(s: str) -> date | None:
     try:
+        if not s:
+            return None
         y, m, d = (int(x) for x in s.split("-"))
         return date(y, m, d)
     except Exception:
@@ -297,12 +299,13 @@ def _build_insights(
     renewing_indemnity = [c for c in contracts if c["premium_display"] == "주계약 합산" and c["badge"]]
     if renewing_indemnity:
         c = renewing_indemnity[0]
+        detail_info = (c['detail'] or "").split(' 가입')[0] if c.get('detail') else ""
         insights.append(
             {
                 "urgent": False,
                 "title": f"실손은 {c['badge']} — 청구 이력 관리",
                 "text": (
-                    f"{c['title']}({c['detail'].split(' 가입')[0]} 가입)이 유일한 실손 계약입니다. "
+                    f"{c['title']}({detail_info} 가입)이 유일한 실손 계약입니다. "
                     f"갱신 시 연령 및 비급여 이용량에 따라 보험료가 오를 수 있어, 갱신 전 보장 구조와 "
                     f"보험료 변화를 함께 점검하는 것이 좋습니다."
                 ),
