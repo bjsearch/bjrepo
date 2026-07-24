@@ -222,7 +222,7 @@ LOGIN_PAGE = """
 <div class="wrap">
   <div class="brand-lockup">""" + LOGO_MARK + """<span class="wordmark">성우아빠의 보장분석</span></div>
   <h1>성우아빠의 보장분석 리포트 생성기</h1>
-  <p class="sub">이름과 휴대폰번호로 로그인하세요. 처음이면 자동으로 계정이 만들어집니다.</p>
+  <p class="sub">이름, 휴대폰번호, 비밀번호로 로그인하세요.</p>
   {% if error %}<div class="err">{{ error }}</div>{% endif %}
   <form method="post" action="/login">
     <input type="hidden" name="next" value="{{ next_url or '' }}">
@@ -231,9 +231,11 @@ LOGIN_PAGE = """
     <label for="phone">휴대폰번호</label>
     <input type="tel" id="phone" name="phone" required placeholder="010-1234-5678" value="{{ phone or '' }}">
     {% if need_password %}
-    <label for="password">팀 비밀번호</label>
-    <input type="password" id="password" name="password" required>
+    <label for="team_password">팀 비밀번호</label>
+    <input type="password" id="team_password" name="team_password" required>
     {% endif %}
+    <label for="password">개인 비밀번호</label>
+    <input type="password" id="password" name="password" required placeholder="6자 이상">
     <button type="submit">로그인</button>
   </form>
 </div>
@@ -485,7 +487,8 @@ def login():
     name = request.form.get("name", "").strip()
     phone_raw = request.form.get("phone", "").strip()
     phone = _normalize_phone(phone_raw)
-    password = request.form.get("password", "")
+    team_password = request.form.get("team_password", "")
+    user_password = request.form.get("password", "")
     next_url = request.form.get("next") or url_for("index")
 
     def _fail(msg, status=400):
@@ -503,12 +506,28 @@ def login():
 
     if not name or len(phone) < 9:
         return _fail("이름과 휴대폰번호를 정확히 입력해주세요.")
-    if TEAM_PASSWORD and not hmac.compare_digest(password, TEAM_PASSWORD):
+
+    # 팀 비밀번호 검증 (설정되어 있으면)
+    if TEAM_PASSWORD and not hmac.compare_digest(team_password, TEAM_PASSWORD):
         return _fail("팀 비밀번호가 올바르지 않습니다.", 401)
+
+    # 개인 비밀번호 검증/저장
+    if not user_password or len(user_password) < 6:
+        return _fail("비밀번호는 6자 이상이어야 합니다.")
 
     role = "admin" if phone in ADMIN_PHONES else "user"
     try:
-        user = storage.upsert_user(name, phone, role)
+        # 기존 사용자 확인
+        existing_user = storage.get_user_by_phone(phone)
+        if existing_user:
+            # 기존 사용자: 비밀번호 검증
+            if not storage.verify_password(user_password, existing_user.get("password_hash", "")):
+                return _fail("비밀번호가 올바르지 않습니다.", 401)
+            # 이름과 역할 업데이트
+            user = storage.upsert_user(name, phone, role)
+        else:
+            # 새 사용자: 비밀번호 저장하며 생성
+            user = storage.upsert_user(name, phone, role, user_password)
     except Exception as e:  # noqa: BLE001 — DB 문제를 화면에 바로 보여줘 진단을 돕는다
         import traceback
 
