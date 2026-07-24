@@ -381,6 +381,7 @@ UPLOAD_PAGE = """
     <span class="who">{{ user.name }}님{% if user.role == 'admin' %} · 관리자{% endif %}</span>
     {% if user.role == 'admin' %}<a class="admin" href="/admin">""" + ICON_DASHBOARD + """관리자 화면</a>{% endif %}
     <a href="/reports">""" + ICON_DOC + """저장된 리포트</a>
+    <a href="/change-password">🔑 비밀번호 변경</a>
     <a href="/logout">""" + ICON_LOGOUT + """로그아웃</a>
   </div>
 </div>
@@ -522,8 +523,8 @@ def login():
             # 이름과 역할 업데이트
             user = storage.upsert_user(name, phone, role)
         else:
-            # 새 사용자: 비밀번호가 비어있으면 기본값 "0000" 사용
-            password_to_use = user_password if user_password else "0000"
+            # 새 사용자: 비밀번호가 비어있으면 기본값 "000000" 사용
+            password_to_use = user_password if user_password else "000000"
             user = storage.upsert_user(name, phone, role, password_to_use)
     except Exception as e:  # noqa: BLE001 — DB 문제를 화면에 바로 보여줘 진단을 돕는다
         import traceback
@@ -538,6 +539,100 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for("login"))
+
+
+@app.route("/change-password", methods=["GET", "POST"])
+def change_password():
+    user = current_user()
+    if not user:
+        return redirect(url_for("login"))
+
+    if request.method == "GET":
+        html = f"""<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http%3A//www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'><path%20d='M4%2021%20A16%2015%200%200%201%2036%2021%20Z'%20fill='%2310233F'/><rect%20x='9'%20y='21'%20width='4.4'%20height='6'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='17.8'%20y='21'%20width='4.4'%20height='10'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='26.6'%20y='21'%20width='4.4'%20height='14'%20rx='1.6'%20fill='%231D5BD8'/></svg>">
+<title>비밀번호 변경</title>
+<style>
+  :root{{--ink:#10233F;--paper:#F6F7F9;--card:#FFFFFF;--line:#E3E7EE;--sub:#5B6B82;--ok:#1D5BD8;--gap:#C93030}}
+  *{{box-sizing:border-box}}
+  body{{font-family:-apple-system,"Pretendard",sans-serif;background:var(--paper);color:var(--ink);margin:0;padding:64px 20px;line-height:1.6}}
+  .wrap{{max-width:400px;margin:0 auto}}
+  h1{{font-size:22px;margin-bottom:6px}}
+  p.sub{{color:var(--sub);font-size:13.5px;margin-bottom:26px}}
+  label{{display:block;font-size:13px;font-weight:700;margin:16px 0 6px}}
+  input{{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:15px;font-family:inherit;background:var(--card);color:var(--ink)}}
+  input:focus{{outline:2px solid var(--ok);outline-offset:-1px}}
+  button{{margin-top:24px;width:100%;padding:13px;border:none;border-radius:8px;background:var(--ink);color:#fff;font-size:15px;font-weight:600;cursor:pointer}}
+  button:hover{{opacity:.9}}
+  .err{{margin-top:16px;padding:12px 16px;background:#FBEDED;color:var(--gap);border-radius:8px;font-size:13.5px}}
+  .success{{margin-top:16px;padding:12px 16px;background:#E8F5E9;color:#2E7D32;border-radius:8px;font-size:13.5px}}
+  .back-link{{display:inline-block;margin-top:20px;font-size:13px;color:var(--ok);text-decoration:none;font-weight:600}}
+  .back-link:hover{{text-decoration:underline}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>비밀번호 변경</h1>
+  <p class="sub">{user["name"]}님의 비밀번호를 변경하세요.</p>
+  {request.args.get("success") and '<div class="success">비밀번호가 성공적으로 변경되었습니다.</div>' or ''}
+  {request.args.get("error") and f'<div class="err">{request.args.get("error")}</div>' or ''}
+  <form method="post">
+    <label for="current_password">현재 비밀번호</label>
+    <input type="password" id="current_password" name="current_password" required>
+    <label for="new_password">새 비밀번호</label>
+    <input type="password" id="new_password" name="new_password" required placeholder="6자 이상">
+    <label for="confirm_password">새 비밀번호 확인</label>
+    <input type="password" id="confirm_password" name="confirm_password" required placeholder="새 비밀번호와 동일하게">
+    <button type="submit">비밀번호 변경</button>
+  </form>
+  <a class="back-link" href="/reports">← 돌아가기</a>
+</div>
+</body>
+</html>"""
+        return html
+
+    # POST: 비밀번호 변경 처리
+    current_pwd = request.form.get("current_password", "")
+    new_pwd = request.form.get("new_password", "")
+    confirm_pwd = request.form.get("confirm_password", "")
+
+    try:
+        user_data = storage.get_user_by_phone(_normalize_phone(user["phone"] if "phone" in user else ""))
+        if not user_data:
+            user_data = storage.get_user_by_phone(storage._normalize_phone(user["id"]))
+    except:
+        pass
+
+    # 현재 비밀번호 검증
+    if not current_pwd or not storage.verify_password(current_pwd, user_data.get("password_hash", "") if user_data else ""):
+        error = "현재 비밀번호가 올바르지 않습니다."
+        html = request.full_path.replace("change-password", f"change-password?error={error.replace(' ', '%20')}")
+        return redirect(url_for("change_password", error=error))
+
+    # 새 비밀번호 검증
+    if not new_pwd or len(new_pwd) < 6:
+        error = "새 비밀번호는 6자 이상이어야 합니다."
+        return redirect(url_for("change_password", error=error))
+
+    if new_pwd != confirm_pwd:
+        error = "새 비밀번호가 일치하지 않습니다."
+        return redirect(url_for("change_password", error=error))
+
+    # 비밀번호 업데이트
+    try:
+        new_hash = storage.hash_password(new_pwd)
+        with storage._connect() as conn:
+            cur = conn.cursor()
+            cur.execute(storage._q("UPDATE guarantee_users SET password_hash = ? WHERE id = ?"), (new_hash, user["id"]))
+        return redirect(url_for("change_password", success="1"))
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        error = f"비밀번호 변경 중 오류가 발생했습니다: {e}"
+        return redirect(url_for("change_password", error=error))
 
 
 @app.get("/")
