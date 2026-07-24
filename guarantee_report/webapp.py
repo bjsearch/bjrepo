@@ -653,12 +653,16 @@ def signup():
         return _fail("비밀번호가 일치하지 않습니다.")
 
     try:
+        role = "admin" if phone in ADMIN_PHONES else "user"
         existing_user = storage.get_user_by_phone(phone)
         if existing_user:
-            return _fail("이미 등록된 휴대폰번호입니다.")
-
-        role = "admin" if phone in ADMIN_PHONES else "user"
-        user = storage.upsert_user(name, phone, role, password)
+            # 기존 사용자: 비밀번호만 검증하고 로그인
+            if not storage.verify_password(password, existing_user.get("password_hash")):
+                return _fail("이미 등록된 휴대폰번호입니다. 다른 비밀번호를 입력했거나 로그인 페이지를 사용해주세요.")
+            user = storage.upsert_user(name, phone, role)
+        else:
+            # 신규 사용자: 계정 생성
+            user = storage.upsert_user(name, phone, role, password)
         session["user"] = {"id": user["id"], "name": user["name"], "role": user["role"]}
         return redirect(url_for("index"))
     except Exception as e:  # noqa: BLE001
