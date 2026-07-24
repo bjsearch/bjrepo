@@ -596,7 +596,8 @@ def login():
             return _fail("등록되지 않은 휴대폰번호입니다. 먼저 회원 가입해주세요.", 401)
 
         # 기존 사용자: 비밀번호 검증
-        if not user_password or not storage.verify_password(user_password, existing_user.get("password_hash", "")):
+        password_hash = existing_user.get("password_hash")
+        if not user_password or not storage.verify_password(user_password, password_hash):
             return _fail("비밀번호가 올바르지 않습니다.", 401)
 
         # 이름과 역할 업데이트

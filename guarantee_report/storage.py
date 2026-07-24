@@ -28,10 +28,15 @@ def hash_password(password: str) -> str:
     return generate_password_hash(password)
 
 
-def verify_password(password: str, password_hash: str) -> bool:
+def verify_password(password: str, password_hash: str | None) -> bool:
     """비밀번호 해시를 검증한다."""
+    if not password_hash or not isinstance(password_hash, str):
+        return False
     from werkzeug.security import check_password_hash
-    return check_password_hash(password_hash, password)
+    try:
+        return check_password_hash(password_hash, password)
+    except Exception:
+        return False
 
 _SCHEMA_POSTGRES = """
 CREATE TABLE IF NOT EXISTS guarantee_reports (
