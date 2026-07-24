@@ -1274,6 +1274,107 @@ def admin_dashboard():
     )
 
 
+@app.route("/admin/init-db", methods=["GET", "POST"])
+@admin_required
+def admin_init_db():
+    user = current_user()
+
+    if request.method == "GET":
+        html = """<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http%3A//www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'><path%20d='M4%2021%20A16%2015%200%200%201%2036%2021%20Z'%20fill='%2310233F'/><rect%20x='9'%20y='21'%20width='4.4'%20height='6'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='17.8'%20y='21'%20width='4.4'%20height='10'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='26.6'%20y='21'%20width='4.4'%20height='14'%20rx='1.6'%20fill='%231D5BD8'/></svg>">
+<title>데이터베이스 초기화</title>
+<style>
+  :root{{--ink:#10233F;--paper:#F6F7F9;--card:#FFFFFF;--line:#E3E7EE;--sub:#5B6B82;--ok:#1D5BD8;--gap:#C93030}}
+  *{{box-sizing:border-box}}
+  body{{font-family:-apple-system,"Pretendard",sans-serif;background:var(--paper);color:var(--ink);margin:0;padding:64px 20px;line-height:1.6}}
+  .wrap{{max-width:400px;margin:0 auto}}
+  h1{{font-size:22px;margin-bottom:6px}}
+  p.sub{{color:var(--sub);font-size:13.5px;margin-bottom:26px;line-height:1.6}}
+  .warn{{background:#FBEDED;border:1px solid #F0CDCD;color:var(--gap);padding:14px 16px;border-radius:8px;margin-bottom:24px;font-size:13.5px;line-height:1.6}}
+  .buttons{{display:flex;gap:10px;margin-top:20px}}
+  button{{flex:1;padding:12px 16px;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.2s}}
+  .btn-cancel{{background:var(--line);color:var(--ink)}}
+  .btn-cancel:hover{{background:#D3D9E4}}
+  .btn-delete{{background:var(--gap);color:#FFFFFF}}
+  .btn-delete:hover{{opacity:0.9}}
+  a{{display:inline-block;margin-top:20px;color:var(--sub);font-size:13.5px;font-weight:600}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🔑 데이터베이스 초기화</h1>
+  <p class="sub">관리자만 접근 가능한 기능입니다.</p>
+
+  <div class="warn">
+    ⚠️ 주의: 이 작업은 되돌릴 수 없습니다.<br>
+    <strong>모든 사용자 계정과 리포트가 삭제</strong>됩니다.
+  </div>
+
+  <form method="post">
+    <input type="hidden" name="_csrf_token" value="{_get_csrf_token()}">
+    <div class="buttons">
+      <button type="button" class="btn-cancel" onclick="history.back()">취소</button>
+      <button type="submit" class="btn-delete">모두 삭제</button>
+    </div>
+  </form>
+
+  <a href="/admin">← 관리자 대시보드</a>
+</div>
+</body>
+</html>"""
+        return render_template_string(html)
+
+    if not _check_csrf_token():
+        abort(403)
+
+    try:
+        storage.clear_all_data()
+        success_html = """<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http%3A//www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'><path%20d='M4%2021%20A16%2015%200%200%201%2036%2021%20Z'%20fill='%2310233F'/><rect%20x='9'%20y='21'%20width='4.4'%20height='6'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='17.8'%20y='21'%20width='4.4'%20height='10'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='26.6'%20y='21'%20width='4.4'%20height='14'%20rx='1.6'%20fill='%231D5BD8'/></svg>">
+<title>초기화 완료</title>
+<style>
+  :root{{--ink:#10233F;--paper:#F6F7F9;--card:#FFFFFF;--line:#E3E7EE;--sub:#5B6B82;--ok:#1D5BD8}}
+  *{{box-sizing:border-box}}
+  body{{font-family:-apple-system,"Pretendard",sans-serif;background:var(--paper);color:var(--ink);margin:0;padding:64px 20px;line-height:1.6}}
+  .wrap{{max-width:400px;margin:0 auto}}
+  h1{{font-size:22px;margin-bottom:6px}}
+  p{{color:var(--sub);font-size:13.5px;margin-bottom:26px}}
+  .success{{background:#EAFAF1;border:1px solid #C6F6D5;color:#22543D;padding:14px 16px;border-radius:8px;margin-bottom:24px;font-size:13.5px}}
+  a{{display:inline-block;color:var(--ok);font-size:13.5px;font-weight:600}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>✓ 초기화 완료</h1>
+  <p>모든 사용자 계정과 리포트가 삭제되었습니다.</p>
+
+  <div class="success">
+    데이터베이스가 초기 상태로 복원되었습니다.<br>
+    이제 사용자들이 새로 가입할 수 있습니다.
+  </div>
+
+  <a href="/admin">← 관리자 대시보드로 돌아가기</a>
+</div>
+</body>
+</html>"""
+        return success_html
+    except Exception as e:  # noqa: BLE001
+        import traceback
+        traceback.print_exc()
+        return render_template_string(
+            ERROR_PAGE,
+            message=f"데이터베이스 초기화 중 오류: {e}"
+        ), 500
+
+
 ERROR_PAGE = """
 <!DOCTYPE html>
 <html lang="ko">

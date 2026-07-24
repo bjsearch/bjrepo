@@ -144,6 +144,14 @@
   {% else %}
   <div class="empty">등록된 사용자가 없습니다.</div>
   {% endif %}
+
+  <h2 style="margin-top:48px">관리자 도구</h2>
+  <div style="display:flex;gap:12px;align-items:center">
+    <a href="/admin/init-db" style="display:inline-flex;align-items:center;gap:6px;padding:12px 18px;background:#C93030;color:#FFFFFF;text-decoration:none;border-radius:8px;font-weight:600;font-size:13.5px">
+      🗑️ 데이터베이스 초기화
+    </a>
+    <span style="color:var(--sub);font-size:12px">모든 사용자와 리포트 삭제</span>
+  </div>
 </div>
 </body>
 </html>

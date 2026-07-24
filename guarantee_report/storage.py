@@ -380,3 +380,12 @@ def get_owner_phone_for_token(token: str) -> str | None:
         )
         row = cur.fetchone()
         return row["phone"] if row else None
+
+
+def clear_all_data() -> None:
+    """모든 사용자와 리포트 삭제 (관리자 초기화용)."""
+    _ensure_init()
+    with _connect() as conn:
+        cur = conn.cursor()
+        cur.execute(_q("DELETE FROM guarantee_reports"))
+        cur.execute(_q("DELETE FROM guarantee_users"))
