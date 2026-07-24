@@ -511,23 +511,20 @@ def login():
     if TEAM_PASSWORD and not hmac.compare_digest(team_password, TEAM_PASSWORD):
         return _fail("팀 비밀번호가 올바르지 않습니다.", 401)
 
-    # 개인 비밀번호 검증/저장
-    if not user_password or len(user_password) < 6:
-        return _fail("비밀번호는 6자 이상이어야 합니다.")
-
     role = "admin" if phone in ADMIN_PHONES else "user"
     try:
         # 기존 사용자 확인
         existing_user = storage.get_user_by_phone(phone)
         if existing_user:
             # 기존 사용자: 비밀번호 검증
-            if not storage.verify_password(user_password, existing_user.get("password_hash", "")):
+            if not user_password or not storage.verify_password(user_password, existing_user.get("password_hash", "")):
                 return _fail("비밀번호가 올바르지 않습니다.", 401)
             # 이름과 역할 업데이트
             user = storage.upsert_user(name, phone, role)
         else:
-            # 새 사용자: 비밀번호 저장하며 생성
-            user = storage.upsert_user(name, phone, role, user_password)
+            # 새 사용자: 비밀번호가 비어있으면 기본값 "0000" 사용
+            password_to_use = user_password if user_password else "0000"
+            user = storage.upsert_user(name, phone, role, password_to_use)
     except Exception as e:  # noqa: BLE001 — DB 문제를 화면에 바로 보여줘 진단을 돕는다
         import traceback
 
