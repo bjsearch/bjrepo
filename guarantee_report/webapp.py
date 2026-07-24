@@ -599,27 +599,27 @@ def change_password():
     new_pwd = request.form.get("new_password", "")
     confirm_pwd = request.form.get("confirm_password", "")
 
+    # DB에서 현재 사용자 정보 조회
     try:
-        user_data = storage.get_user_by_phone(_normalize_phone(user["phone"] if "phone" in user else ""))
-        if not user_data:
-            user_data = storage.get_user_by_phone(storage._normalize_phone(user["id"]))
-    except:
-        pass
+        # user["id"]로 사용자 조회
+        with storage._connect() as conn:
+            cur = conn.cursor()
+            cur.execute(storage._q("SELECT password_hash FROM guarantee_users WHERE id = ?"), (user["id"],))
+            row = cur.fetchone()
+            password_hash = row["password_hash"] if row else ""
+    except Exception as e:
+        return redirect(url_for("change_password", error="사용자 정보를 불러올 수 없습니다."))
 
     # 현재 비밀번호 검증
-    if not current_pwd or not storage.verify_password(current_pwd, user_data.get("password_hash", "") if user_data else ""):
-        error = "현재 비밀번호가 올바르지 않습니다."
-        html = request.full_path.replace("change-password", f"change-password?error={error.replace(' ', '%20')}")
-        return redirect(url_for("change_password", error=error))
+    if not current_pwd or not storage.verify_password(current_pwd, password_hash or ""):
+        return redirect(url_for("change_password", error="현재 비밀번호가 올바르지 않습니다."))
 
     # 새 비밀번호 검증
     if not new_pwd or len(new_pwd) < 6:
-        error = "새 비밀번호는 6자 이상이어야 합니다."
-        return redirect(url_for("change_password", error=error))
+        return redirect(url_for("change_password", error="새 비밀번호는 6자 이상이어야 합니다."))
 
     if new_pwd != confirm_pwd:
-        error = "새 비밀번호가 일치하지 않습니다."
-        return redirect(url_for("change_password", error=error))
+        return redirect(url_for("change_password", error="새 비밀번호가 일치하지 않습니다."))
 
     # 비밀번호 업데이트
     try:
@@ -631,8 +631,7 @@ def change_password():
     except Exception as e:
         import traceback
         traceback.print_exc()
-        error = f"비밀번호 변경 중 오류가 발생했습니다: {e}"
-        return redirect(url_for("change_password", error=error))
+        return redirect(url_for("change_password", error=f"비밀번호 변경 중 오류가 발생했습니다"))
 
 
 @app.get("/")
