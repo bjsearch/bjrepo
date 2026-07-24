@@ -139,8 +139,12 @@
   const submitBtn = document.getElementById('submitBtn');
   const steps = ['PDF 업로드 중...', '보장 항목 표 추출 중...', '보장 매트릭스 계산 중...', '리포트 조립 중...', '거의 다 됐어요...'];
 
-  form.addEventListener('submit', () => {
-    if (!input.files.length) return;
+  form.addEventListener('submit', (e) => {
+    if (!input.files.length) {
+      e.preventDefault();
+      alert('📄 PDF 또는 Excel 파일을 선택해주세요.');
+      return;
+    }
     submitBtn.disabled = true;
     submitBtn.textContent = '생성 중...';
     overlay.classList.add('show');
