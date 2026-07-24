@@ -222,7 +222,7 @@ LOGIN_PAGE = """
 <div class="wrap">
   <div class="brand-lockup">""" + LOGO_MARK + """<span class="wordmark">Team DIN 보장분석기</span></div>
   <h1>Team DIN 보장분석기 리포트 생성기</h1>
-  <p class="sub">이름, 휴대폰번호, 비밀번호로 로그인하세요.</p>
+  <p class="sub">이름, 휴대폰번호, 비밀번호로 로그인 또는 가입하세요. (처음이면 비밀번호를 입력하지 않아도 됩니다)</p>
   {% if error %}<div class="err">{{ error }}</div>{% endif %}
   <form method="post" action="/login">
     <input type="hidden" name="next" value="{{ next_url or '' }}">
@@ -588,20 +588,24 @@ def login():
     if TEAM_PASSWORD and not hmac.compare_digest(team_password, TEAM_PASSWORD):
         return _fail("팀 비밀번호가 올바르지 않습니다.", 401)
 
+    # 비밀번호가 비어있으면 기본값 "000000" 사용
+    if not user_password:
+        user_password = "000000"
+
     role = "admin" if phone in ADMIN_PHONES else "user"
     try:
         # 기존 사용자 확인
         existing_user = storage.get_user_by_phone(phone)
-        if not existing_user:
-            return _fail("등록되지 않은 휴대폰번호입니다. 먼저 회원 가입해주세요.", 401)
-
-        # 기존 사용자: 비밀번호 검증
-        password_hash = existing_user.get("password_hash")
-        if not user_password or not storage.verify_password(user_password, password_hash):
-            return _fail("비밀번호가 올바르지 않습니다.", 401)
-
-        # 이름과 역할 업데이트
-        user = storage.upsert_user(name, phone, role)
+        if existing_user:
+            # 기존 사용자: 비밀번호 검증
+            password_hash = existing_user.get("password_hash")
+            if not storage.verify_password(user_password, password_hash):
+                return _fail("비밀번호가 올바르지 않습니다.", 401)
+            # 이름과 역할 업데이트
+            user = storage.upsert_user(name, phone, role)
+        else:
+            # 신규 사용자: 계정 생성
+            user = storage.upsert_user(name, phone, role, user_password)
     except Exception as e:  # noqa: BLE001 — DB 문제를 화면에 바로 보여줘 진단을 돕는다
         import traceback
 
