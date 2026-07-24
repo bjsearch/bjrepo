@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http%3A//www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'><path%20d='M4%2021%20A16%2015%200%200%201%2036%2021%20Z'%20fill='%2310233F'/><rect%20x='9'%20y='21'%20width='4.4'%20height='6'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='17.8'%20y='21'%20width='4.4'%20height='10'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='26.6'%20y='21'%20width='4.4'%20height='14'%20rx='1.6'%20fill='%231D5BD8'/></svg>">
+<title>관리자 — Team DIN 보장분석기 리포트</title>
+<style>
+  :root{--ink:#10233F;--paper:#F6F7F9;--card:#FFFFFF;--line:#E3E7EE;--sub:#5B6B82;--ok:#1D5BD8;--warn:#C77700;--gap:#C93030;--ok-bg:#EDF3FE;--warn-bg:#FDF3E3;--gap-bg:#FBEDED}
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,"Pretendard",sans-serif;background:var(--paper);color:var(--ink);margin:0;padding:28px 20px 80px;line-height:1.6;font-size:14px}
+  .wrap{max-width:1000px;margin:0 auto}
+  .navbar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 14px;margin-bottom:14px;font-size:13px;color:var(--sub)}
+  .navbar .brand-group{display:flex;align-items:center;gap:9px}
+  .navbar .brand{display:flex;align-items:center;gap:7px;text-decoration:none;flex:none}
+  .navbar .brand .wordmark{font-family:"Noto Serif KR",serif;font-weight:700;font-size:15.5px;color:var(--ink);letter-spacing:-.01em}
+  .navbar .menu{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px}
+  .navbar a,.navbar .who{white-space:nowrap}
+  .navbar a{display:inline-flex;align-items:center;gap:5px;color:var(--sub);text-decoration:none;font-weight:600}
+  .navbar a:hover{color:var(--ink)}
+  .navbar a.new{color:var(--ok)}
+  .navbar a.new:hover{color:var(--ink)}
+  .navbar a svg{width:14px;height:14px;flex:none}
+  .top{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:24px}
+  h1{font-size:24px;margin:0}
+  h2{font-family:"Noto Serif KR",serif;font-size:18px;font-weight:700;padding-bottom:8px;border-bottom:1.5px solid var(--ink);margin:36px 0 14px}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:8px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+  .kpi .label{font-size:12.5px;color:var(--sub);margin-bottom:6px}
+  .kpi .value{font-size:22px;font-weight:700}
+  .gap-list{display:grid;gap:8px}
+  .gap-row{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 14px}
+  .gap-row .label{flex:1;font-weight:600;font-size:13.5px}
+  .gap-row .bar{flex:2;height:8px;background:#EDF0F5;border-radius:99px;overflow:hidden}
+  .gap-row .bar .fill{height:100%;background:var(--gap);border-radius:99px}
+  .gap-row .count{font-size:12.5px;color:var(--sub);width:60px;text-align:right}
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:13.5px}
+  thead th{background:#F0F3F8;font-size:12px;font-weight:600;color:var(--sub);text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
+  tbody td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+  tbody tr:last-child td{border-bottom:none}
+  td.r{text-align:right}
+  .name-link{font-weight:700;color:var(--ink);text-decoration:none}
+  .name-link:hover{text-decoration:underline}
+  .chip{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;white-space:nowrap}
+  .chip.ok{color:var(--ok);background:var(--ok-bg)}
+  .chip.warn{color:var(--warn);background:var(--warn-bg)}
+  .chip.gap{color:var(--gap);background:var(--gap-bg)}
+  .chip.admin{color:var(--ok);background:var(--ok-bg)}
+  .chips{display:flex;gap:4px;flex-wrap:wrap}
+  .empty{padding:30px 20px;text-align:center;color:var(--sub);font-size:13.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="navbar">
+    <div class="brand-group">
+      <a class="brand" href="/">
+        <svg viewBox="0 0 40 40" width="22" height="22" aria-hidden="true"><path d="M4 21 A16 15 0 0 1 36 21 Z" fill="#10233F"/><rect x="9" y="21" width="4.4" height="6" rx="1.6" fill="#1D5BD8"/><rect x="17.8" y="21" width="4.4" height="10" rx="1.6" fill="#1D5BD8"/><rect x="26.6" y="21" width="4.4" height="14" rx="1.6" fill="#1D5BD8"/></svg>
+        <span class="wordmark">Team DIN 보장분석기</span>
+      </a>
+    </div>
+    <div class="menu">
+      <span class="who">{{ user.name }}님 · 관리자</span>
+      <a class="new" href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>새 리포트 생성</a>
+      <a href="/reports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M14 3v5h5"/></svg>저장된 리포트</a>
+      <a href="/change-password">🔑 비밀번호 변경</a>
+      <a href="/logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>로그아웃</a>
+    </div>
+  </div>
+  <div class="top">
+    <h1>관리자 화면</h1>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="label">총 리포트 수</div><div class="value">{{ total_reports }}건</div></div>
+    <div class="kpi"><div class="label">분석한 고객 수</div><div class="value">{{ total_customers }}명</div></div>
+    <div class="kpi"><div class="label">평균 월 보험료</div><div class="value">{{ "{:,}".format(avg_premium) }}원</div></div>
+  </div>
+
+  <h2>전체 고객 미가입(공백) 항목 Top {{ top_gaps|length }}</h2>
+  {% if top_gaps %}
+  <div class="gap-list">
+    {% set max_count = top_gaps[0][1] %}
+    {% for label, count in top_gaps %}
+    <div class="gap-row">
+      <div class="label">{{ label }}</div>
+      <div class="bar"><div class="fill" style="width:{{ (count / max_count * 100)|round(0,'floor') }}%"></div></div>
+      <div class="count">{{ count }}명</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty">아직 데이터가 없습니다.</div>
+  {% endif %}
+
+  <h2>전체 리포트 ({{ reports|length }}건)</h2>
+  {% if reports %}
+  <table>
+    <thead>
+      <tr><th>고객</th><th>성별</th><th>생년월일</th><th class="r">나이</th><th>생성자</th><th>생성일</th><th class="r">월 보험료</th><th>진단 결과</th></tr>
+    </thead>
+    <tbody>
+      {% for r in reports %}
+      <tr>
+        <td><a class="name-link" href="/reports/{{ r.id }}">{{ r.customer_name }}</a></td>
+        <td>{{ r.gender or '-' }}</td>
+        <td>{{ r.birth_date or '-' }}</td>
+        <td class="r">{{ (r.age ~ '세') if r.age else '-' }}</td>
+        <td>{{ r.created_by_name or '-' }}</td>
+        <td>{{ r.created_at[:10] }}</td>
+        <td class="r">{{ "{:,}".format(r.monthly_premium) if r.monthly_premium else '-' }}원</td>
+        <td>
+          <div class="chips">
+            <span class="chip ok">적정 {{ r.ok_count }}</span>
+            <span class="chip warn">주의·부족 {{ r.warn_count }}</span>
+            <span class="chip gap">미가입 {{ r.gap_count }}</span>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">아직 저장된 리포트가 없습니다.</div>
+  {% endif %}
+
+  <h2>등록된 사용자 ({{ users|length }}명)</h2>
+  {% if users %}
+  <table>
+    <thead>
+      <tr><th>이름</th><th>휴대폰번호</th><th>권한</th><th>최근 로그인</th></tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td>{{ u.name }}</td>
+        <td>{{ u.phone }}</td>
+        <td>{% if u.role == 'admin' %}<span class="chip admin">관리자</span>{% else %}일반{% endif %}</td>
+        <td>{{ (u.last_login_at or '-')[:16] }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">등록된 사용자가 없습니다.</div>
+  {% endif %}
+
+  <h2 style="margin-top:48px">관리자 도구</h2>
+  <div style="display:flex;gap:12px;align-items:center">
+    <a href="/admin/init-db" style="display:inline-flex;align-items:center;gap:6px;padding:12px 18px;background:#C93030;color:#FFFFFF;text-decoration:none;border-radius:8px;font-weight:600;font-size:13.5px">
+      🗑️ 데이터베이스 초기화
+    </a>
+    <span style="color:var(--sub);font-size:12px">모든 사용자와 리포트 삭제</span>
+  </div>
+</div>
+</body>
+</html>

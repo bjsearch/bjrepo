@@ -1,0 +1,71 @@
+{
+  "sections": [
+    {
+      "title": "사망 · 후유장해 · 치매",
+      "rows": [
+        {"label": "상해사망", "categories": ["상해사망", "유병자상해사망", "교통상해사망"], "recommend": 10000},
+        {"label": "상해 80% 이상 후유장해", "categories": ["상해80%이상후유장해", "상해후유장해"], "recommend": 10000},
+        {"label": "질병사망", "categories": ["질병사망"], "recommend": 10000},
+        {"label": "질병 80% 이상 후유장해", "categories": ["질병80%이상후유장해", "질병후유장해"], "recommend": 10000},
+        {"label": "재해(상해)장해 3% 일경우", "categories": ["상해후유장해"], "multiplier": 0.03, "recommend": 300},
+        {"label": "질병후유장해 3% 일경우", "categories": ["질병후유장해"], "multiplier": 0.03, "recommend": 300},
+        {"label": "치매(LTC) · 경증치매 진단", "categories_contains": ["치매"], "recommend": 3000, "recommend_display": "3,000 / 400"}
+      ]
+    },
+    {
+      "title": "암 보장",
+      "rows": [
+        {"label": "일반암 진단", "categories": ["암진단"], "recommend": 3000},
+        {"label": "유사암(소액암) 진단", "categories": ["소액암진단"], "recommend": 1000},
+        {"label": "항암방사선치료", "categories": ["항암방사선약물치료비"], "recommend": 1000},
+        {"label": "고액암 진단", "categories_contains": ["고액암"], "recommend": 5000},
+        {"label": "표적항암약물치료", "categories_contains": ["표적항암"], "recommend": 3000},
+        {"label": "이차암 진단", "categories_contains": ["이차암"], "recommend": 1000}
+      ]
+    },
+    {
+      "title": "뇌 · 심장 질환",
+      "rows": [
+        {"label": "뇌혈관질환 진단", "categories": ["뇌혈관질환진단"], "recommend": 1000},
+        {"label": "허혈성심장질환 진단", "categories": ["허혈성심장질환진단"], "recommend": 1000},
+        {"label": "뇌졸중 진단", "categories": ["뇌졸중진단"], "recommend": 3000},
+        {"label": "급성심근경색 진단", "categories": ["급성심근경색진단"], "recommend": 3000},
+        {"label": "뇌출혈 진단", "categories_contains": ["뇌출혈"], "recommend": 3000}
+      ]
+    },
+    {
+      "title": "수술 · 입원 · 간병",
+      "rows": [
+        {"label": "상해수술", "categories": ["상해수술"], "recommend": 50},
+        {"label": "질병 · 상해 종수술", "kind": "each_pair", "categories": ["질병종수술", "상해종수술"], "recommend": null},
+        {"label": "질병수술 (일반)", "categories": ["질병수술"], "recommend": 50},
+        {"label": "암수술", "categories_contains": ["암수술"], "recommend": 500},
+        {"label": "특정질병입원일당", "categories": ["특정질병입원일당"], "kind": "info", "recommend": null},
+        {"label": "질병 · 상해 입원일당", "kind": "each_pair", "categories": ["질병입원일당", "상해입원일당"], "recommend": 10},
+        {"label": "간병인지원 입원일당", "kind": "each_pair", "categories": ["간병인지원질병입원일당", "간병인지원상해입원일당"], "recommend": 10},
+        {"label": "간호간병통합서비스 일당", "kind": "each_pair", "categories": ["질병간호간병통합서비스사용일당", "상해간호간병통합서비스사용일당"], "recommend": null}
+      ]
+    },
+    {
+      "title": "실손 · 생활보장",
+      "rows": [
+        {"label": "실손 입원 (질병 · 상해 각)", "kind": "indemnity_pair", "match": "입원의료비", "recommend": 5000},
+        {"label": "실손 외래 (질병 · 상해 각)", "kind": "indemnity_pair", "match": "외래의료비", "recommend": 30},
+        {"label": "일상생활(가족)배상책임", "kind": "indemnity_sum", "match": "배상책임", "recommend": 10000},
+        {"label": "골절진단", "categories": ["골절진단", "중대골절진단"], "recommend": 30},
+        {"label": "중대화상진단", "categories": ["중대화상진단"], "kind": "info", "recommend": null},
+        {"label": "화상진단", "categories": ["화상진단"], "recommend": 50},
+        {"label": "임플란트", "categories_contains": ["임플란트"], "recommend": 150},
+        {"label": "운전자 담보 (교처지 · 변호사 · 벌금)", "categories_contains": ["교통사고처리", "벌금", "변호사"], "recommend": null}
+      ]
+    }
+  ],
+  "matrix_group_hints": {
+    "암사망": "암 보장",
+    "특정질병진단": "뇌 · 심장 질환",
+    "특정질병수술": "수술 · 입원 · 간병",
+    "특정상해수술": "수술 · 입원 · 간병",
+    "화상수술": "수술 · 입원 · 간병",
+    "깁스치료": "수술 · 입원 · 간병"
+  }
+}
