@@ -493,29 +493,85 @@ export default function GolfFieldTyping() {
                 <p className="text-2xl font-black text-green-300 mb-2" style={{ animation: "pulse-glow 2s ease-in-out infinite" }}>
                   {gameState.currentCourse?.name}
                 </p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-500 mb-3">
                   {gameState.currentCourse?.region} • {gameState.currentCourse?.holes}홀 • {gameState.currentCourse?.established}년 개설
                 </p>
+
+                {/* 난이도 */}
+                <div className="mb-3">
+                  <p className="text-xs font-semibold text-gray-400 mb-1">난이도</p>
+                  <div className="flex gap-2 items-center">
+                    <div className={`px-3 py-1 rounded-full text-xs font-bold text-white ${
+                      gameState.currentCourse?.difficulty === "쉬움" ? "bg-green-600" :
+                      gameState.currentCourse?.difficulty === "중간" ? "bg-yellow-600" :
+                      "bg-red-600"
+                    }`}>
+                      {gameState.currentCourse?.difficulty}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 골프장 특징 */}
+                {gameState.currentCourse?.features && gameState.currentCourse.features.length > 0 && (
+                  <div className="mb-3">
+                    <p className="text-xs font-semibold text-gray-400 mb-1">⭐ 특징</p>
+                    <div className="flex flex-wrap gap-2">
+                      {gameState.currentCourse.features.map((feature, i) => (
+                        <span key={i} className="text-xs bg-green-900 bg-opacity-50 text-green-300 px-2 py-1 rounded-full border border-green-500 border-opacity-50">
+                          {feature}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 추천 클럽 */}
+                {gameState.currentCourse?.recommendedClubs && gameState.currentCourse.recommendedClubs.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-400 mb-1">🏌️ 추천 클럽</p>
+                    <div className="flex flex-wrap gap-2">
+                      {gameState.currentCourse.recommendedClubs.map((club, i) => (
+                        <span key={i} className="text-xs bg-blue-900 bg-opacity-50 text-blue-300 px-2 py-1 rounded-full border border-blue-500 border-opacity-50">
+                          {club}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* 힌트 섹션 */}
               <div className="bg-gradient-to-r from-cyan-600 to-blue-600 bg-opacity-10 p-4 rounded-xl border-2 border-cyan-500 border-opacity-40 backdrop-blur" style={{ boxShadow: "0 0 15px rgba(34, 211, 238, 0.2)" }}>
-                <p className="text-xs font-bold text-cyan-400 mb-2 uppercase">💡 정보 & 힌트</p>
-                <p className="text-sm text-gray-300 mb-3 leading-relaxed">{gameState.currentCourse?.description}</p>
+                <div className="mb-3">
+                  <p className="text-xs font-bold text-cyan-400 mb-2 uppercase">💡 골프장 소개</p>
+                  <p className="text-sm text-gray-300 leading-relaxed">{gameState.currentCourse?.description}</p>
+                </div>
 
                 {gameState.hintIndex > 0 && (
                   <div className="space-y-2 mb-3">
+                    <p className="text-xs font-bold text-cyan-400 uppercase mb-2">📌 팁</p>
                     {gameState.currentCourse?.hints.slice(0, gameState.hintIndex).map((hint, i) => (
                       <div key={i} className="text-sm text-cyan-300 bg-black bg-opacity-40 p-2.5 rounded-lg border-l-3 border-cyan-400">
                         ✓ {hint}
                       </div>
                     ))}
+                    {/* 난이도별 팁 */}
+                    {gameState.currentCourse?.difficultyTips && gameState.hintIndex >= 2 && (
+                      <div className="space-y-1 mt-2">
+                        <p className="text-xs font-bold text-yellow-400 uppercase">🎯 난이도 조언</p>
+                        {gameState.currentCourse.difficultyTips.map((tip, i) => (
+                          <div key={`difficulty-${i}`} className="text-xs text-yellow-300 bg-black bg-opacity-40 p-2 rounded-lg border-l-3 border-yellow-500">
+                            • {tip}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 
                 <button
                   onClick={showNextHint}
-                  disabled={!gameState.currentCourse || gameState.hintIndex >= gameState.currentCourse.hints.length}
+                  disabled={!gameState.currentCourse || gameState.hintIndex >= (gameState.currentCourse?.hints.length || 0) + 2}
                   className="w-full text-xs bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 disabled:opacity-40 disabled:bg-gray-600 text-white font-bold py-2 px-2 rounded-lg transition-all hover:scale-105 active:scale-95"
                 >
                   {gameState.hintIndex === 0 ? "💡 첫 번째 힌트" : "➡️ 다음 힌트"}
