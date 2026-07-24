@@ -8,42 +8,71 @@
 <style>
   :root{--ink:#10233F;--paper:#F6F7F9;--card:#FFFFFF;--line:#E3E7EE;--sub:#5B6B82;--ok:#1D5BD8;--gap:#C93030}
   *{box-sizing:border-box}
-  body{font-family:-apple-system,"Pretendard",sans-serif;background:var(--paper);color:var(--ink);margin:0;padding:64px 20px;line-height:1.6}
-  .wrap{max-width:400px;margin:0 auto}
-  h1{font-size:22px;margin-bottom:6px}
-  p.sub{color:var(--sub);font-size:13.5px;margin-bottom:26px}
-  label{display:block;font-size:13px;font-weight:700;margin:16px 0 6px}
-  input{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:15px;font-family:inherit;background:var(--card);color:var(--ink)}
-  input:focus{outline:2px solid var(--ok);outline-offset:-1px}
-  button{margin-top:24px;width:100%;padding:13px;border:none;border-radius:8px;background:var(--ink);color:#fff;font-size:15px;font-weight:600;cursor:pointer}
-  button:hover{opacity:.9}
-  .err{margin-top:16px;padding:12px 16px;background:#FBEDED;color:var(--gap);border-radius:8px;font-size:13.5px}
-  .brand-lockup{display:flex;align-items:center;gap:9px;margin-bottom:22px}
+  body{font-family:-apple-system,"Pretendard",sans-serif;background:linear-gradient(135deg,#0F3068 0%,#1A4B8C 50%,#0F3068 100%);color:var(--ink);margin:0;padding:0;line-height:1.6;min-height:100vh;display:flex;align-items:center;justify-content:center}
+  .split{display:flex;width:100%;height:100vh;max-height:100vh}
+  .hero{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding:60px 80px;color:#fff;background:linear-gradient(135deg,#0F3068 0%,#1A4B8C 50%,#0F3068 100%)}
+  .hero h2{font-size:42px;font-weight:900;margin:0 0 24px 0;line-height:1.2}
+  .hero p{font-size:16px;color:rgba(255,255,255,.85);margin:0;max-width:500px;line-height:1.7}
+  .form-box{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:48px;background:var(--paper)}
+  .form-container{width:100%;max-width:380px}
+  .brand-lockup{display:flex;align-items:center;gap:9px;margin-bottom:28px}
   .brand-lockup .wordmark{font-family:"Noto Serif KR",serif;font-weight:700;font-size:17px;color:var(--ink);letter-spacing:-.01em}
-  .footer{margin-top:18px;text-align:center;font-size:13px;color:var(--sub)}
-  .footer a{color:var(--ok);font-weight:600;text-decoration:none}
+  h1{font-size:24px;font-weight:800;margin:0 0 8px 0;color:var(--ink)}
+  .sub{color:var(--sub);font-size:14px;margin:0 0 28px 0}
+  .form-group{margin-bottom:18px}
+  label{display:block;font-size:13px;font-weight:700;margin:0 0 8px 0;color:var(--ink)}
+  input{width:100%;padding:14px 16px;border:1.5px solid var(--line);border-radius:10px;font-size:15px;font-family:inherit;background:var(--card);color:var(--ink);transition:all .2s}
+  input:focus{outline:none;border-color:var(--ok);box-shadow:0 0 0 3px rgba(29,91,216,.1)}
+  button{margin-top:28px;width:100%;padding:14px;border:none;border-radius:10px;background:linear-gradient(135deg,#1D5BD8 0%,#1a4fa8 100%);color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:all .2s;box-shadow:0 4px 12px rgba(29,91,216,.25)}
+  button:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(29,91,216,.35)}
+  button:active{transform:translateY(0)}
+  .err{margin:16px 0;padding:14px 16px;background:#FBEDED;color:var(--gap);border-radius:8px;font-size:13.5px;border-left:4px solid var(--gap)}
+  .footer{margin-top:24px;text-align:center;font-size:13px;color:var(--sub)}
+  .footer a{color:var(--ok);font-weight:700;text-decoration:none}
   .footer a:hover{text-decoration:underline}
+  @media (max-width:768px){
+    .split{flex-direction:column;height:auto}
+    .hero{padding:40px 20px;min-height:300px}
+    .hero h2{font-size:32px}
+    .form-box{padding:36px 20px}
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="brand-lockup">{{ logo_mark|safe }}<span class="wordmark">Team DIN 보장분석기</span></div>
-  <h1>회원 가입</h1>
-  <p class="sub">새로운 계정을 생성하세요.</p>
-  {% if error %}<div class="err">{{ error }}</div>{% endif %}
-  <form method="post" action="/signup">
-    <label for="name">이름</label>
-    <input type="text" id="name" name="name" required placeholder="홍길동" value="{{ name or '' }}">
-    <label for="phone">휴대폰번호</label>
-    <input type="tel" id="phone" name="phone" required placeholder="010-1234-5678" value="{{ phone or '' }}">
-    <label for="password">비밀번호</label>
-    <input type="password" id="password" name="password" required placeholder="6자 이상">
-    <label for="password_confirm">비밀번호 확인</label>
-    <input type="password" id="password_confirm" name="password_confirm" required placeholder="비밀번호 재입력">
-    <button type="submit">회원 가입</button>
-  </form>
-  <div class="footer">
-    이미 회원이신가요? <a href="/login">로그인</a>
+<div class="split">
+  <div class="hero">
+    <h2>전문가와 함께하는<br>보험 관리</h2>
+    <p>Team DIN의 맞춤형 분석으로 당신에게 필요한 보험 보장을 정확하게 파악하세요.</p>
+  </div>
+  <div class="form-box">
+    <div class="form-container">
+      <div class="brand-lockup">{{ logo_mark|safe }}<span class="wordmark">Team DIN</span></div>
+      <h1>회원 가입</h1>
+      <p class="sub">계정을 생성하여 시작하세요</p>
+      {% if error %}<div class="err">{{ error }}</div>{% endif %}
+      <form method="post" action="/signup">
+        <div class="form-group">
+          <label for="name">이름</label>
+          <input type="text" id="name" name="name" required placeholder="홍길동" value="{{ name or '' }}">
+        </div>
+        <div class="form-group">
+          <label for="phone">휴대폰번호</label>
+          <input type="tel" id="phone" name="phone" required placeholder="010-1234-5678" value="{{ phone or '' }}">
+        </div>
+        <div class="form-group">
+          <label for="password">비밀번호</label>
+          <input type="password" id="password" name="password" required placeholder="6자 이상">
+        </div>
+        <div class="form-group">
+          <label for="password_confirm">비밀번호 확인</label>
+          <input type="password" id="password_confirm" name="password_confirm" required placeholder="비밀번호 재입력">
+        </div>
+        <button type="submit">회원 가입하기</button>
+      </form>
+      <div class="footer">
+        이미 계정이 있으신가요? <a href="/login">로그인</a>
+      </div>
+    </div>
   </div>
 </div>
 <script>
