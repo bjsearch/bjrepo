@@ -144,7 +144,7 @@ def admin_required(view):
 
 @app.before_request
 def _require_login():
-    if request.endpoint in ("login", "logout", "static", "shared_report", "shared_report_chat"):
+    if request.endpoint in ("login", "signup", "logout", "static", "shared_report", "shared_report_chat"):
         return None
     if not current_user():
         return redirect(url_for("login", next=request.path))
@@ -238,6 +238,82 @@ LOGIN_PAGE = """
     <input type="password" id="password" name="password" required placeholder="6자 이상">
     <button type="submit">로그인</button>
   </form>
+  <div style="margin-top:18px;text-align:center;font-size:13px;color:var(--sub)">
+    회원이 아니신가요? <a href="/signup" style="color:var(--ok);font-weight:600;text-decoration:none">회원 가입</a>
+  </div>
+</div>
+<script>
+  function formatPhone(digits) {
+    digits = digits.slice(0, 11);
+    if (digits.startsWith('02')) {
+      if (digits.length <= 2) return digits;
+      if (digits.length <= 5) return digits.slice(0, 2) + '-' + digits.slice(2);
+      if (digits.length <= 9) return digits.slice(0, 2) + '-' + digits.slice(2, 5) + '-' + digits.slice(5);
+      return digits.slice(0, 2) + '-' + digits.slice(2, 6) + '-' + digits.slice(6, 10);
+    }
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return digits.slice(0, 3) + '-' + digits.slice(3);
+    if (digits.length <= 10) return digits.slice(0, 3) + '-' + digits.slice(3, 6) + '-' + digits.slice(6);
+    return digits.slice(0, 3) + '-' + digits.slice(3, 7) + '-' + digits.slice(7, 11);
+  }
+  const phoneInput = document.getElementById('phone');
+  phoneInput.addEventListener('input', () => {
+    const digits = phoneInput.value.replace(/\\D/g, '');
+    phoneInput.value = formatPhone(digits);
+  });
+</script>
+</body>
+</html>
+"""
+
+SIGNUP_PAGE = """
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http%3A//www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'><path%20d='M4%2021%20A16%2015%200%200%201%2036%2021%20Z'%20fill='%2310233F'/><rect%20x='9'%20y='21'%20width='4.4'%20height='6'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='17.8'%20y='21'%20width='4.4'%20height='10'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='26.6'%20y='21'%20width='4.4'%20height='14'%20rx='1.6'%20fill='%231D5BD8'/></svg>">
+<title>회원 가입 — Team DIN 보장분석기 리포트 생성기</title>
+<style>
+  :root{--ink:#10233F;--paper:#F6F7F9;--card:#FFFFFF;--line:#E3E7EE;--sub:#5B6B82;--ok:#1D5BD8;--gap:#C93030}
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,"Pretendard",sans-serif;background:var(--paper);color:var(--ink);margin:0;padding:64px 20px;line-height:1.6}
+  .wrap{max-width:400px;margin:0 auto}
+  h1{font-size:22px;margin-bottom:6px}
+  p.sub{color:var(--sub);font-size:13.5px;margin-bottom:26px}
+  label{display:block;font-size:13px;font-weight:700;margin:16px 0 6px}
+  input{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:15px;font-family:inherit;background:var(--card);color:var(--ink)}
+  input:focus{outline:2px solid var(--ok);outline-offset:-1px}
+  button{margin-top:24px;width:100%;padding:13px;border:none;border-radius:8px;background:var(--ink);color:#fff;font-size:15px;font-weight:600;cursor:pointer}
+  button:hover{opacity:.9}
+  .err{margin-top:16px;padding:12px 16px;background:#FBEDED;color:var(--gap);border-radius:8px;font-size:13.5px}
+  .brand-lockup{display:flex;align-items:center;gap:9px;margin-bottom:22px}
+  .brand-lockup .wordmark{font-family:"Noto Serif KR",serif;font-weight:700;font-size:17px;color:var(--ink);letter-spacing:-.01em}
+  .footer{margin-top:18px;text-align:center;font-size:13px;color:var(--sub)}
+  .footer a{color:var(--ok);font-weight:600;text-decoration:none}
+  .footer a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand-lockup">""" + LOGO_MARK + """<span class="wordmark">Team DIN 보장분석기</span></div>
+  <h1>회원 가입</h1>
+  <p class="sub">새로운 계정을 생성하세요.</p>
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+  <form method="post" action="/signup">
+    <label for="name">이름</label>
+    <input type="text" id="name" name="name" required placeholder="홍길동" value="{{ name or '' }}">
+    <label for="phone">휴대폰번호</label>
+    <input type="tel" id="phone" name="phone" required placeholder="010-1234-5678" value="{{ phone or '' }}">
+    <label for="password">비밀번호</label>
+    <input type="password" id="password" name="password" required placeholder="6자 이상">
+    <label for="password_confirm">비밀번호 확인</label>
+    <input type="password" id="password_confirm" name="password_confirm" required placeholder="비밀번호 재입력">
+    <button type="submit">회원 가입</button>
+  </form>
+  <div class="footer">
+    이미 회원이신가요? <a href="/login">로그인</a>
+  </div>
 </div>
 <script>
   function formatPhone(digits) {
@@ -516,16 +592,15 @@ def login():
     try:
         # 기존 사용자 확인
         existing_user = storage.get_user_by_phone(phone)
-        if existing_user:
-            # 기존 사용자: 비밀번호 검증
-            if not user_password or not storage.verify_password(user_password, existing_user.get("password_hash", "")):
-                return _fail("비밀번호가 올바르지 않습니다.", 401)
-            # 이름과 역할 업데이트
-            user = storage.upsert_user(name, phone, role)
-        else:
-            # 새 사용자: 비밀번호가 비어있으면 기본값 "000000" 사용
-            password_to_use = user_password if user_password else "000000"
-            user = storage.upsert_user(name, phone, role, password_to_use)
+        if not existing_user:
+            return _fail("등록되지 않은 휴대폰번호입니다. 먼저 회원 가입해주세요.", 401)
+
+        # 기존 사용자: 비밀번호 검증
+        if not user_password or not storage.verify_password(user_password, existing_user.get("password_hash", "")):
+            return _fail("비밀번호가 올바르지 않습니다.", 401)
+
+        # 이름과 역할 업데이트
+        user = storage.upsert_user(name, phone, role)
     except Exception as e:  # noqa: BLE001 — DB 문제를 화면에 바로 보여줘 진단을 돕는다
         import traceback
 
@@ -539,6 +614,53 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for("login"))
+
+
+@app.route("/signup", methods=["GET", "POST"])
+def signup():
+    if request.method == "GET":
+        return render_template_string(SIGNUP_PAGE, error=None)
+
+    name = request.form.get("name", "").strip()
+    phone_raw = request.form.get("phone", "").strip()
+    phone = _normalize_phone(phone_raw)
+    password = request.form.get("password", "")
+    password_confirm = request.form.get("password_confirm", "")
+
+    def _fail(msg, status=400):
+        return (
+            render_template_string(
+                SIGNUP_PAGE,
+                error=msg,
+                name=name,
+                phone=phone_raw,
+            ),
+            status,
+        )
+
+    if not name or len(phone) < 9:
+        return _fail("이름과 휴대폰번호를 정확히 입력해주세요.")
+
+    if not password or len(password) < 6:
+        return _fail("비밀번호는 6자 이상이어야 합니다.")
+
+    if password != password_confirm:
+        return _fail("비밀번호가 일치하지 않습니다.")
+
+    try:
+        existing_user = storage.get_user_by_phone(phone)
+        if existing_user:
+            return _fail("이미 등록된 휴대폰번호입니다.")
+
+        role = "admin" if phone in ADMIN_PHONES else "user"
+        user = storage.upsert_user(name, phone, role, password)
+        session["user"] = {"id": user["id"], "name": user["name"], "role": user["role"]}
+        return redirect(url_for("index"))
+    except Exception as e:  # noqa: BLE001
+        import traceback
+
+        traceback.print_exc()
+        return _fail(f"회원 가입 중 서버 오류가 발생했습니다: {e}", 500)
 
 
 @app.route("/change-password", methods=["GET", "POST"])
