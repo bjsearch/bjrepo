@@ -23,7 +23,7 @@ from collections import Counter
 from functools import wraps
 from urllib.parse import quote
 
-from flask import Flask, request, render_template_string, Response, redirect, url_for, abort, session, jsonify
+from flask import Flask, request, render_template, Response, redirect, url_for, abort, session, jsonify
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.utils import secure_filename
 
@@ -91,6 +91,21 @@ def _check_csrf_token() -> bool:
     token = request.form.get("_csrf_token", "")
     session_token = session.get("_csrf_token", "")
     return token and session_token and hmac.compare_digest(token, session_token)
+
+
+def _get_upload_context(error=None, **extra) -> dict:
+    """업로드 페이지 템플릿 컨텍스트 생성"""
+    return {
+        "error": error,
+        "user": current_user(),
+        "csrf_token": _get_csrf_token(),
+        "logo_mark": LOGO_MARK,
+        "nav_css": NAV_CSS,
+        "icon_dashboard": ICON_DASHBOARD,
+        "icon_doc": ICON_DOC,
+        "icon_logout": ICON_LOGOUT,
+        **extra,
+    }
 
 
 if not TEAM_PASSWORD:
@@ -194,371 +209,13 @@ ICON_PLUS = (
     'stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/>'
     '<line x1="5" y1="12" x2="19" y2="12"/></svg>'
 )
-LOGIN_PAGE = """
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http%3A//www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'><path%20d='M4%2021%20A16%2015%200%200%201%2036%2021%20Z'%20fill='%2310233F'/><rect%20x='9'%20y='21'%20width='4.4'%20height='6'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='17.8'%20y='21'%20width='4.4'%20height='10'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='26.6'%20y='21'%20width='4.4'%20height='14'%20rx='1.6'%20fill='%231D5BD8'/></svg>">
-<title>로그인 — Team DIN 보장분석기 리포트 생성기</title>
-<style>
-  :root{--ink:#10233F;--paper:#F6F7F9;--card:#FFFFFF;--line:#E3E7EE;--sub:#5B6B82;--ok:#1D5BD8;--gap:#C93030}
-  *{box-sizing:border-box}
-  body{font-family:-apple-system,"Pretendard",sans-serif;background:var(--paper);color:var(--ink);margin:0;padding:64px 20px;line-height:1.6}
-  .wrap{max-width:400px;margin:0 auto}
-  h1{font-size:22px;margin-bottom:6px}
-  p.sub{color:var(--sub);font-size:13.5px;margin-bottom:26px}
-  label{display:block;font-size:13px;font-weight:700;margin:16px 0 6px}
-  input{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:15px;font-family:inherit;background:var(--card);color:var(--ink)}
-  input:focus{outline:2px solid var(--ok);outline-offset:-1px}
-  button{margin-top:24px;width:100%;padding:13px;border:none;border-radius:8px;background:var(--ink);color:#fff;font-size:15px;font-weight:600;cursor:pointer}
-  .err{margin-top:16px;padding:12px 16px;background:#FBEDED;color:var(--gap);border-radius:8px;font-size:13.5px}
-  .brand-lockup{display:flex;align-items:center;gap:9px;margin-bottom:22px}
-  .brand-lockup .wordmark{font-family:"Noto Serif KR",serif;font-weight:700;font-size:17px;color:var(--ink);letter-spacing:-.01em}
-</style>
-</head>
-<body>
-<div class="wrap">
-  <div class="brand-lockup">""" + LOGO_MARK + """<span class="wordmark">Team DIN 보장분석기</span></div>
-  <h1>Team DIN 보장분석기 리포트 생성기</h1>
-  <p class="sub">이름, 휴대폰번호, 비밀번호로 로그인 또는 가입하세요. (처음이면 비밀번호를 입력하지 않아도 됩니다)</p>
-  {% if error %}<div class="err">{{ error }}</div>{% endif %}
-  <form method="post" action="/login">
-    <input type="hidden" name="next" value="{{ next_url or '' }}">
-    <label for="name">이름</label>
-    <input type="text" id="name" name="name" required placeholder="홍길동" value="{{ name or '' }}">
-    <label for="phone">휴대폰번호</label>
-    <input type="tel" id="phone" name="phone" required placeholder="010-1234-5678" value="{{ phone or '' }}">
-    {% if need_password %}
-    <label for="team_password">팀 비밀번호</label>
-    <input type="password" id="team_password" name="team_password" required>
-    {% endif %}
-    <label for="password">개인 비밀번호</label>
-    <input type="password" id="password" name="password" required placeholder="6자 이상">
-    <button type="submit">로그인</button>
-  </form>
-  <div style="margin-top:18px;text-align:center;font-size:13px;color:var(--sub)">
-    회원이 아니신가요? <a href="/signup" style="color:var(--ok);font-weight:600;text-decoration:none">회원 가입</a>
-  </div>
-</div>
-<script>
-  function formatPhone(digits) {
-    digits = digits.slice(0, 11);
-    if (digits.startsWith('02')) {
-      if (digits.length <= 2) return digits;
-      if (digits.length <= 5) return digits.slice(0, 2) + '-' + digits.slice(2);
-      if (digits.length <= 9) return digits.slice(0, 2) + '-' + digits.slice(2, 5) + '-' + digits.slice(5);
-      return digits.slice(0, 2) + '-' + digits.slice(2, 6) + '-' + digits.slice(6, 10);
-    }
-    if (digits.length <= 3) return digits;
-    if (digits.length <= 6) return digits.slice(0, 3) + '-' + digits.slice(3);
-    if (digits.length <= 10) return digits.slice(0, 3) + '-' + digits.slice(3, 6) + '-' + digits.slice(6);
-    return digits.slice(0, 3) + '-' + digits.slice(3, 7) + '-' + digits.slice(7, 11);
-  }
-  const phoneInput = document.getElementById('phone');
-  phoneInput.addEventListener('input', () => {
-    const digits = phoneInput.value.replace(/\\D/g, '');
-    phoneInput.value = formatPhone(digits);
-  });
-</script>
-</body>
-</html>
-"""
-
-SIGNUP_PAGE = """
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http%3A//www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'><path%20d='M4%2021%20A16%2015%200%200%201%2036%2021%20Z'%20fill='%2310233F'/><rect%20x='9'%20y='21'%20width='4.4'%20height='6'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='17.8'%20y='21'%20width='4.4'%20height='10'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='26.6'%20y='21'%20width='4.4'%20height='14'%20rx='1.6'%20fill='%231D5BD8'/></svg>">
-<title>회원 가입 — Team DIN 보장분석기 리포트 생성기</title>
-<style>
-  :root{--ink:#10233F;--paper:#F6F7F9;--card:#FFFFFF;--line:#E3E7EE;--sub:#5B6B82;--ok:#1D5BD8;--gap:#C93030}
-  *{box-sizing:border-box}
-  body{font-family:-apple-system,"Pretendard",sans-serif;background:var(--paper);color:var(--ink);margin:0;padding:64px 20px;line-height:1.6}
-  .wrap{max-width:400px;margin:0 auto}
-  h1{font-size:22px;margin-bottom:6px}
-  p.sub{color:var(--sub);font-size:13.5px;margin-bottom:26px}
-  label{display:block;font-size:13px;font-weight:700;margin:16px 0 6px}
-  input{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:15px;font-family:inherit;background:var(--card);color:var(--ink)}
-  input:focus{outline:2px solid var(--ok);outline-offset:-1px}
-  button{margin-top:24px;width:100%;padding:13px;border:none;border-radius:8px;background:var(--ink);color:#fff;font-size:15px;font-weight:600;cursor:pointer}
-  button:hover{opacity:.9}
-  .err{margin-top:16px;padding:12px 16px;background:#FBEDED;color:var(--gap);border-radius:8px;font-size:13.5px}
-  .brand-lockup{display:flex;align-items:center;gap:9px;margin-bottom:22px}
-  .brand-lockup .wordmark{font-family:"Noto Serif KR",serif;font-weight:700;font-size:17px;color:var(--ink);letter-spacing:-.01em}
-  .footer{margin-top:18px;text-align:center;font-size:13px;color:var(--sub)}
-  .footer a{color:var(--ok);font-weight:600;text-decoration:none}
-  .footer a:hover{text-decoration:underline}
-</style>
-</head>
-<body>
-<div class="wrap">
-  <div class="brand-lockup">""" + LOGO_MARK + """<span class="wordmark">Team DIN 보장분석기</span></div>
-  <h1>회원 가입</h1>
-  <p class="sub">새로운 계정을 생성하세요.</p>
-  {% if error %}<div class="err">{{ error }}</div>{% endif %}
-  <form method="post" action="/signup">
-    <label for="name">이름</label>
-    <input type="text" id="name" name="name" required placeholder="홍길동" value="{{ name or '' }}">
-    <label for="phone">휴대폰번호</label>
-    <input type="tel" id="phone" name="phone" required placeholder="010-1234-5678" value="{{ phone or '' }}">
-    <label for="password">비밀번호</label>
-    <input type="password" id="password" name="password" required placeholder="6자 이상">
-    <label for="password_confirm">비밀번호 확인</label>
-    <input type="password" id="password_confirm" name="password_confirm" required placeholder="비밀번호 재입력">
-    <button type="submit">회원 가입</button>
-  </form>
-  <div class="footer">
-    이미 회원이신가요? <a href="/login">로그인</a>
-  </div>
-</div>
-<script>
-  function formatPhone(digits) {
-    digits = digits.slice(0, 11);
-    if (digits.startsWith('02')) {
-      if (digits.length <= 2) return digits;
-      if (digits.length <= 5) return digits.slice(0, 2) + '-' + digits.slice(2);
-      if (digits.length <= 9) return digits.slice(0, 2) + '-' + digits.slice(2, 5) + '-' + digits.slice(5);
-      return digits.slice(0, 2) + '-' + digits.slice(2, 6) + '-' + digits.slice(6, 10);
-    }
-    if (digits.length <= 3) return digits;
-    if (digits.length <= 6) return digits.slice(0, 3) + '-' + digits.slice(3);
-    if (digits.length <= 10) return digits.slice(0, 3) + '-' + digits.slice(3, 6) + '-' + digits.slice(6);
-    return digits.slice(0, 3) + '-' + digits.slice(3, 7) + '-' + digits.slice(7, 11);
-  }
-  const phoneInput = document.getElementById('phone');
-  phoneInput.addEventListener('input', () => {
-    const digits = phoneInput.value.replace(/\\D/g, '');
-    phoneInput.value = formatPhone(digits);
-  });
-</script>
-</body>
-</html>
-"""
-
-SHARE_GATE_PAGE = """
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http%3A//www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'><path%20d='M4%2021%20A16%2015%200%200%201%2036%2021%20Z'%20fill='%2310233F'/><rect%20x='9'%20y='21'%20width='4.4'%20height='6'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='17.8'%20y='21'%20width='4.4'%20height='10'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='26.6'%20y='21'%20width='4.4'%20height='14'%20rx='1.6'%20fill='%231D5BD8'/></svg>">
-<title>Team DIN 보장분석기 리포트 확인</title>
-<style>
-  :root{--ink:#10233F;--paper:#F6F7F9;--card:#FFFFFF;--line:#E3E7EE;--sub:#5B6B82;--ok:#1D5BD8;--gap:#C93030}
-  *{box-sizing:border-box}
-  body{font-family:-apple-system,"Pretendard",sans-serif;background:var(--paper);color:var(--ink);margin:0;padding:64px 20px;line-height:1.6}
-  .wrap{max-width:400px;margin:0 auto}
-  h1{font-size:20px;margin-bottom:6px}
-  p.sub{color:var(--sub);font-size:13.5px;margin-bottom:26px}
-  label{display:block;font-size:13px;font-weight:700;margin:16px 0 6px}
-  input{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:15px;font-family:inherit;background:var(--card);color:var(--ink)}
-  input:focus{outline:2px solid var(--ok);outline-offset:-1px}
-  button{margin-top:24px;width:100%;padding:13px;border:none;border-radius:8px;background:var(--ink);color:#fff;font-size:15px;font-weight:600;cursor:pointer}
-  .err{margin-top:16px;padding:12px 16px;background:#FBEDED;color:var(--gap);border-radius:8px;font-size:13.5px}
-  .brand-lockup{display:flex;align-items:center;gap:9px;margin-bottom:22px}
-  .brand-lockup .wordmark{font-family:"Noto Serif KR",serif;font-weight:700;font-size:17px;color:var(--ink);letter-spacing:-.01em}
-</style>
-</head>
-<body>
-<div class="wrap">
-  <div class="brand-lockup">""" + LOGO_MARK + """<span class="wordmark">Team DIN 보장분석기</span></div>
-  <h1>{{ customer_name }}님 Team DIN 보장분석기 리포트</h1>
-  <p class="sub">본인 확인을 위해 이 리포트를 보내주신 담당자의 휴대폰번호를 입력해주세요.</p>
-  {% if error %}<div class="err">{{ error }}</div>{% endif %}
-  <form method="post">
-    <label for="phone">담당자 휴대폰번호</label>
-    <input type="tel" id="phone" name="phone" required placeholder="010-1234-5678" autofocus>
-    <button type="submit">확인하고 리포트 보기</button>
-  </form>
-</div>
-<script>
-  function formatPhone(digits) {
-    digits = digits.slice(0, 11);
-    if (digits.startsWith('02')) {
-      if (digits.length <= 2) return digits;
-      if (digits.length <= 5) return digits.slice(0, 2) + '-' + digits.slice(2);
-      if (digits.length <= 9) return digits.slice(0, 2) + '-' + digits.slice(2, 5) + '-' + digits.slice(5);
-      return digits.slice(0, 2) + '-' + digits.slice(2, 6) + '-' + digits.slice(6, 10);
-    }
-    if (digits.length <= 3) return digits;
-    if (digits.length <= 6) return digits.slice(0, 3) + '-' + digits.slice(3);
-    if (digits.length <= 10) return digits.slice(0, 3) + '-' + digits.slice(3, 6) + '-' + digits.slice(6);
-    return digits.slice(0, 3) + '-' + digits.slice(3, 7) + '-' + digits.slice(7, 11);
-  }
-  const phoneInput = document.getElementById('phone');
-  phoneInput.addEventListener('input', () => {
-    const digits = phoneInput.value.replace(/\\D/g, '');
-    phoneInput.value = formatPhone(digits);
-  });
-</script>
-</body>
-</html>
-"""
-
-UPLOAD_PAGE = """
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http%3A//www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'><path%20d='M4%2021%20A16%2015%200%200%201%2036%2021%20Z'%20fill='%2310233F'/><rect%20x='9'%20y='21'%20width='4.4'%20height='6'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='17.8'%20y='21'%20width='4.4'%20height='10'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='26.6'%20y='21'%20width='4.4'%20height='14'%20rx='1.6'%20fill='%231D5BD8'/></svg>">
-<title>Team DIN 보장분석기 리포트 생성기</title>
-<style>
-  :root{--ink:#10233F;--paper:#F6F7F9;--card:#FFFFFF;--line:#E3E7EE;--sub:#5B6B82;--ok:#1D5BD8;--gap:#C93030}
-  *{box-sizing:border-box}
-  body{font-family:-apple-system,"Pretendard",sans-serif;background:var(--paper);color:var(--ink);margin:0;padding:28px 20px 48px;line-height:1.6}
-  .wrap{max-width:520px;margin:0 auto}
-  h1{font-size:24px;margin-bottom:6px}
-  p.sub{color:var(--sub);font-size:14px;margin-bottom:28px}
-  .emphasis{background:#EDF3FE;border-left:4px solid #1D5BD8;padding:12px 14px;border-radius:6px;margin:12px 0;font-size:13px;color:var(--ink);font-weight:500;line-height:1.6}
-  .drop{display:block;background:var(--card);border:2px dashed var(--line);border-radius:14px;padding:40px 24px;text-align:center;cursor:pointer;transition:border-color .15s}
-  .drop.drag{border-color:var(--ok)}
-  .drop input{display:none}
-  .drop .hint{color:var(--sub);font-size:13px;margin-top:8px}
-  .filename{margin-top:14px;font-size:13.5px;font-weight:600}
-  button{margin-top:20px;width:100%;padding:13px;border:none;border-radius:8px;background:var(--ink);color:#fff;font-size:15px;font-weight:600;cursor:pointer}
-  button:disabled{opacity:.4;cursor:not-allowed}
-  .err{margin-top:16px;padding:12px 16px;background:#FBEDED;color:var(--gap);border-radius:8px;font-size:13.5px}
-  .note{margin-top:28px;font-size:12px;color:var(--sub);line-height:1.7}
-""" + NAV_CSS + """
-  .overlay{position:fixed;inset:0;background:rgba(16,35,63,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:50;opacity:0;pointer-events:none;transition:opacity .2s}
-  .overlay.show{opacity:1;pointer-events:all}
-  .scan-card{width:78px;height:96px}
-  .scan-card svg{width:100%;height:100%;display:block}
-  .scan-line{animation:scanmove 1.9s cubic-bezier(.65,0,.35,1) infinite}
-  @keyframes scanmove{0%{transform:translateY(0);opacity:0}8%{opacity:1}92%{opacity:1}100%{transform:translateY(78px);opacity:0}}
-  .check-row{display:flex;flex-wrap:wrap;justify-content:center;gap:7px;max-width:280px}
-  .check-chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:5px 10px;border-radius:99px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.22);animation:checkpop 2.6s ease-in-out infinite;animation-delay:var(--d,0s)}
-  @keyframes checkpop{
-    0%,12%,100%{background:rgba(255,255,255,.1);color:rgba(255,255,255,.5);border-color:rgba(255,255,255,.22);transform:scale(1)}
-    22%,60%{background:#1D5BD8;color:#fff;border-color:#1D5BD8;transform:scale(1.06)}
-    72%{background:rgba(255,255,255,.1);color:rgba(255,255,255,.5);border-color:rgba(255,255,255,.22);transform:scale(1)}
-  }
-  @media (prefers-reduced-motion: reduce){
-    .scan-line{animation:none;opacity:.7}
-    .check-chip{animation:none}
-  }
-  .overlay .status{color:#fff;font-size:15px;font-weight:600;min-height:20px}
-  .overlay .bar{width:220px;height:6px;background:rgba(255,255,255,.2);border-radius:99px;overflow:hidden}
-  .overlay .bar .fill{height:100%;width:0%;background:#fff;border-radius:99px;transition:width .5s ease}
-  .overlay .hint2{color:rgba(255,255,255,.6);font-size:12px}
-</style>
-</head>
-<body>
-<div class="navbar">
-  <div class="brand-group">
-    <a class="brand" href="/">""" + LOGO_MARK + """<span class="wordmark">Team DIN 보장분석기</span></a>
-  </div>
-  <div class="menu">
-    <span class="who">{{ user.name }}님{% if user.role == 'admin' %} · 관리자{% endif %}</span>
-    {% if user.role == 'admin' %}<a class="admin" href="/admin">""" + ICON_DASHBOARD + """관리자 화면</a>{% endif %}
-    <a href="/reports">""" + ICON_DOC + """저장된 리포트</a>
-    <a href="/change-password">🔑 비밀번호 변경</a>
-    <a href="/logout">""" + ICON_LOGOUT + """로그아웃</a>
-  </div>
-</div>
-<div class="wrap">
-  <h1>Team DIN 보장분석기 리포트 생성기</h1>
-  <p class="sub">신용정보원 '보험신용정보 통합조회 결과서' PDF 또는 Excel 파일을 업로드하면 HTML 리포트를 생성하고 자동으로 저장합니다.</p>
-  <div class="emphasis">업로드 정보에 따라 PDF 업로드시 상세 리포트 생성이 가능하며, Excel 파일 업로드시 약식 리포트가 생성됩니다.</div>
-
-  {% if error %}<div class="err">{{ error }}</div>{% endif %}
-
-  <form action="/generate" method="post" enctype="multipart/form-data" id="f">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-    <label class="drop" id="drop">
-      <input type="file" name="file" accept=".pdf,.xlsx" id="file" required>
-      <div id="label">PDF 또는 Excel 파일을 여기로 끌어놓거나 클릭해서 선택하세요</div>
-      <div class="hint">보험신용정보 통합조회 결과서 (.pdf) 또는 보험정보 (.xlsx) · 최대 20MB</div>
-      <div class="filename" id="fname"></div>
-    </label>
-    <button type="submit" id="submitBtn">HTML 리포트 생성</button>
-  </form>
-
-  <div class="note">
-    업로드한 PDF는 리포트 생성 즉시 폐기되며 서버에 저장되지 않습니다. 민감한 개인정보가 포함된
-    파일이므로 신뢰된 네트워크에서만 사용하세요.
-  </div>
-</div>
-
-<div class="overlay" id="overlay">
-  <div class="scan-card">
-    <svg viewBox="0 0 78 96" aria-hidden="true">
-      <defs>
-        <linearGradient id="scangrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#4C8DFF" stop-opacity="0"/>
-          <stop offset="0.5" stop-color="#4C8DFF" stop-opacity=".95"/>
-          <stop offset="1" stop-color="#4C8DFF" stop-opacity="0"/>
-        </linearGradient>
-      </defs>
-      <rect x="4" y="4" width="70" height="88" rx="8" fill="#16294A" stroke="rgba(255,255,255,.18)" stroke-width="2"/>
-      <rect x="16" y="20" width="46" height="4.5" rx="2.25" fill="rgba(255,255,255,.25)"/>
-      <rect x="16" y="32" width="34" height="4.5" rx="2.25" fill="rgba(255,255,255,.25)"/>
-      <rect x="16" y="44" width="40" height="4.5" rx="2.25" fill="rgba(255,255,255,.25)"/>
-      <rect x="16" y="56" width="30" height="4.5" rx="2.25" fill="rgba(255,255,255,.25)"/>
-      <rect x="16" y="68" width="38" height="4.5" rx="2.25" fill="rgba(255,255,255,.25)"/>
-      <rect class="scan-line" x="4" y="4" width="70" height="10" fill="url(#scangrad)"/>
-    </svg>
-  </div>
-  <div class="check-row">
-    <span class="check-chip" style="--d:0s">✓ 사망</span>
-    <span class="check-chip" style="--d:.5s">✓ 암</span>
-    <span class="check-chip" style="--d:1s">✓ 뇌·심장</span>
-    <span class="check-chip" style="--d:1.5s">✓ 실손</span>
-  </div>
-  <div class="status" id="status">PDF 업로드 중...</div>
-  <div class="bar"><div class="fill" id="fill"></div></div>
-  <div class="hint2">보통 5~20초 정도 걸려요. 창을 닫지 마세요.</div>
-</div>
-
-<script>
-  const drop = document.getElementById('drop');
-  const input = document.getElementById('file');
-  const fname = document.getElementById('fname');
-  input.addEventListener('change', () => { fname.textContent = input.files[0] ? input.files[0].name : ''; });
-  ['dragover','dragenter'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('drag'); }));
-  ['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('drag'); }));
-  drop.addEventListener('drop', e => {
-    if (e.dataTransfer.files.length) { input.files = e.dataTransfer.files; fname.textContent = input.files[0].name; }
-  });
-
-  const form = document.getElementById('f');
-  const overlay = document.getElementById('overlay');
-  const statusEl = document.getElementById('status');
-  const fillEl = document.getElementById('fill');
-  const submitBtn = document.getElementById('submitBtn');
-  const steps = ['PDF 업로드 중...', '보장 항목 표 추출 중...', '보장 매트릭스 계산 중...', '리포트 조립 중...', '거의 다 됐어요...'];
-
-  form.addEventListener('submit', () => {
-    if (!input.files.length) return;
-    submitBtn.disabled = true;
-    submitBtn.textContent = '생성 중...';
-    overlay.classList.add('show');
-    let stepIdx = 0, progress = 8;
-    statusEl.textContent = steps[0];
-    fillEl.style.width = progress + '%';
-    setInterval(() => {
-      stepIdx = Math.min(stepIdx + 1, steps.length - 1);
-      statusEl.textContent = steps[stepIdx];
-      progress = Math.min(progress + Math.random() * 18 + 10, 92);
-      fillEl.style.width = progress + '%';
-    }, 1400);
-  });
-</script>
-</body>
-</html>
-"""
 
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "GET":
-        return render_template_string(
-            LOGIN_PAGE, error=None, need_password=bool(TEAM_PASSWORD), next_url=request.args.get("next")
+        return render_template(
+            "login.html.j2", error=None, need_password=bool(TEAM_PASSWORD), next_url=request.args.get("next"), logo_mark=LOGO_MARK
         )
 
     name = request.form.get("name", "").strip()
@@ -570,11 +227,12 @@ def login():
 
     def _fail(msg, status=400):
         return (
-            render_template_string(
-                LOGIN_PAGE,
+            render_template(
+                "login.html.j2",
                 error=msg,
                 need_password=bool(TEAM_PASSWORD),
                 next_url=next_url,
+                logo_mark=LOGO_MARK,
                 name=name,
                 phone=phone_raw,
             ),
@@ -624,7 +282,7 @@ def logout():
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if request.method == "GET":
-        return render_template_string(SIGNUP_PAGE, error=None)
+        return render_template("signup.html.j2", error=None, logo_mark=LOGO_MARK)
 
     name = request.form.get("name", "").strip()
     phone_raw = request.form.get("phone", "").strip()
@@ -634,11 +292,12 @@ def signup():
 
     def _fail(msg, status=400):
         return (
-            render_template_string(
-                SIGNUP_PAGE,
+            render_template(
+                "signup.html.j2",
                 error=msg,
                 name=name,
                 phone=phone_raw,
+                logo_mark=LOGO_MARK,
             ),
             status,
         )
@@ -767,7 +426,7 @@ def change_password():
 
 @app.get("/")
 def index():
-    return render_template_string(UPLOAD_PAGE, error=None, user=current_user(), csrf_token=_get_csrf_token())
+    return render_template("upload.html.j2", **_get_upload_context())
 
 
 @app.post("/generate")
@@ -777,14 +436,14 @@ def generate():
     user = current_user()
     f = request.files.get("file")
     if not f or not f.filename:
-        return render_template_string(UPLOAD_PAGE, error="파일을 선택해주세요.", user=user, csrf_token=_get_csrf_token()), 400
+        return render_template("upload.html.j2", **_get_upload_context(error="파일을 선택해주세요.")), 400
 
     filename_lower = f.filename.lower()
     is_pdf = filename_lower.endswith(".pdf")
     is_xlsx = filename_lower.endswith(".xlsx")
 
     if not (is_pdf or is_xlsx):
-        return render_template_string(UPLOAD_PAGE, error="PDF 또는 Excel 파일만 업로드할 수 있습니다.", user=user, csrf_token=_get_csrf_token()), 400
+        return render_template("upload.html.j2", **_get_upload_context(error="PDF 또는 Excel 파일만 업로드할 수 있습니다.")), 400
 
     tmp_path = None
     try:
@@ -804,16 +463,16 @@ def generate():
                 parsed_report = excel_result.to_parsed_report()
                 data = build_report_data(parsed_report)
             except ImportError:
-                return render_template_string(UPLOAD_PAGE, error="Excel 지원이 설치되지 않았습니다", user=user, csrf_token=_get_csrf_token()), 500
+                return render_template("upload.html.j2", **_get_upload_context(error="Excel 지원이 설치되지 않았습니다")), 500
             except ReportParseError as e:
-                return render_template_string(UPLOAD_PAGE, error=f"Excel 파일 오류: {str(e)}", user=user, csrf_token=_get_csrf_token()), 400
+                return render_template("upload.html.j2", **_get_upload_context(error=f"Excel 파일 오류: {str(e)}")), 400
     except ReportParseError as e:
-        return render_template_string(UPLOAD_PAGE, error=str(e), user=user, csrf_token=_get_csrf_token()), 400
+        return render_template("upload.html.j2", **_get_upload_context(error=str(e))), 400
     except Exception as e:  # noqa: BLE001 — 사용자에게 원인 안내
         import traceback
         error_detail = traceback.format_exc()
         print(f"[오류] 리포트 생성 중 문제 발생:\n{error_detail}", flush=True)
-        return render_template_string(UPLOAD_PAGE, error=f"리포트 생성 중 오류가 발생했습니다: {e}", user=user, csrf_token=_get_csrf_token()), 500
+        return render_template("upload.html.j2", **_get_upload_context(error=f"리포트 생성 중 오류가 발생했습니다: {e}")), 500
     finally:
         if tmp_path and os.path.exists(tmp_path):
             os.remove(tmp_path)
@@ -1170,8 +829,8 @@ def shared_report(token: str):
             else:
                 error = "휴대폰번호가 일치하지 않습니다. 리포트를 보내주신 분에게 다시 확인해주세요."
         if not session.get(verified_key):
-            return render_template_string(
-                SHARE_GATE_PAGE, error=error, customer_name=data["header"]["name"]
+            return render_template(
+                "share_gate.html.j2", error=error, customer_name=data["header"]["name"], logo_mark=LOGO_MARK
             )
 
     html = render_html(
@@ -1369,39 +1028,11 @@ def admin_init_db():
     except Exception as e:  # noqa: BLE001
         import traceback
         traceback.print_exc()
-        return render_template_string(
-            ERROR_PAGE,
+        return render_template(
+            "error.html.j2",
             message=f"데이터베이스 초기화 중 오류: {e}"
         ), 500
 
-
-ERROR_PAGE = """
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http%3A//www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'><path%20d='M4%2021%20A16%2015%200%200%201%2036%2021%20Z'%20fill='%2310233F'/><rect%20x='9'%20y='21'%20width='4.4'%20height='6'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='17.8'%20y='21'%20width='4.4'%20height='10'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='26.6'%20y='21'%20width='4.4'%20height='14'%20rx='1.6'%20fill='%231D5BD8'/></svg>">
-<title>오류 — 보장분석 리포트 생성기</title>
-<style>
-  :root{--ink:#10233F;--paper:#F6F7F9;--card:#FFFFFF;--line:#E3E7EE;--sub:#5B6B82;--gap:#C93030}
-  *{box-sizing:border-box}
-  body{font-family:-apple-system,"Pretendard",sans-serif;background:var(--paper);color:var(--ink);margin:0;padding:64px 20px;line-height:1.6}
-  .wrap{max-width:520px;margin:0 auto}
-  h1{font-size:20px;margin-bottom:14px}
-  .err{padding:14px 16px;background:#FBEDED;color:var(--gap);border-radius:8px;font-size:13.5px;word-break:break-all}
-  a{display:inline-block;margin-top:20px;color:var(--sub);font-size:13.5px;font-weight:600}
-</style>
-</head>
-<body>
-<div class="wrap">
-  <h1>일시적인 오류가 발생했습니다</h1>
-  <div class="err">{{ message }}</div>
-  <a href="/">← 처음으로</a>
-</div>
-</body>
-</html>
-"""
 
 
 @app.errorhandler(500)
@@ -1410,7 +1041,7 @@ def handle_500(e):
 
     traceback.print_exc()
     original = getattr(e, "original_exception", None) or e
-    return render_template_string(ERROR_PAGE, message=str(original) or "알 수 없는 오류"), 500
+    return render_template("error.html.j2", message=str(original) or "알 수 없는 오류"), 500
 
 
 IMAGES_DIR = os.path.join(os.path.dirname(__file__), "static", "images")
