@@ -150,6 +150,16 @@ def parse_pdf(pdf_path: str) -> ParsedReport:
     full_text = "\n".join(full_text_pages)
 
     if "정액담보계약정보조회" not in full_text and "실손보상담보" not in full_text:
+        # 디버깅: 추출된 텍스트의 처음 500자 로깅
+        extracted_preview = full_text[:500] if full_text else "(텍스트 없음)"
+        import sys
+        print(
+            f"[파서 오류] PDF에서 필수 키워드를 찾을 수 없습니다.\n"
+            f"추출된 텍스트 (처음 500자):\n{extracted_preview}\n"
+            f"텍스트 총 길이: {len(full_text)} 자",
+            file=sys.stderr,
+            flush=True
+        )
         raise ReportParseError(
             "'보험신용정보 통합조회 결과서' 형식의 PDF가 아닙니다. "
             "신용정보원 제공 보장분석 조회서만 지원합니다."
