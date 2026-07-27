@@ -2,7 +2,7 @@ services:
   - type: web
     name: guarantee-report
     runtime: python
-    plan: standard
+    plan: pro
     buildCommand: pip install -r guarantee_report/requirements.txt
     startCommand: gunicorn guarantee_report.webapp:app --bind 0.0.0.0:$PORT --timeout 600 --workers 1 --worker-class sync --keep-alive 300 --graceful-timeout 600
     envVars:
