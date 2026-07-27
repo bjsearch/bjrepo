@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS guarantee_reports (
     total_contracts INTEGER,
     data_json TEXT NOT NULL,
     source_file_name TEXT,
-    source_file_data TEXT
+    source_file_path TEXT
 );
 CREATE TABLE IF NOT EXISTS guarantee_users (
     id SERIAL PRIMARY KEY,
@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS guarantee_reports (
     total_contracts INTEGER,
     data_json TEXT NOT NULL,
     source_file_name TEXT,
-    source_file_data TEXT
+    source_file_path TEXT
 );
 CREATE TABLE IF NOT EXISTS guarantee_users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -147,7 +147,7 @@ def init_db() -> None:
         _add_column_if_missing(cur, "guarantee_reports", "age", "INTEGER")
         # 원본 파일 저장 컬럼 추가
         _add_column_if_missing(cur, "guarantee_reports", "source_file_name", "TEXT")
-        _add_column_if_missing(cur, "guarantee_reports", "source_file_data", "TEXT")
+        _add_column_if_missing(cur, "guarantee_reports", "source_file_path", "TEXT")
         # 사용자 비밀번호 컬럼 추가
         _add_column_if_missing(cur, "guarantee_users", "password_hash", "TEXT")
     global _initialized
@@ -228,7 +228,7 @@ def list_users() -> list[dict]:
 # --- 리포트 ---
 
 
-def save_report(data: dict, created_by_user_id: int | None = None, created_by_name: str | None = None, source_file_name: str | None = None, source_file_data: str | None = None) -> int:
+def save_report(data: dict, created_by_user_id: int | None = None, created_by_name: str | None = None, source_file_name: str | None = None, source_file_path: str | None = None) -> int:
     _ensure_init()
     header = data["header"]
     kpis = data["kpis"]
@@ -248,12 +248,12 @@ def save_report(data: dict, created_by_user_id: int | None = None, created_by_na
         created_by_user_id,
         created_by_name,
         source_file_name,
-        source_file_data,
+        source_file_path,
     )
     insert_sql = """INSERT INTO guarantee_reports
         (customer_name, gender, birth_date, age, basis_date, created_at,
          monthly_premium, ok_count, warn_count, gap_count, total_contracts, data_json,
-         created_by_user_id, created_by_name, source_file_name, source_file_data)
+         created_by_user_id, created_by_name, source_file_name, source_file_path)
         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"""
     with _connect() as conn:
         cur = conn.cursor()
@@ -392,18 +392,18 @@ def get_owner_phone_for_token(token: str) -> str | None:
 
 
 def get_source_file(report_id: int, user_id: int | None = None) -> tuple[str, str] | None:
-    """원본 파일명과 파일 데이터(base64)를 반환한다. (user_id 검증 포함)"""
+    """원본 파일명과 파일 경로를 반환한다. (user_id 검증 포함)"""
     _ensure_init()
     with _connect() as conn:
         cur = conn.cursor()
         if user_id is not None:
-            cur.execute(_q("SELECT source_file_name, source_file_data FROM guarantee_reports WHERE id = ? AND created_by_user_id = ?"), (report_id, user_id))
+            cur.execute(_q("SELECT source_file_name, source_file_path FROM guarantee_reports WHERE id = ? AND created_by_user_id = ?"), (report_id, user_id))
         else:
-            cur.execute(_q("SELECT source_file_name, source_file_data FROM guarantee_reports WHERE id = ?"), (report_id,))
+            cur.execute(_q("SELECT source_file_name, source_file_path FROM guarantee_reports WHERE id = ?"), (report_id,))
         row = cur.fetchone()
         if not row:
             return None
-        return (row["source_file_name"], row["source_file_data"])
+        return (row["source_file_name"], row["source_file_path"])
 
 
 def clear_all_data() -> None:

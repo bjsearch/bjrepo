@@ -12,7 +12,6 @@ APP_PASSWORD를 설정하면 로그인 화면에 팀 공용 비밀번호 입력�
 """
 from __future__ import annotations
 
-import base64
 import hmac
 import os
 import re
@@ -22,6 +21,7 @@ import tempfile
 import time
 from collections import Counter
 from functools import wraps
+from pathlib import Path
 from urllib.parse import quote
 
 from flask import Flask, request, render_template, Response, redirect, url_for, abort, session, jsonify
@@ -42,6 +42,10 @@ app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20MB
 # 주소(예: 127.0.0.1:10000)가 아닌 실제 공개 도메인/https를 반환한다.
 # (그렇지 않으면 카카오톡 등으로 공유한 링크의 호스트가 잘못되어 열리지 않는다.)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
+
+# 업로드된 원본 파일 저장 디렉토리 (메모리 절감용 파일 시스템 저장)
+UPLOAD_DIR = Path(tempfile.gettempdir()) / "guarantee_report_uploads"
+UPLOAD_DIR.mkdir(exist_ok=True)
 try:
     storage.init_db()
 except Exception as e:  # noqa: BLE001 — DB가 기동 시점에 잠깐 응답 없어도 앱 자체는 떠야 함
@@ -447,7 +451,7 @@ def generate():
         return render_template("upload.html.j2", **_get_upload_context(error="PDF 또는 Excel 파일만 업로드할 수 있습니다.")), 400
 
     tmp_path = None
-    source_file_data = None
+    upload_file_path = None
     try:
         if is_pdf:
             fd, tmp_path = tempfile.mkstemp(suffix=".pdf")
@@ -477,9 +481,10 @@ def generate():
         return render_template("upload.html.j2", **_get_upload_context(error=f"리포트 생성 중 오류가 발생했습니다: {e}")), 500
     finally:
         if tmp_path and os.path.exists(tmp_path):
-            with open(tmp_path, "rb") as src:
-                source_file_data = base64.b64encode(src.read()).decode("utf-8")
-            os.remove(tmp_path)
+            # 임시 파일을 업로드 디렉토리로 이동 (메모리 사용 최소화)
+            file_ext = f.filename.split(".")[-1] if "." in f.filename else "bin"
+            upload_file_path = UPLOAD_DIR / f"{secrets.token_hex(16)}.{file_ext}"
+            os.rename(tmp_path, upload_file_path)
 
     # 임시 리포트 저장 후 수정 페이지로 이동
     draft_id = _generate_draft_id()
@@ -489,7 +494,7 @@ def generate():
         "user_name": user["name"],
         "created_at": time.time(),
         "source_file_name": f.filename,
-        "source_file_data": source_file_data,
+        "source_file_path": str(upload_file_path),
     }
     return redirect(url_for("edit_report", draft_id=draft_id))
 
@@ -727,7 +732,7 @@ function removeNewInsightPanel(idx) {{
         created_by_user_id=user["id"],
         created_by_name=user["name"],
         source_file_name=draft.get("source_file_name"),
-        source_file_data=draft.get("source_file_data"),
+        source_file_path=draft.get("source_file_path"),
     )
 
     # 임시 데이터 정리
@@ -788,17 +793,23 @@ def download_source_file(report_id: int):
         abort(404)
     if not _can_access(meta, user):
         abort(403)
-    source_file = storage.get_source_file(report_id)
+    source_file = storage.get_source_file(report_id, user_id=user["id"])
     if not source_file or not source_file[1]:
         abort(404)
-    filename, file_data_b64 = source_file
-    try:
-        file_data = base64.b64decode(file_data_b64)
-    except Exception:
-        abort(400)
-    resp = Response(file_data, mimetype="application/octet-stream")
-    resp.headers["Content-Disposition"] = f"attachment; filename*=UTF-8''{quote(filename)}"
-    return resp
+    filename, file_path = source_file
+
+    # 파일이 존재하는지 확인
+    file_path_obj = Path(file_path)
+    if not file_path_obj.exists():
+        abort(404)
+
+    # 파일 스트리밍 다운로드
+    from flask import send_file
+    return send_file(
+        file_path_obj,
+        as_attachment=True,
+        download_name=filename
+    )
 
 
 @app.post("/reports/<int:report_id>/delete")
@@ -808,6 +819,15 @@ def delete_report(report_id: int):
     user = current_user()
     meta = storage.get_report_meta(report_id)
     if meta and _can_access(meta, user):
+        # 업로드된 원본 파일도 함께 삭제
+        source_file = storage.get_source_file(report_id, user_id=user["id"])
+        if source_file and source_file[1]:
+            file_path = Path(source_file[1])
+            if file_path.exists():
+                try:
+                    file_path.unlink()  # 파일 삭제
+                except Exception:
+                    pass  # 파일 삭제 실패해도 무시 (DB 삭제는 진행)
         storage.delete_report(report_id)
     return redirect(url_for("reports_list"))
 
