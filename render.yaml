@@ -4,7 +4,7 @@ services:
     runtime: python
     plan: free
     buildCommand: pip install -r guarantee_report/requirements.txt
-    startCommand: gunicorn guarantee_report.webapp:app --bind 0.0.0.0:$PORT --timeout 120
+    startCommand: gunicorn guarantee_report.webapp:app --bind 0.0.0.0:$PORT --timeout 300 --workers 1 --worker-class sync --keep-alive 75
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
