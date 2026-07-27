@@ -518,9 +518,14 @@ def _parse_excel_alternative(file_path: str) -> ExcelParseResult:
                     }
 
                     # 카테고리 금액 추출 (행 25-52에서)
+                    # 구조: 행 25 = 헤더, 행 32+ = 데이터 (B=대분류, C=소분류, D+= 각 상품별 금액)
                     category_amounts_by_col = {}
-                    for row_num in range(25, 53):
-                        category_label_cell = cells.get(f'B{row_num}')
+                    for row_num in range(32, 53):  # 실제 데이터는 행 32부터 시작
+                        # 카테고리명은 C열에 있음 (B열은 대분류)
+                        category_label_cell = cells.get(f'C{row_num}')
+                        if not category_label_cell:
+                            # C열이 없으면 B열을 시도
+                            category_label_cell = cells.get(f'B{row_num}')
                         if not category_label_cell:
                             continue
 
@@ -528,8 +533,10 @@ def _parse_excel_alternative(file_path: str) -> ExcelParseResult:
                         if not mapped_category:
                             continue
 
-                        # 각 상품 열에서 해당 카테고리의 금액 추출
+                        # 각 상품 열에서 해당 카테고리의 금액 추출 (D열부터는 해당 상품의 열)
+                        # 상품은 E, F, G... 열에 있으므로 D (Dㆍ즉 인덱스 3)부터 시작
                         for col in product_cols:
+                            # D, E, F, G... 중 product_cols에 해당하는 열 찾기
                             amount_str = cells.get(f'{col}{row_num}')
                             if amount_str:
                                 amount = _parse_number(amount_str)
