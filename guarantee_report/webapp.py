@@ -34,6 +34,7 @@ from .compare import build_comparison
 from .parser import ReportParseError, parse_pdf
 from .excel_parser import parse_excel as parse_excel_file
 from .render import render_html, render_template
+from .pdf_utils import compress_pdf, should_compress
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20MB
@@ -482,30 +483,41 @@ def generate():
     if not (is_pdf or is_xlsx):
         return render_template("upload.html.j2", **_get_upload_context(error="PDF 또는 Excel 파일만 업로드할 수 있습니다.")), 400
 
-    # 파일 크기 체크 (10MB 이상 PDF는 경고)
+    # 파일 크기 체크
     f.seek(0, 2)  # 파일 끝으로 이동
     file_size = f.tell()
     f.seek(0)  # 처음으로 리셋
 
-    if is_pdf and file_size > 10 * 1024 * 1024:
-        return render_template(
-            "upload.html.j2",
-            **_get_upload_context(
-                error="❌ 파일이 너무 큽니다 (10MB 초과)\n\n"
-                      "대용량 PDF는 처리 시간이 오래 걸립니다. "
-                      "Excel 형식으로 변환하여 업로드하거나, "
-                      "PDF를 여러 개로 나누어 업로드해주세요."
-            )
-        ), 400
+    compress_needed = is_pdf and should_compress(file_size)
 
     tmp_path = None
+    compressed_path = None
     upload_file_path = None
     try:
         if is_pdf:
             fd, tmp_path = tempfile.mkstemp(suffix=".pdf")
             with os.fdopen(fd, "wb") as tmp:
                 f.save(tmp)
-            parsed = parse_pdf(tmp_path)
+
+            # 대용량 PDF 자동 압축
+            pdf_to_parse = tmp_path
+            if compress_needed:
+                fd_compressed, compressed_path = tempfile.mkstemp(suffix=".pdf")
+                os.close(fd_compressed)  # 파일 디스크립터 닫기
+                success, method = compress_pdf(tmp_path, compressed_path)
+                if success:
+                    compressed_size = os.path.getsize(compressed_path)
+                    original_size = os.path.getsize(tmp_path)
+                    ratio = (compressed_size / original_size * 100) if original_size > 0 else 0
+                    print(
+                        f"[PDF 압축] {method}: {original_size / 1024 / 1024:.1f}MB → {compressed_size / 1024 / 1024:.1f}MB ({ratio:.1f}%)",
+                        flush=True,
+                    )
+                    pdf_to_parse = compressed_path
+                    os.unlink(tmp_path)  # 원본 삭제
+                    tmp_path = compressed_path  # 경로 업데이트
+
+            parsed = parse_pdf(pdf_to_parse)
             data = build_report_data(parsed)
         else:  # is_xlsx
             try:
