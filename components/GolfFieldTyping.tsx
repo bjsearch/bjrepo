@@ -70,6 +70,14 @@ const ParticleEffect = ({ particles }: { particles: Particle[] }) => (
         50% { border-color: rgba(74, 222, 128, 1); }
         100% { border-color: rgba(74, 222, 128, 0.5); }
       }
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-10px); }
+        75% { transform: translateX(10px); }
+      }
+      .animate-shake {
+        animation: shake 0.3s ease-in-out;
+      }
     `}</style>
   </>
 );
@@ -92,6 +100,7 @@ export default function GolfFieldTyping() {
   });
 
   const [particles, setParticles] = useState<Particle[]>([]);
+  const [showShake, setShowShake] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -186,6 +195,27 @@ export default function GolfFieldTyping() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target.value;
+
+    // 오타 감지
+    if (gameState.currentCourse && input.length > 0) {
+      const courseName = gameState.currentCourse.name.toLowerCase();
+      const userInput = input.toLowerCase();
+
+      // 입력된 부분이 올바른지 확인
+      if (userInput.length <= courseName.length) {
+        const isCorrectSoFar = courseName.startsWith(userInput);
+        if (!isCorrectSoFar && userInput.length > 0) {
+          // 오타 감지 - shake 효과
+          setShowShake(true);
+          setTimeout(() => setShowShake(false), 300);
+        }
+      } else {
+        // 입력이 너무 길면 shake
+        setShowShake(true);
+        setTimeout(() => setShowShake(false), 300);
+      }
+    }
+
     setGameState((prev) => ({
       ...prev,
       userInput: input,
@@ -583,13 +613,78 @@ export default function GolfFieldTyping() {
               <label className="block text-sm font-bold text-gray-300 mb-3 uppercase">
                 ✏️ 골프장 이름 입력
               </label>
+
+              {/* 입력 진행도 표시 */}
+              {gameState.userInput && gameState.currentCourse && (
+                <div className="mb-3 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <p className="text-xs text-gray-400">입력 진행도</p>
+                    <p className="text-xs font-bold text-green-400">
+                      {gameState.userInput.length} / {gameState.currentCourse.name.length}
+                    </p>
+                  </div>
+                  <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-green-500 to-emerald-400 h-full transition-all duration-100"
+                      style={{
+                        width: `${(gameState.userInput.length / gameState.currentCourse.name.length) * 100}%`,
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              )}
+
+              {/* 올바른 입력과 오류 표시 */}
+              {gameState.userInput && gameState.currentCourse && (
+                <div className="mb-3 p-3 bg-black bg-opacity-50 rounded-lg border-l-4 border-blue-500">
+                  <div className="flex flex-wrap gap-1">
+                    {gameState.currentCourse.name.split("").map((char, i) => {
+                      const userChar = gameState.userInput[i];
+                      let bgColor = "bg-gray-700";
+                      let textColor = "text-gray-400";
+
+                      if (userChar === undefined) {
+                        // 아직 입력 안 함
+                        bgColor = "bg-gray-700";
+                        textColor = "text-gray-500";
+                      } else if (userChar.toLowerCase() === char.toLowerCase()) {
+                        // 올바른 입력
+                        bgColor = "bg-green-600";
+                        textColor = "text-white";
+                      } else {
+                        // 오류
+                        bgColor = "bg-red-600";
+                        textColor = "text-white";
+                      }
+
+                      return (
+                        <span
+                          key={i}
+                          className={`${bgColor} ${textColor} px-2 py-1 rounded text-sm font-semibold transition-all`}
+                        >
+                          {char}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <input
                 ref={inputRef}
                 type="text"
                 value={gameState.userInput}
                 onChange={handleInputChange}
                 placeholder="골프장 이름을 입력하세요..."
-                className="w-full px-4 py-3 bg-gray-700 border-2 border-green-500 border-opacity-50 text-white placeholder-gray-500 rounded-xl font-semibold text-lg focus:outline-none focus:border-green-400 focus:border-opacity-100 transition-all mb-4 hover:border-opacity-75 focus:ring-2 focus:ring-green-500 focus:ring-opacity-30 backdrop-blur"
+                className={`w-full px-4 py-3 bg-gray-700 border-2 text-white placeholder-gray-500 rounded-xl font-semibold text-lg focus:outline-none focus:border-opacity-100 transition-all mb-4 hover:border-opacity-75 focus:ring-2 focus:ring-opacity-30 backdrop-blur ${
+                  showShake ? "animate-shake" : ""
+                } ${
+                  gameState.userInput
+                    ? gameState.currentCourse?.name.toLowerCase().startsWith(gameState.userInput.toLowerCase())
+                      ? "border-green-500 focus:border-green-400 focus:ring-green-500"
+                      : "border-red-500 focus:border-red-400 focus:ring-red-500"
+                    : "border-green-500 border-opacity-50 focus:border-green-400"
+                }`}
               />
 
               <button
