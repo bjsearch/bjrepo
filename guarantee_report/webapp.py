@@ -12,6 +12,7 @@ APP_PASSWORD를 설정하면 로그인 화면에 팀 공용 비밀번호 입력�
 """
 from __future__ import annotations
 
+import base64
 import hmac
 import os
 import re
@@ -446,6 +447,7 @@ def generate():
         return render_template("upload.html.j2", **_get_upload_context(error="PDF 또는 Excel 파일만 업로드할 수 있습니다.")), 400
 
     tmp_path = None
+    source_file_data = None
     try:
         if is_pdf:
             fd, tmp_path = tempfile.mkstemp(suffix=".pdf")
@@ -475,6 +477,8 @@ def generate():
         return render_template("upload.html.j2", **_get_upload_context(error=f"리포트 생성 중 오류가 발생했습니다: {e}")), 500
     finally:
         if tmp_path and os.path.exists(tmp_path):
+            with open(tmp_path, "rb") as src:
+                source_file_data = base64.b64encode(src.read()).decode("utf-8")
             os.remove(tmp_path)
 
     # 임시 리포트 저장 후 수정 페이지로 이동
@@ -484,6 +488,8 @@ def generate():
         "user_id": user["id"],
         "user_name": user["name"],
         "created_at": time.time(),
+        "source_file_name": f.filename,
+        "source_file_data": source_file_data,
     }
     return redirect(url_for("edit_report", draft_id=draft_id))
 
@@ -716,7 +722,13 @@ function removeNewInsightPanel(idx) {{
     data["insights"] = modified_insights
 
     # DB에 저장
-    report_id = storage.save_report(data, created_by_user_id=user["id"], created_by_name=user["name"])
+    report_id = storage.save_report(
+        data,
+        created_by_user_id=user["id"],
+        created_by_name=user["name"],
+        source_file_name=draft.get("source_file_name"),
+        source_file_data=draft.get("source_file_data"),
+    )
 
     # 임시 데이터 정리
     del _draft_reports[draft_id]
@@ -765,6 +777,27 @@ def view_report(report_id: int):
     resp = Response(html, mimetype="text/html")
     # 한글 파일명은 latin-1 헤더 인코딩을 통과하지 못하므로 RFC 5987 인코딩 사용
     resp.headers["Content-Disposition"] = f"inline; filename*=UTF-8''{quote(filename)}"
+    return resp
+
+
+@app.get("/reports/<int:report_id>/download-source")
+def download_source_file(report_id: int):
+    user = current_user()
+    meta = storage.get_report_meta(report_id)
+    if not meta:
+        abort(404)
+    if not _can_access(meta, user):
+        abort(403)
+    source_file = storage.get_source_file(report_id)
+    if not source_file or not source_file[1]:
+        abort(404)
+    filename, file_data_b64 = source_file
+    try:
+        file_data = base64.b64decode(file_data_b64)
+    except Exception:
+        abort(400)
+    resp = Response(file_data, mimetype="application/octet-stream")
+    resp.headers["Content-Disposition"] = f"attachment; filename*=UTF-8''{quote(filename)}"
     return resp
 
 

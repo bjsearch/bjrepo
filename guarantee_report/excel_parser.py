@@ -497,6 +497,49 @@ def _parse_excel_alternative(file_path: str) -> ExcelParseResult:
                             if row in [6, 7] and col in ['E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M']:
                                 product_cols.add(col)
 
+                    # 카테고리 매핑: Excel 파일의 카테고리명 -> 규칙 시스템의 표준 카테고리명
+                    category_mapping = {
+                        '일반암진단': '암진단',
+                        '소액암(유사암)진단': '소액암진단',
+                        '고액암진단': '고액암진단',
+                        '뇌혈관질환진단': '뇌혈관질환진단',
+                        '뇌졸중질환진단': '뇌졸중진단',
+                        '뇌출혈질환진단': '뇌출혈진단',
+                        '허혈성심장질환진단': '허혈성심장질환진단',
+                        '급성심근경색진단': '급성심근경색진단',
+                        '질병사망': '질병사망',
+                        '상해사망': '상해사망',
+                        '질병수술': '질병수술',
+                        '상해수술': '상해수술',
+                        '질병입원': '질병입원일당',
+                        '상해입원': '상해입원일당',
+                        '골절진단': '골절진단',
+                        '화상진단': '중대화상진단',
+                    }
+
+                    # 카테고리 금액 추출 (행 25-52에서)
+                    category_amounts_by_col = {}
+                    for row_num in range(25, 53):
+                        category_label_cell = cells.get(f'B{row_num}')
+                        if not category_label_cell:
+                            continue
+
+                        mapped_category = category_mapping.get(category_label_cell)
+                        if not mapped_category:
+                            continue
+
+                        # 각 상품 열에서 해당 카테고리의 금액 추출
+                        for col in product_cols:
+                            amount_str = cells.get(f'{col}{row_num}')
+                            if amount_str:
+                                amount = _parse_number(amount_str)
+                                if amount > 0:
+                                    if col not in category_amounts_by_col:
+                                        category_amounts_by_col[col] = {}
+                                    if mapped_category not in category_amounts_by_col[col]:
+                                        category_amounts_by_col[col][mapped_category] = 0
+                                    category_amounts_by_col[col][mapped_category] += amount
+
                     # 각 상품별로 데이터 추출
                     for col in sorted(product_cols):
                         company = cells.get(f'{col}7', '')
@@ -512,6 +555,13 @@ def _parse_excel_alternative(file_path: str) -> ExcelParseResult:
                             remaining_premium = _parse_number(remaining_premium_str)
                             contract_end = cells.get(f'{col}15', '')
 
+                            # 이 상품의 카테고리 정보 추출
+                            coverages = []
+                            if col in category_amounts_by_col:
+                                for cat_name, amount in category_amounts_by_col[col].items():
+                                    if amount > 0:
+                                        coverages.append({"name": cat_name, "amount": amount})
+
                             product = {
                                 "company": company or "보험사 미입력",
                                 "product_name": product_name or "상품명 미입력",
@@ -519,7 +569,7 @@ def _parse_excel_alternative(file_path: str) -> ExcelParseResult:
                                 "monthly_premium": monthly_premium,
                                 "total_premium": total_premium,
                                 "remaining_premium": remaining_premium,
-                                "coverages": [],
+                                "coverages": coverages,
                                 "contract_end": contract_end or "9999-12-31"
                             }
                             insurance_products.append(product)

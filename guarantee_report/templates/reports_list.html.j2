@@ -27,8 +27,11 @@
   .chip.warn{color:var(--warn);background:var(--warn-bg)}
   .chip.gap{color:var(--gap);background:var(--gap-bg)}
   .chips{display:flex;gap:4px;flex-wrap:wrap}
+  .actions-cell{display:flex;gap:6px;align-items:center}
   .del{background:none;border:none;color:var(--sub);font-size:12px;cursor:pointer;padding:4px 6px}
   .del:hover{color:var(--gap)}
+  .download{background:none;border:none;color:var(--ok);font-size:12px;cursor:pointer;padding:4px 6px;text-decoration:none;display:inline}
+  .download:hover{color:var(--ink)}
   .actions{margin-top:20px;display:flex;align-items:center;gap:12px}
   button.compare{padding:11px 22px;border:none;border-radius:8px;background:var(--ink);color:#fff;font-size:14px;font-weight:700;cursor:pointer}
   button.compare:disabled{opacity:.35;cursor:not-allowed}
@@ -99,9 +102,12 @@
             </div>
           </td>
           <td>
-            <form action="/reports/{{ r.id }}/delete" method="post" onsubmit="return confirm('{{ r.customer_name }}님 리포트를 삭제할까요?')">
-              <button type="submit" class="del">삭제</button>
-            </form>
+            <div class="actions-cell">
+              <a href="/reports/{{ r.id }}/download-source" class="download" title="원본 파일 다운로드">⬇</a>
+              <form action="/reports/{{ r.id }}/delete" method="post" onsubmit="return confirm('{{ r.customer_name }}님 리포트를 삭제할까요?')" style="margin:0">
+                <button type="submit" class="del">삭제</button>
+              </form>
+            </div>
           </td>
         </tr>
         {% endfor %}
