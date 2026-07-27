@@ -166,8 +166,14 @@ def admin_required(view):
 def _require_login():
     if request.endpoint in ("login", "signup", "logout", "static", "shared_report", "shared_report_chat"):
         return None
-    if not current_user():
+    user = current_user()
+    if not user:
         return redirect(url_for("login", next=request.path))
+    # 사용자 활동 시간 업데이트 (인증된 요청)
+    try:
+        storage.update_user_activity(user["id"])
+    except Exception:
+        pass  # 활동 추적 실패는 무시
     return None
 
 
@@ -974,6 +980,20 @@ def admin_dashboard():
 
     users = [{**u, "phone": _mask_phone(u["phone"])} for u in storage.list_users()]
 
+    # 활동 중인 사용자 (최근 10분 이내)
+    active_users = []
+    try:
+        active_users = storage.list_active_users(minutes=10)
+    except Exception:
+        pass  # 활동 조회 실패는 무시
+
+    active_users_display = [{
+        "name": u["name"],
+        "phone": _mask_phone(u["phone"]),
+        "role": u.get("role", "user"),
+        "last_login_at": u.get("last_login_at", ""),
+    } for u in active_users]
+
     return render_template(
         "admin.html.j2",
         user=current_user(),
@@ -983,6 +1003,7 @@ def admin_dashboard():
         top_gaps=top_gaps,
         reports=storage.list_reports(),
         users=users,
+        active_users=active_users_display,
     )
 
 

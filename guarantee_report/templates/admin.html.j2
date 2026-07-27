@@ -77,6 +77,27 @@
     <div class="kpi"><div class="label">평균 월 보험료</div><div class="value">{{ "{:,}".format(avg_premium) }}원</div></div>
   </div>
 
+  <h2>활동 중인 사용자 ({{ active_users|length }}명)</h2>
+  {% if active_users %}
+  <table>
+    <thead>
+      <tr><th>이름</th><th>휴대폰번호</th><th>권한</th><th>마지막 활동</th></tr>
+    </thead>
+    <tbody>
+      {% for u in active_users %}
+      <tr>
+        <td><span style="display:inline-block;width:8px;height:8px;border-radius:99px;background:#4CAF50;margin-right:8px;vertical-align:middle"></span>{{ u.name }}</td>
+        <td>{{ u.phone }}</td>
+        <td>{% if u.role == 'admin' %}<span class="chip admin">관리자</span>{% else %}일반{% endif %}</td>
+        <td>{{ (u.last_login_at or '-')[:16] }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">현재 활동 중인 사용자가 없습니다.</div>
+  {% endif %}
+
   <h2>전체 고객 미가입(공백) 항목 Top {{ top_gaps|length }}</h2>
   {% if top_gaps %}
   <div class="gap-list">

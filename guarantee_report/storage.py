@@ -15,7 +15,7 @@ import json
 import os
 import secrets
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 DB_PATH = os.environ.get("DB_PATH", os.path.join(os.path.dirname(__file__), "reports.db"))
@@ -413,3 +413,26 @@ def clear_all_data() -> None:
         cur = conn.cursor()
         cur.execute(_q("DELETE FROM guarantee_reports"))
         cur.execute(_q("DELETE FROM guarantee_users"))
+
+
+def update_user_activity(user_id: int, action: str | None = None) -> None:
+    """사용자의 마지막 활동 시간을 업데이트한다."""
+    _ensure_init()
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    with _connect() as conn:
+        cur = conn.cursor()
+        cur.execute(_q("UPDATE guarantee_users SET last_login_at = ? WHERE id = ?"), (now, user_id))
+
+
+def list_active_users(minutes: int = 10) -> list[dict]:
+    """최근 N분 이내에 활동한 사용자 목록을 반환한다."""
+    _ensure_init()
+    now = datetime.now(timezone.utc)
+    cutoff = (now - timedelta(minutes=minutes)).isoformat(timespec="seconds")
+    with _connect() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            _q("SELECT id, name, phone, role, created_at, last_login_at FROM guarantee_users WHERE last_login_at > ? ORDER BY last_login_at DESC"),
+            (cutoff,),
+        )
+        return [dict(r) for r in cur.fetchall()]
