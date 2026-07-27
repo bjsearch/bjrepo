@@ -43,6 +43,12 @@ app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20MB
 # (그렇지 않으면 카카오톡 등으로 공유한 링크의 호스트가 잘못되어 열리지 않는다.)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
 
+# 요청 타임아웃 설정 (Render 무료에서 장시간 요청 처리)
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0  # 캐시 비활성화 (개발)
+if os.environ.get("RENDER"):
+    # Render 환경에서 추가 설정
+    app.config["JSON_SORT_KEYS"] = False
+
 # 업로드된 원본 파일 저장 디렉토리 (메모리 절감용 파일 시스템 저장)
 UPLOAD_DIR = Path(tempfile.gettempdir()) / "guarantee_report_uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
@@ -475,6 +481,22 @@ def generate():
 
     if not (is_pdf or is_xlsx):
         return render_template("upload.html.j2", **_get_upload_context(error="PDF 또는 Excel 파일만 업로드할 수 있습니다.")), 400
+
+    # 파일 크기 체크 (10MB 이상 PDF는 경고)
+    f.seek(0, 2)  # 파일 끝으로 이동
+    file_size = f.tell()
+    f.seek(0)  # 처음으로 리셋
+
+    if is_pdf and file_size > 10 * 1024 * 1024:
+        return render_template(
+            "upload.html.j2",
+            **_get_upload_context(
+                error="❌ 파일이 너무 큽니다 (10MB 초과)\n\n"
+                      "대용량 PDF는 처리 시간이 오래 걸립니다. "
+                      "Excel 형식으로 변환하여 업로드하거나, "
+                      "PDF를 여러 개로 나누어 업로드해주세요."
+            )
+        ), 400
 
     tmp_path = None
     upload_file_path = None
