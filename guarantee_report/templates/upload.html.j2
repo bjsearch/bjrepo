@@ -142,7 +142,8 @@
   form.addEventListener('submit', (e) => {
     if (!input.files.length) {
       e.preventDefault();
-      alert('📄 PDF 또는 Excel 파일을 선택해주세요.');
+      alert('📄 파일 첨부\n\n리포트를 생성하려면 먼저 PDF 또는 Excel 파일을 첨부해주세요.\n\n• 신용정보원 보험신용정보 통합조회 결과서 (PDF)\n• 보험정보 파일 (Excel)');
+      input.focus();
       return;
     }
     submitBtn.disabled = true;
