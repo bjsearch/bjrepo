@@ -255,7 +255,11 @@ def login():
 
     # 팀 비밀번호 검증 (설정되어 있으면)
     if TEAM_PASSWORD and not hmac.compare_digest(team_password, TEAM_PASSWORD):
-        return _fail("팀 비밀번호가 올바르지 않습니다.", 401)
+        return _fail(
+            "❌ 팀 비밀번호가 올바르지 않습니다.\n\n"
+            "팀에서 공유받은 비밀번호를 다시 확인하고 입력해주세요.",
+            401
+        )
 
     # 비밀번호가 비어있으면 기본값 "000000" 사용
     if not user_password:
@@ -269,7 +273,12 @@ def login():
             # 기존 사용자: 비밀번호 검증
             password_hash = existing_user.get("password_hash")
             if not storage.verify_password(user_password, password_hash):
-                return _fail("비밀번호가 올바르지 않습니다.", 401)
+                return _fail(
+                    "❌ 비밀번호가 올바르지 않습니다.\n\n"
+                    "입력하신 비밀번호를 다시 확인해주세요. 혹은 비밀번호를 변경하려면 "
+                    "회원 가입 페이지에서 새로운 비밀번호로 등록할 수 있습니다.",
+                    401
+                )
             # 이름과 역할 업데이트
             user = storage.upsert_user(name, phone, role)
         else:
@@ -314,13 +323,19 @@ def signup():
         )
 
     if not name or len(phone) < 9:
-        return _fail("이름과 휴대폰번호를 정확히 입력해주세요.")
+        return _fail("❌ 입력 오류\n\n이름과 휴대폰번호를 모두 정확히 입력해주세요.")
 
     if not password or len(password) < 6:
-        return _fail("비밀번호는 6자 이상이어야 합니다.")
+        return _fail(
+            "❌ 비밀번호 요건 미충족\n\n"
+            "비밀번호는 6자 이상이어야 합니다. (예: abc1234)"
+        )
 
     if password != password_confirm:
-        return _fail("비밀번호가 일치하지 않습니다.")
+        return _fail(
+            "❌ 비밀번호 불일치\n\n"
+            "입력하신 두 비밀번호가 일치하지 않습니다. 다시 확인해주세요."
+        )
 
     try:
         role = "admin" if phone in ADMIN_PHONES else "user"
@@ -328,7 +343,12 @@ def signup():
         if existing_user:
             # 기존 사용자: 비밀번호만 검증하고 로그인
             if not storage.verify_password(password, existing_user.get("password_hash")):
-                return _fail("이미 등록된 휴대폰번호입니다. 다른 비밀번호를 입력했거나 로그인 페이지를 사용해주세요.")
+                return _fail(
+                    "❌ 계정 이미 존재\n\n"
+                    f"이 휴대폰번호({_mask_phone(phone)})로 이미 등록된 계정이 있습니다.\n"
+                    "로그인 페이지에서 해당 계정으로 로그인해주세요. "
+                    "비밀번호를 잊으신 경우 로그인 후 비밀번호를 변경할 수 있습니다."
+                )
             user = storage.upsert_user(name, phone, role)
         else:
             # 신규 사용자: 계정 생성
