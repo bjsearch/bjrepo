@@ -514,11 +514,31 @@ def generate():
                         flush=True,
                     )
                     pdf_to_parse = compressed_path
-                    os.unlink(tmp_path)  # 원본 삭제
-                    tmp_path = compressed_path  # 경로 업데이트
 
-            parsed = parse_pdf(pdf_to_parse)
-            data = build_report_data(parsed)
+            try:
+                parsed = parse_pdf(pdf_to_parse)
+                data = build_report_data(parsed)
+                # 파싱 성공 후 압축된 파일 사용 확인 및 원본 삭제
+                if compress_needed and compressed_path and os.path.exists(tmp_path):
+                    os.unlink(tmp_path)  # 파싱 성공하면 원본 삭제
+                    tmp_path = compressed_path  # 저장할 파일 경로 업데이트
+            except ReportParseError as e:
+                # 압축된 PDF가 손상된 경우, 원본 PDF로 재시도
+                if compress_needed and compressed_path and os.path.exists(tmp_path):
+                    print(
+                        f"[경고] 압축된 PDF의 텍스트 추출 실패, 원본 PDF로 재시도 중...",
+                        flush=True,
+                    )
+                    # 압축된 파일 삭제 후 원본으로 파싱 재시도
+                    if os.path.exists(compressed_path):
+                        os.unlink(compressed_path)
+                    try:
+                        parsed = parse_pdf(tmp_path)
+                        data = build_report_data(parsed)
+                    except ReportParseError:
+                        raise e  # 원본도 실패하면 원래 오류 메시지 반환
+                else:
+                    raise
         else:  # is_xlsx
             try:
                 fd, tmp_path = tempfile.mkstemp(suffix=".xlsx")
@@ -540,8 +560,14 @@ def generate():
         print(f"[오류] 리포트 생성 중 문제 발생:\n{error_detail}", flush=True)
         return render_template("upload.html.j2", **_get_upload_context(error=f"리포트 생성 중 오류가 발생했습니다: {e}")), 500
     finally:
+        # 사용되지 않은 압축 파일 정리
+        if compressed_path and os.path.exists(compressed_path) and (not tmp_path or compressed_path != tmp_path):
+            try:
+                os.unlink(compressed_path)
+            except:
+                pass
+        # 성공한 임시 파일을 업로드 디렉토리로 이동 (메모리 사용 최소화)
         if tmp_path and os.path.exists(tmp_path):
-            # 임시 파일을 업로드 디렉토리로 이동 (메모리 사용 최소화)
             file_ext = f.filename.split(".")[-1] if "." in f.filename else "bin"
             upload_file_path = UPLOAD_DIR / f"{secrets.token_hex(16)}.{file_ext}"
             os.rename(tmp_path, upload_file_path)
