@@ -488,7 +488,7 @@ def generate():
     file_size = f.tell()
     f.seek(0)  # 처음으로 리셋
 
-    compress_needed = is_pdf and should_compress(file_size)
+    compress_needed = is_pdf and should_compress(file_size, threshold_mb=50)
 
     tmp_path = None
     compressed_path = None
