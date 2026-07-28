@@ -217,6 +217,10 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 {% if not is_public_view %}<a class="back-link" href="/reports">← 저장된 리포트</a>{% endif %}
 <div class="action-bar">
   {% if not is_public_view %}
+  <a class="download-btn" href="/reports/{{ report_id }}/coverage-summary" style="text-decoration:none;display:inline-flex;align-items:center;gap:7px;padding:11px 20px">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="M2 12h20"/><circle cx="12" cy="12" r="1"/></svg>
+    <span>담보보장 요약</span>
+  </a>
   <button class="share-btn" type="button" id="shareBtn" data-report-id="{{ report_id }}" data-title="{{ header.name }}님 Team DIN 보장분석기 리포트" data-url="{{ share_url or '' }}">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/></svg>
     <span>카카오톡으로 보내기</span>

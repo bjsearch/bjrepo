@@ -918,6 +918,96 @@ def delete_report(report_id: int):
     return redirect(url_for("reports_list"))
 
 
+@app.get("/reports/<int:report_id>/coverage-summary")
+def coverage_summary(report_id: int):
+    """보험사별 담보보장 요약 (실손/정액 구분)"""
+    user = current_user()
+    meta = storage.get_report_meta(report_id)
+    if not meta or not _can_access(meta, user):
+        abort(403)
+    data = storage.get_report(report_id)
+    if not data:
+        abort(404)
+
+    # 데이터 준비
+    contracts = data.get("contracts", [])
+    detail_items = data.get("detail_items", [])
+
+    # 보험사별 정리
+    by_company = {}
+    for item in detail_items:
+        company = item.get("company", "기타")
+        if company not in by_company:
+            by_company[company] = {"실손": [], "정액": [], "기타": []}
+
+        category = item.get("category", "기타")
+        item_type = "실손" if "실손" in category or "의료비" in category or "상해" in category else "정액"
+        by_company[company][item_type].append(item)
+
+    # HTML 보고서 생성
+    html = f"""<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{data.get('header', {}).get('name')}님 - 보험사별 담보보장 요약</title>
+    <style>
+        body {{ font-family: -apple-system, "Pretendard", sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }}
+        .container {{ max-width: 900px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; }}
+        h1 {{ font-size: 28px; color: #10233F; margin: 0 0 10px 0; }}
+        .subtitle {{ color: #666; margin-bottom: 30px; font-size: 14px; }}
+        .company-section {{ margin-bottom: 30px; border: 1px solid #e0e0e0; padding: 20px; border-radius: 8px; }}
+        .company-name {{ font-size: 18px; font-weight: 700; color: #1D5BD8; margin-bottom: 15px; }}
+        .type-table {{ width: 100%; margin-bottom: 15px; border-collapse: collapse; }}
+        .type-table th {{ background: #f0f3f8; padding: 10px; text-align: left; font-weight: 600; font-size: 13px; border-bottom: 2px solid #ddd; }}
+        .type-table td {{ padding: 8px 10px; border-bottom: 1px solid #eee; font-size: 13px; }}
+        .type-table tr:hover {{ background: #fafbfc; }}
+        .type-label {{ font-weight: 600; color: #333; padding: 10px; background: #f0f3f8; margin-top: 10px; margin-bottom: 5px; border-radius: 4px; }}
+        @media print {{ body {{ background: white; }} .container {{ box-shadow: none; }} }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>{data.get('header', {}).get('name')}님 보험사별 담보보장 요약</h1>
+        <p class="subtitle">생성일시: {data.get('header', {}).get('basis_date_display', '확인불가')}</p>
+"""
+
+    for company in sorted(by_company.keys()):
+        items_by_type = by_company[company]
+        html += f'<div class="company-section"><div class="company-name">{company}</div>'
+
+        for type_name in ["실손", "정액", "기타"]:
+            items = items_by_type.get(type_name, [])
+            if not items:
+                continue
+
+            html += f'<div class="type-label">{type_name}</div>'
+            html += '<table class="type-table"><thead><tr><th>상품명</th><th>담보명</th><th>금액</th><th>납입기간</th></tr></thead><tbody>'
+
+            for item in items:
+                product = item.get("product", "-")
+                rider = item.get("rider_name", "-")
+                amount = item.get("amount_man", 0)
+                pay_years = item.get("pay_years")
+                pay_period = f"{pay_years}년" if pay_years else item.get("pay_method", "-")
+
+                html += f'<tr><td>{product}</td><td>{rider}</td><td>{amount:,}만원</td><td>{pay_period}</td></tr>'
+
+            html += '</tbody></table>'
+
+        html += '</div>'
+
+    html += """
+    </div>
+</body>
+</html>
+"""
+
+    resp = Response(html, mimetype="text/html")
+    resp.headers["Content-Disposition"] = f"inline; filename*=UTF-8''{quote(f\"{data.get('header', {}).get('name')}_담보보장요약.html\")}"
+    return resp
+
+
 @app.get("/reports/<int:report_id>/feedback")
 def get_feedback(report_id: int):
     user = current_user()

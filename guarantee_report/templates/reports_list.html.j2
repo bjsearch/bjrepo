@@ -103,6 +103,7 @@
           </td>
           <td>
             <div class="actions-cell">
+              <a href="/reports/{{ r.id }}/coverage-summary" class="download" title="담보보장 요약">📊</a>
               <a href="/reports/{{ r.id }}/download-source" class="download" title="원본 파일 다운로드">⬇</a>
               <form action="/reports/{{ r.id }}/delete" method="post" onsubmit="return confirm('{{ r.customer_name }}님 리포트를 삭제할까요?')" style="margin:0">
                 <button type="submit" class="del">삭제</button>
