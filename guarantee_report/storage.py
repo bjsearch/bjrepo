@@ -64,6 +64,16 @@ CREATE TABLE IF NOT EXISTS guarantee_users (
     created_at TEXT NOT NULL,
     last_login_at TEXT
 );
+CREATE TABLE IF NOT EXISTS report_feedback (
+    id SERIAL PRIMARY KEY,
+    report_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (report_id) REFERENCES guarantee_reports(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES guarantee_users(id) ON DELETE SET NULL
+);
 """
 
 _SCHEMA_SQLITE = """
@@ -91,6 +101,16 @@ CREATE TABLE IF NOT EXISTS guarantee_users (
     role TEXT NOT NULL DEFAULT 'user',
     created_at TEXT NOT NULL,
     last_login_at TEXT
+);
+CREATE TABLE IF NOT EXISTS report_feedback (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    report_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (report_id) REFERENCES guarantee_reports(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES guarantee_users(id) ON DELETE SET NULL
 );
 """
 
@@ -436,3 +456,52 @@ def list_active_users(minutes: int = 10) -> list[dict]:
             (cutoff,),
         )
         return [dict(r) for r in cur.fetchall()]
+
+
+# --- 피드백 ---
+
+
+def save_feedback(report_id: int, user_id: int, content: str) -> int:
+    """리포트에 피드백을 추가한다."""
+    _ensure_init()
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    insert_sql = "INSERT INTO report_feedback (report_id, user_id, content, created_at, updated_at) VALUES (?,?,?,?,?)"
+    with _connect() as conn:
+        cur = conn.cursor()
+        if BACKEND == "postgres":
+            cur.execute(_q(insert_sql) + " RETURNING id", (report_id, user_id, content, now, now))
+            return cur.fetchone()["id"]
+        cur.execute(insert_sql, (report_id, user_id, content, now, now))
+        return cur.lastrowid
+
+
+def get_report_feedback(report_id: int) -> list[dict]:
+    """리포트의 모든 피드백을 조회한다."""
+    _ensure_init()
+    with _connect() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            _q("""SELECT f.id, f.report_id, f.user_id, f.content, f.created_at, f.updated_at,
+                          u.name AS user_name FROM report_feedback f
+                   LEFT JOIN guarantee_users u ON f.user_id = u.id
+                   WHERE f.report_id = ? ORDER BY f.created_at DESC"""),
+            (report_id,),
+        )
+        return [dict(r) for r in cur.fetchall()]
+
+
+def update_feedback(feedback_id: int, content: str) -> None:
+    """피드백 내용을 수정한다."""
+    _ensure_init()
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    with _connect() as conn:
+        cur = conn.cursor()
+        cur.execute(_q("UPDATE report_feedback SET content = ?, updated_at = ? WHERE id = ?"), (content, now, feedback_id))
+
+
+def delete_feedback(feedback_id: int) -> None:
+    """피드백을 삭제한다."""
+    _ensure_init()
+    with _connect() as conn:
+        cur = conn.cursor()
+        cur.execute(_q("DELETE FROM report_feedback WHERE id = ?"), (feedback_id,))

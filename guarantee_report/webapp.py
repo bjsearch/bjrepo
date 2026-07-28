@@ -918,6 +918,59 @@ def delete_report(report_id: int):
     return redirect(url_for("reports_list"))
 
 
+@app.get("/reports/<int:report_id>/feedback")
+def get_feedback(report_id: int):
+    user = current_user()
+    meta = storage.get_report_meta(report_id)
+    if not meta or not _can_access(meta, user):
+        abort(403)
+    feedbacks = storage.get_report_feedback(report_id)
+    return jsonify(feedbacks)
+
+
+@app.post("/reports/<int:report_id>/feedback")
+def add_feedback(report_id: int):
+    user = current_user()
+    meta = storage.get_report_meta(report_id)
+    if not meta or not _can_access(meta, user):
+        abort(403)
+
+    body = request.get_json(silent=True) or {}
+    content = body.get("content", "").strip()
+    if not content:
+        return {"error": "피드백 내용을 입력하세요."}, 400
+
+    feedback_id = storage.save_feedback(report_id, user["id"], content)
+    return {"id": feedback_id, "content": content}, 201
+
+
+@app.put("/reports/<int:report_id>/feedback/<int:feedback_id>")
+def update_feedback(report_id: int, feedback_id: int):
+    user = current_user()
+    meta = storage.get_report_meta(report_id)
+    if not meta or not _can_access(meta, user):
+        abort(403)
+
+    body = request.get_json(silent=True) or {}
+    content = body.get("content", "").strip()
+    if not content:
+        return {"error": "피드백 내용을 입력하세요."}, 400
+
+    storage.update_feedback(feedback_id, content)
+    return {"id": feedback_id, "content": content}
+
+
+@app.delete("/reports/<int:report_id>/feedback/<int:feedback_id>")
+def delete_feedback_item(report_id: int, feedback_id: int):
+    user = current_user()
+    meta = storage.get_report_meta(report_id)
+    if not meta or not _can_access(meta, user):
+        abort(403)
+
+    storage.delete_feedback(feedback_id)
+    return {"success": True}
+
+
 @app.post("/reports/<int:report_id>/share")
 def create_share_link(report_id: int):
     if not _check_csrf_token() and request.headers.get("Accept") != "application/json":
