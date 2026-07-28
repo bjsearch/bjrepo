@@ -138,52 +138,14 @@ class ReportParseError(Exception):
 
 
 def _extract_text_with_ocr(pdf_path: str) -> str:
-    """PaddleOCR을 사용해 PDF에서 텍스트를 추출한다."""
-    try:
-        from paddleocr import PaddleOCR
-        from pdf2image import convert_from_path
-
-        print("[OCR] PaddleOCR 모델 로드 중...", file=sys.stderr, flush=True)
-        ocr = PaddleOCR(use_angle_cls=True, lang="korean")
-
-        print("[OCR] PDF를 이미지로 변환 중...", file=sys.stderr, flush=True)
-        images = convert_from_path(pdf_path, dpi=200, first_page=1, last_page=None)
-
-        full_text = ""
-        total_pages = len(images)
-        for i, image in enumerate(images, 1):
-            print(f"[OCR] {i}/{total_pages} 페이지 OCR 처리 중...", file=sys.stderr, flush=True)
-            # PaddleOCR은 PIL Image 또는 numpy array를 받음
-            import numpy as np
-            image_array = np.array(image)
-            result = ocr.ocr(image_array, cls=True)
-
-            # 결과에서 텍스트 추출
-            page_text = ""
-            if result:
-                for line in result:
-                    if line:
-                        for word_info in line:
-                            text = word_info[1][0] if word_info[1] else ""
-                            page_text += text
-                    page_text += "\n"
-
-            full_text += page_text + "\n"
-
-        print(f"[OCR] 완료: {len(full_text)} 자 추출됨", file=sys.stderr, flush=True)
-        return full_text
-    except ImportError as e:
-        print(f"[경고] OCR 라이브러리 부족: {e}", file=sys.stderr, flush=True)
-        raise ReportParseError(
-            "PDF가 스캔 이미지 형식입니다. "
-            "OCR 처리가 필요하지만 서버에 설치되지 않았습니다. "
-            "관리자에게 문의해주세요."
-        )
-    except Exception as e:
-        print(f"[경고] OCR 처리 실패: {e}", file=sys.stderr, flush=True)
-        raise ReportParseError(
-            f"PDF OCR 처리 중 오류가 발생했습니다: {e}"
-        )
+    """스캔 PDF 감지 시 사용자에게 명확한 안내 제공."""
+    print(f"[파서] PDF가 스캔 이미지 형식입니다 (텍스트 추출 불가)", file=sys.stderr, flush=True)
+    raise ReportParseError(
+        "📷 스캔된 PDF입니다\n\n"
+        "현재 이 파일은 처리할 수 없습니다. "
+        "신용정보원에서 제공하는 디지털 PDF 파일을 업로드해주세요.\n\n"
+        "혹은 스캔 PDF를 다시 생성할 때 텍스트 인식 기능을 활성화해주세요."
+    )
 
 
 def parse_pdf(pdf_path: str) -> ParsedReport:
