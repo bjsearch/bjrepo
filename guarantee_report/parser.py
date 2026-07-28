@@ -142,7 +142,6 @@ def _extract_text_with_ocr(pdf_path: str) -> str:
     try:
         import pytesseract
         from pdf2image import convert_from_path
-        from PIL import Image
 
         print("[OCR] PDF를 이미지로 변환 중...", file=sys.stderr, flush=True)
         images = convert_from_path(pdf_path, dpi=300)
