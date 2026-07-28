@@ -3,7 +3,7 @@ services:
     name: guarantee-report
     runtime: python
     plan: pro
-    buildCommand: apt-get update && apt-get install -y libleptonica-dev libtesseract-dev tesseract-ocr && pip install --no-cache-dir -r guarantee_report/requirements.txt
+    buildCommand: pip install --no-cache-dir -r guarantee_report/requirements.txt
     startCommand: gunicorn guarantee_report.webapp:app --bind 0.0.0.0:$PORT --timeout 600 --workers 1 --worker-class sync --keep-alive 300 --graceful-timeout 600
     envVars:
       - key: PYTHON_VERSION

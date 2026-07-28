@@ -138,20 +138,37 @@ class ReportParseError(Exception):
 
 
 def _extract_text_with_ocr(pdf_path: str) -> str:
-    """Tesseract OCR을 사용해 PDF에서 텍스트를 추출한다."""
+    """PaddleOCR을 사용해 PDF에서 텍스트를 추출한다."""
     try:
-        import pytesseract
+        from paddleocr import PaddleOCR
         from pdf2image import convert_from_path
 
+        print("[OCR] PaddleOCR 모델 로드 중...", file=sys.stderr, flush=True)
+        ocr = PaddleOCR(use_angle_cls=True, lang="korean")
+
         print("[OCR] PDF를 이미지로 변환 중...", file=sys.stderr, flush=True)
-        images = convert_from_path(pdf_path, dpi=300)
+        images = convert_from_path(pdf_path, dpi=200, first_page=1, last_page=None)
 
         full_text = ""
         total_pages = len(images)
         for i, image in enumerate(images, 1):
             print(f"[OCR] {i}/{total_pages} 페이지 OCR 처리 중...", file=sys.stderr, flush=True)
-            text = pytesseract.image_to_string(image, lang="kor+eng")
-            full_text += text + "\n"
+            # PaddleOCR은 PIL Image 또는 numpy array를 받음
+            import numpy as np
+            image_array = np.array(image)
+            result = ocr.ocr(image_array, cls=True)
+
+            # 결과에서 텍스트 추출
+            page_text = ""
+            if result:
+                for line in result:
+                    if line:
+                        for word_info in line:
+                            text = word_info[1][0] if word_info[1] else ""
+                            page_text += text
+                    page_text += "\n"
+
+            full_text += page_text + "\n"
 
         print(f"[OCR] 완료: {len(full_text)} 자 추출됨", file=sys.stderr, flush=True)
         return full_text
