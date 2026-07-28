@@ -142,6 +142,7 @@ def _extract_text_with_ocr(pdf_path: str) -> str:
     try:
         import easyocr
         from pdf2image import convert_from_path
+        import numpy as np
 
         print("[OCR] EasyOCR 리더 초기화 중...", file=sys.stderr, flush=True)
         reader = easyocr.Reader(['ko', 'en'], gpu=False)
@@ -154,8 +155,10 @@ def _extract_text_with_ocr(pdf_path: str) -> str:
         for i, image in enumerate(images, 1):
             print(f"[OCR] {i}/{total_pages} 페이지 OCR 처리 중...", file=sys.stderr, flush=True)
 
-            # EasyOCR은 PIL Image를 받음
-            result = reader.readtext(image, detail=0)
+            # PIL Image를 numpy array로 변환
+            image_array = np.array(image)
+            # EasyOCR은 numpy array, 파일 경로, bytes를 받음
+            result = reader.readtext(image_array, detail=0)
             page_text = "\n".join(result) if result else ""
             full_text += page_text + "\n"
 
