@@ -1004,7 +1004,9 @@ def coverage_summary(report_id: int):
 """
 
     resp = Response(html, mimetype="text/html")
-    resp.headers["Content-Disposition"] = f"inline; filename*=UTF-8''{quote(f\"{data.get('header', {}).get('name')}_담보보장요약.html\")}"
+    customer_name = data.get('header', {}).get('name', '고객')
+    filename = f"{customer_name}_담보보장요약.html"
+    resp.headers["Content-Disposition"] = f"inline; filename*=UTF-8''{quote(filename)}"
     return resp
 
 
