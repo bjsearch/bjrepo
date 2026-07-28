@@ -384,3 +384,12 @@ def _parse_detail_items(all_tables) -> list[DetailItem]:
                 )
             )
     return items
+
+
+def _parse_detail_items_from_text(text: str) -> list[DetailItem]:
+    """OCR 추출 텍스트에서 정액담보 상세 항목을 파싱한다 (테이블이 없을 때 폴백)."""
+    items: list[DetailItem] = []
+    # 이 함수는 OCR 텍스트의 구조를 분석하여 상세 항목을 추출한다.
+    # 실제 구현은 OCR 텍스트 포맷에 따라 달라진다.
+    # 현재는 빈 리스트를 반환하고, 필요에 따라 구현될 예정이다.
+    return items
