@@ -9,6 +9,10 @@ export interface GolfCourse {
   established: number;
   description: string;
   hints: string[];
+  features?: string[];
+  recommendedClubs?: string[];
+  difficulty?: "쉬움" | "중간" | "어려움";
+  difficultyTips?: string[];
 }
 
 export const golfCourses: GolfCourse[] = [

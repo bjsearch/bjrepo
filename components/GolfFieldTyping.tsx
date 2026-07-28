@@ -26,6 +26,32 @@ interface GameState {
   playedCourses: GolfCourse[];
 }
 
+interface Tier {
+  name: string;
+  label: string;
+  color: string;
+  bgColor: string;
+  minScore: number;
+}
+
+const tiers: Tier[] = [
+  { name: "백돌이", label: "Baekdoli", color: "text-gray-400", bgColor: "from-gray-500 to-gray-600", minScore: 0 },
+  { name: "구십돌이", label: "Gushipdoli", color: "text-cyan-400", bgColor: "from-cyan-500 to-blue-600", minScore: 200 },
+  { name: "팔십돌이", label: "Palsshipdoli", color: "text-blue-400", bgColor: "from-blue-500 to-indigo-600", minScore: 400 },
+  { name: "하이싱글러", label: "High Singler", color: "text-yellow-400", bgColor: "from-yellow-500 to-orange-600", minScore: 700 },
+  { name: "로우싱글러", label: "Low Singler", color: "text-orange-400", bgColor: "from-orange-500 to-red-600", minScore: 1000 },
+  { name: "프로", label: "Pro", color: "text-red-400", bgColor: "from-red-500 to-pink-600", minScore: 1500 },
+];
+
+const getTier = (score: number): Tier => {
+  for (let i = tiers.length - 1; i >= 0; i--) {
+    if (score >= tiers[i].minScore) {
+      return tiers[i];
+    }
+  }
+  return tiers[0];
+};
+
 export default function GolfFieldTyping() {
   const [gameState, setGameState] = useState<GameState>({
     currentCourse: null,
@@ -268,6 +294,7 @@ export default function GolfFieldTyping() {
   }
 
   if (gameState.isGameOver) {
+    const currentTier = getTier(gameState.score);
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black p-4">
         <div className="max-w-6xl mx-auto">
@@ -290,6 +317,14 @@ export default function GolfFieldTyping() {
             {/* 통계 */}
             <div className="space-y-4">
               <div className="bg-gradient-to-br from-gray-800 to-gray-900 border border-green-500 border-opacity-30 rounded-xl shadow-xl p-6 space-y-4">
+                {/* 등급 */}
+                <div className={`bg-gradient-to-r ${currentTier.bgColor} bg-opacity-10 p-4 rounded-lg border border-opacity-30`} style={{ borderColor: currentTier.color.replace("text-", "") }}>
+                  <p className="text-sm text-gray-400 mb-1">⭐ 골프 실력 등급</p>
+                  <p className={`text-3xl font-bold ${currentTier.color}`}>
+                    {currentTier.name}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">{currentTier.label}</p>
+                </div>
                 <div className="bg-gradient-to-r from-amber-500 to-yellow-600 bg-opacity-10 p-4 rounded-lg border border-amber-500 border-opacity-30">
                   <p className="text-sm text-gray-400">최종 점수</p>
                   <p className="text-3xl font-bold text-amber-400">
