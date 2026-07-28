@@ -138,14 +138,42 @@ class ReportParseError(Exception):
 
 
 def _extract_text_with_ocr(pdf_path: str) -> str:
-    """스캔 PDF 감지 시 사용자에게 명확한 안내 제공."""
-    print(f"[파서] PDF가 스캔 이미지 형식입니다 (텍스트 추출 불가)", file=sys.stderr, flush=True)
-    raise ReportParseError(
-        "📷 스캔된 PDF입니다\n\n"
-        "현재 이 파일은 처리할 수 없습니다. "
-        "신용정보원에서 제공하는 디지털 PDF 파일을 업로드해주세요.\n\n"
-        "혹은 스캔 PDF를 다시 생성할 때 텍스트 인식 기능을 활성화해주세요."
-    )
+    """EasyOCR을 사용해 PDF에서 텍스트를 추출한다."""
+    try:
+        import easyocr
+        from pdf2image import convert_from_path
+
+        print("[OCR] EasyOCR 리더 초기화 중...", file=sys.stderr, flush=True)
+        reader = easyocr.Reader(['ko', 'en'], gpu=False)
+
+        print("[OCR] PDF를 이미지로 변환 중...", file=sys.stderr, flush=True)
+        images = convert_from_path(pdf_path, dpi=200)
+
+        full_text = ""
+        total_pages = len(images)
+        for i, image in enumerate(images, 1):
+            print(f"[OCR] {i}/{total_pages} 페이지 OCR 처리 중...", file=sys.stderr, flush=True)
+
+            # EasyOCR은 PIL Image를 받음
+            result = reader.readtext(image, detail=0)
+            page_text = "\n".join(result) if result else ""
+            full_text += page_text + "\n"
+
+        print(f"[OCR] 완료: {len(full_text)} 자 추출됨", file=sys.stderr, flush=True)
+        return full_text
+
+    except ImportError as e:
+        print(f"[경고] EasyOCR 라이브러리 부족: {e}", file=sys.stderr, flush=True)
+        raise ReportParseError(
+            "📷 스캔된 PDF입니다\n\n"
+            "현재 이 파일은 처리할 수 없습니다. "
+            "신용정보원에서 제공하는 디지털 PDF 파일을 업로드해주세요."
+        )
+    except Exception as e:
+        print(f"[경고] OCR 처리 실패: {e}", file=sys.stderr, flush=True)
+        raise ReportParseError(
+            f"PDF OCR 처리 중 오류가 발생했습니다: {e}"
+        )
 
 
 def parse_pdf(pdf_path: str) -> ParsedReport:
