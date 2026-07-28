@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import re
+import sys
 from dataclasses import dataclass, field
 from datetime import date
 
@@ -136,6 +137,39 @@ class ReportParseError(Exception):
     pass
 
 
+def _extract_text_with_ocr(pdf_path: str) -> str:
+    """Tesseract OCR을 사용해 PDF에서 텍스트를 추출한다."""
+    try:
+        import pytesseract
+        from pdf2image import convert_from_path
+        from PIL import Image
+
+        print("[OCR] PDF를 이미지로 변환 중...", file=sys.stderr, flush=True)
+        images = convert_from_path(pdf_path, dpi=300)
+
+        full_text = ""
+        total_pages = len(images)
+        for i, image in enumerate(images, 1):
+            print(f"[OCR] {i}/{total_pages} 페이지 OCR 처리 중...", file=sys.stderr, flush=True)
+            text = pytesseract.image_to_string(image, lang="kor+eng")
+            full_text += text + "\n"
+
+        print(f"[OCR] 완료: {len(full_text)} 자 추출됨", file=sys.stderr, flush=True)
+        return full_text
+    except ImportError as e:
+        print(f"[경고] OCR 라이브러리 부족: {e}", file=sys.stderr, flush=True)
+        raise ReportParseError(
+            "PDF가 스캔 이미지 형식입니다. "
+            "OCR 처리가 필요하지만 서버에 설치되지 않았습니다. "
+            "관리자에게 문의해주세요."
+        )
+    except Exception as e:
+        print(f"[경고] OCR 처리 실패: {e}", file=sys.stderr, flush=True)
+        raise ReportParseError(
+            f"PDF OCR 처리 중 오류가 발생했습니다: {e}"
+        )
+
+
 def parse_pdf(pdf_path: str) -> ParsedReport:
     import pdfplumber
 
@@ -149,21 +183,43 @@ def parse_pdf(pdf_path: str) -> ParsedReport:
 
     full_text = "\n".join(full_text_pages)
 
-    if "정액담보계약정보조회" not in full_text and "실손보상담보" not in full_text:
-        # 디버깅: 추출된 텍스트의 처음 500자 로깅
-        extracted_preview = full_text[:500] if full_text else "(텍스트 없음)"
-        import sys
+    # 텍스트가 충분하지 않으면 (100자 미만) OCR 시도
+    if len(full_text) < 100:
         print(
-            f"[파서 오류] PDF에서 필수 키워드를 찾을 수 없습니다.\n"
-            f"추출된 텍스트 (처음 500자):\n{extracted_preview}\n"
-            f"텍스트 총 길이: {len(full_text)} 자",
+            f"[파서] 일반 텍스트 추출 실패 ({len(full_text)} 자). OCR 시도 중...",
             file=sys.stderr,
             flush=True
         )
-        raise ReportParseError(
-            "'보험신용정보 통합조회 결과서' 형식의 PDF가 아닙니다. "
-            "신용정보원 제공 보장분석 조회서만 지원합니다."
-        )
+        full_text = _extract_text_with_ocr(pdf_path)
+
+    if "정액담보계약정보조회" not in full_text and "실손보상담보" not in full_text:
+        # 필수 키워드가 없으면 OCR 재시도
+        if len(full_text) < 1000:  # 아직 텍스트가 충분하지 않으면
+            print(
+                f"[파서] 필수 키워드 미발견, OCR 재시도...",
+                file=sys.stderr,
+                flush=True
+            )
+            try:
+                full_text = _extract_text_with_ocr(pdf_path)
+            except ReportParseError:
+                # OCR도 실패하면 원래 에러 메시지 표시
+                pass
+
+        # 그래도 키워드가 없으면 에러
+        if "정액담보계약정보조회" not in full_text and "실손보상담보" not in full_text:
+            extracted_preview = full_text[:500] if full_text else "(텍스트 없음)"
+            print(
+                f"[파서 오류] PDF에서 필수 키워드를 찾을 수 없습니다.\n"
+                f"추출된 텍스트 (처음 500자):\n{extracted_preview}\n"
+                f"텍스트 총 길이: {len(full_text)} 자",
+                file=sys.stderr,
+                flush=True
+            )
+            raise ReportParseError(
+                "'보험신용정보 통합조회 결과서' 형식의 PDF가 아닙니다. "
+                "신용정보원 제공 보장분석 조회서만 지원합니다."
+            )
 
     customer = _parse_customer(full_text)
     indemnity_items = _parse_indemnity_table(all_tables)
