@@ -192,9 +192,8 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 @media(max-width:640px){.chat-panel{left:12px;bottom:78px;width:calc(100vw - 24px)}.chat-fab{left:16px;bottom:16px}}
 @media print{.chat-fab,.chat-panel{display:none}}
 
-.feedback-fab{position:fixed;bottom:86px;left:22px;z-index:45;display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:50%;background:var(--ok);color:#fff;border:none;cursor:pointer;box-shadow:0 6px 18px rgba(16,35,63,.32);transition:transform .15s}
+.feedback-fab{position:fixed;bottom:86px;left:22px;z-index:45;display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:50%;background:var(--ok);color:#fff;border:none;cursor:pointer;font-size:26px;box-shadow:0 6px 18px rgba(16,35,63,.32);transition:transform .15s}
 .feedback-fab:hover{transform:translateY(-1px)}
-.feedback-fab svg{width:22px;height:22px}
 .feedback-panel{position:fixed;bottom:154px;left:22px;z-index:46;width:min(360px,calc(100vw - 44px));max-height:min(400px,calc(100vh - 210px));background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:0 12px 40px rgba(16,35,63,.22);display:flex;flex-direction:column;overflow:hidden;opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .18s,transform .18s}
 .feedback-panel.open{opacity:1;transform:translateY(0);pointer-events:all}
 .feedback-head{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
@@ -254,9 +253,7 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 </div>
 {% endif %}
 {% if not is_public_view %}
-<button class="feedback-fab" type="button" id="feedbackFab" title="피드백 추가">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-</button>
+<button class="feedback-fab" type="button" id="feedbackFab" title="의견/수정사항 입력">📝</button>
 <div class="feedback-panel" id="feedbackPanel">
   <div class="feedback-head">
     <div><b>피드백</b><span>리포트에 대한 의견을 남겨보세요</span></div>

@@ -99,6 +99,7 @@
           <th>생성일</th>
           <th class="r">월 보험료</th>
           <th>진단 결과</th>
+          <th>의견</th>
           <th></th>
         </tr>
       </thead>
@@ -116,6 +117,13 @@
               <span class="chip warn">주의·부족 {{ r.warn_count }}</span>
               <span class="chip gap">미가입 {{ r.gap_count }}</span>
             </div>
+          </td>
+          <td>
+            {% if r.feedback_count %}
+              <span class="chip ok">💬 {{ r.feedback_count }}</span>
+            {% else %}
+              <span style="color:var(--sub);font-size:12px">-</span>
+            {% endif %}
           </td>
           <td>
             <div class="actions-cell">

@@ -118,7 +118,7 @@ CREATE TABLE IF NOT EXISTS report_feedback (
 
 _SUMMARY_COLS = """id, customer_name, gender, birth_date, age, basis_date, created_at,
                     monthly_premium, ok_count, warn_count, gap_count, total_contracts,
-                    created_by_user_id, created_by_name, share_token"""
+                    created_by_user_id, created_by_name, share_token, notes"""
 
 
 def _q(sql: str) -> str:
@@ -292,11 +292,16 @@ def list_reports(created_by_user_id: int | None = None) -> list[dict]:
     _ensure_init()
     with _connect() as conn:
         cur = conn.cursor()
+        query = _q(f"""
+            SELECT {_SUMMARY_COLS},
+                   COALESCE((SELECT COUNT(*) FROM report_feedback WHERE report_feedback.report_id = guarantee_reports.id), 0) as feedback_count
+            FROM guarantee_reports
+        """)
         if created_by_user_id is None:
-            cur.execute(f"SELECT {_SUMMARY_COLS} FROM guarantee_reports ORDER BY created_at DESC")
+            cur.execute(query + " ORDER BY created_at DESC")
         else:
             cur.execute(
-                _q(f"SELECT {_SUMMARY_COLS} FROM guarantee_reports WHERE created_by_user_id = ? ORDER BY created_at DESC"),
+                query + " WHERE created_by_user_id = ? ORDER BY created_at DESC",
                 (created_by_user_id,),
             )
         return [dict(r) for r in cur.fetchall()]
