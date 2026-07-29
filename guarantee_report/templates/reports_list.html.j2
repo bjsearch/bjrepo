@@ -16,7 +16,7 @@
   p.sub{color:var(--sub);font-size:14px;margin:6px 0 26px}
   table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:13.5px}
   thead th{background:#F0F3F8;font-size:12px;font-weight:600;color:var(--sub);text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
-  tbody td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+  tbody td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
   tbody tr:last-child td{border-bottom:none}
   tbody tr:hover{background:#FAFBFC}
   td.r{text-align:right}
@@ -118,9 +118,14 @@
               <span class="chip gap">미가입 {{ r.gap_count }}</span>
             </div>
           </td>
-          <td>
+          <td title="{% if r.latest_feedback %}최근 의견: {{ r.latest_feedback }}{% endif %}">
             {% if r.feedback_count %}
-              <span class="chip ok">💬 {{ r.feedback_count }}</span>
+              <div style="display:flex;flex-direction:column;gap:4px;max-width:200px">
+                <span class="chip ok">💬 {{ r.feedback_count }}</span>
+                {% if r.latest_feedback %}
+                  <span style="font-size:12px;color:var(--sub);line-height:1.4;word-break:break-word">{{ r.latest_feedback[:50] }}{% if r.latest_feedback|length > 50 %}...{% endif %}</span>
+                {% endif %}
+              </div>
             {% else %}
               <span style="color:var(--sub);font-size:12px">-</span>
             {% endif %}
