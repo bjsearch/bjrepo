@@ -1077,6 +1077,36 @@ def update_feedback(report_id: int, feedback_id: int):
     return {"id": feedback_id, "content": content}
 
 
+@app.post("/reports/<int:report_id>/feedback/<int:feedback_id>/resolve")
+def resolve_feedback_endpoint(report_id: int, feedback_id: int):
+    """피드백 반영 완료 표시 (관리자만 가능)"""
+    user = current_user()
+    if user["role"] != "admin":
+        abort(403)
+
+    meta = storage.get_report_meta(report_id)
+    if not meta:
+        abort(404)
+
+    storage.resolve_feedback(feedback_id, user["id"])
+    return {"success": True, "feedback_id": feedback_id, "resolved_by": user["name"]}
+
+
+@app.post("/reports/<int:report_id>/feedback/<int:feedback_id>/unresolve")
+def unresolve_feedback_endpoint(report_id: int, feedback_id: int):
+    """피드백 반영 완료 해제 (관리자만 가능)"""
+    user = current_user()
+    if user["role"] != "admin":
+        abort(403)
+
+    meta = storage.get_report_meta(report_id)
+    if not meta:
+        abort(404)
+
+    storage.unresolve_feedback(feedback_id)
+    return {"success": True, "feedback_id": feedback_id}
+
+
 @app.delete("/reports/<int:report_id>/feedback/<int:feedback_id>")
 def delete_feedback_item(report_id: int, feedback_id: int):
     user = current_user()

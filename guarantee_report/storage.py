@@ -72,8 +72,11 @@ CREATE TABLE IF NOT EXISTS report_feedback (
     content TEXT NOT NULL,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
+    resolved_at TEXT,
+    resolved_by_user_id INTEGER,
     FOREIGN KEY (report_id) REFERENCES guarantee_reports(id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES guarantee_users(id) ON DELETE SET NULL
+    FOREIGN KEY (user_id) REFERENCES guarantee_users(id) ON DELETE SET NULL,
+    FOREIGN KEY (resolved_by_user_id) REFERENCES guarantee_users(id) ON DELETE SET NULL
 );
 """
 
@@ -111,8 +114,11 @@ CREATE TABLE IF NOT EXISTS report_feedback (
     content TEXT NOT NULL,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
+    resolved_at TEXT,
+    resolved_by_user_id INTEGER,
     FOREIGN KEY (report_id) REFERENCES guarantee_reports(id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES guarantee_users(id) ON DELETE SET NULL
+    FOREIGN KEY (user_id) REFERENCES guarantee_users(id) ON DELETE SET NULL,
+    FOREIGN KEY (resolved_by_user_id) REFERENCES guarantee_users(id) ON DELETE SET NULL
 );
 """
 
@@ -174,6 +180,9 @@ def init_db() -> None:
         _add_column_if_missing(cur, "guarantee_users", "password_hash", "TEXT")
         # 리포트 수정사항 컬럼 추가
         _add_column_if_missing(cur, "guarantee_reports", "notes", "TEXT")
+        # 피드백 반영 완료 여부 컬럼 추가
+        _add_column_if_missing(cur, "report_feedback", "resolved_at", "TEXT")
+        _add_column_if_missing(cur, "report_feedback", "resolved_by_user_id", "INTEGER")
     global _initialized
     _initialized = True
 
@@ -510,8 +519,12 @@ def get_report_feedback(report_id: int) -> list[dict]:
         cur = conn.cursor()
         cur.execute(
             _q("""SELECT f.id, f.report_id, f.user_id, f.content, f.created_at, f.updated_at,
-                          u.name AS user_name FROM report_feedback f
+                          f.resolved_at, f.resolved_by_user_id,
+                          u.name AS user_name,
+                          u2.name AS resolved_by_user_name
+                   FROM report_feedback f
                    LEFT JOIN guarantee_users u ON f.user_id = u.id
+                   LEFT JOIN guarantee_users u2 ON f.resolved_by_user_id = u2.id
                    WHERE f.report_id = ? ORDER BY f.created_at DESC"""),
             (report_id,),
         )
@@ -525,6 +538,26 @@ def update_feedback(feedback_id: int, content: str) -> None:
     with _connect() as conn:
         cur = conn.cursor()
         cur.execute(_q("UPDATE report_feedback SET content = ?, updated_at = ? WHERE id = ?"), (content, now, feedback_id))
+
+
+def resolve_feedback(feedback_id: int, admin_user_id: int) -> None:
+    """피드백 반영 완료 상태를 표시한다. (관리자만 가능)"""
+    _ensure_init()
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    with _connect() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            _q("UPDATE report_feedback SET resolved_at = ?, resolved_by_user_id = ? WHERE id = ?"),
+            (now, admin_user_id, feedback_id)
+        )
+
+
+def unresolve_feedback(feedback_id: int) -> None:
+    """피드백 반영 완료 상태를 해제한다. (관리자만 가능)"""
+    _ensure_init()
+    with _connect() as conn:
+        cur = conn.cursor()
+        cur.execute(_q("UPDATE report_feedback SET resolved_at = NULL, resolved_by_user_id = NULL WHERE id = ?"), (feedback_id,))
 
 
 def delete_feedback(feedback_id: int) -> None:

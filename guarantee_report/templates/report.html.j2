@@ -753,6 +753,7 @@ document.getElementById('shareBtn')?.addEventListener('click', shareReport);
   var textarea = document.getElementById('feedbackInput');
   var sendBtn = document.getElementById('feedbackSend');
   var reportId = {{ report_id }};
+  var userRole = '{{ user.role }}';
   var busy = false;
 
   function toggle(open){
@@ -781,10 +782,16 @@ document.getElementById('shareBtn')?.addEventListener('click', shareReport);
           item.className = 'feedback-item';
           var date = new Date(fb.created_at);
           var time = date.toLocaleDateString('ko-KR') + ' ' + date.toLocaleTimeString('ko-KR', {hour: '2-digit', minute:'2-digit'});
-          item.innerHTML = '<span>' + escapeHtml(fb.content) + '</span><div class="time">' + time + (fb.user_name ? ' · ' + escapeHtml(fb.user_name) : '') + '</div><button class="delete-btn" title="삭제">✕</button>';
+          var resolvedText = fb.resolved_at ? '<div style="font-size:11px;color:#1D5BD8;margin-top:6px">✓ 반영 완료 (' + escapeHtml(fb.resolved_by_user_name || '관리자') + ')</div>' : '';
+          var adminCheckbox = userRole === 'admin' ? '<label style="font-size:11px;margin-top:6px;display:flex;align-items:center;gap:4px"><input type="checkbox" class="resolve-check" ' + (fb.resolved_at ? 'checked' : '') + '> 반영 완료</label>' : '';
+          item.innerHTML = '<span>' + escapeHtml(fb.content) + '</span><div class="time">' + time + (fb.user_name ? ' · ' + escapeHtml(fb.user_name) : '') + '</div>' + resolvedText + adminCheckbox + '<button class="delete-btn" title="삭제">✕</button>';
           item.dataset.feedbackId = fb.id;
           var deleteBtn = item.querySelector('.delete-btn');
           deleteBtn.addEventListener('click', function(){ deleteFeedback(fb.id, item); });
+          if (userRole === 'admin') {
+            var checkbox = item.querySelector('.resolve-check');
+            checkbox.addEventListener('change', function(){ toggleResolve(fb.id, this.checked); });
+          }
           list.appendChild(item);
         });
       }
@@ -837,6 +844,20 @@ document.getElementById('shareBtn')?.addEventListener('click', shareReport);
       }
     } catch (e) {
       alert('피드백 삭제에 실패했습니다: ' + e.message);
+    }
+  }
+
+  async function toggleResolve(feedbackId, isResolved){
+    var endpoint = isResolved ? 'resolve' : 'unresolve';
+    try {
+      var resp = await fetch('/reports/' + reportId + '/feedback/' + feedbackId + '/' + endpoint, {
+        method: 'POST',
+      });
+      if (!resp.ok) throw new Error('상태 변경 실패');
+      loadFeedback();
+    } catch (e) {
+      alert('피드백 반영 완료 상태 변경에 실패했습니다: ' + e.message);
+      loadFeedback();
     }
   }
 
