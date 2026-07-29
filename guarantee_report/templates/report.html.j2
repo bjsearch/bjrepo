@@ -753,7 +753,7 @@ document.getElementById('shareBtn')?.addEventListener('click', shareReport);
   var textarea = document.getElementById('feedbackInput');
   var sendBtn = document.getElementById('feedbackSend');
   var reportId = {{ report_id }};
-  var userRole = '{{ user.role }}';
+  var userRole = '{{ user.role if user else "" }}';
   var busy = false;
 
   function toggle(open){

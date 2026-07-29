@@ -857,6 +857,7 @@ def view_report(report_id: int):
         {
             **data,
             "report_id": report_id,
+            "user": user,
             "share_url": _share_url(meta.get("share_token")),
             "is_public_view": False,
             "kakao_js_key": KAKAO_JS_KEY,
