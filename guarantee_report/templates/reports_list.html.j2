@@ -48,6 +48,22 @@
   .navbar a.admin{color:var(--ok)}
   .navbar a.admin:hover{color:var(--ink)}
   .navbar a svg{width:14px;height:14px;flex:none}
+  .notes-btn{background:none;border:none;color:var(--ok);font-size:12px;cursor:pointer;padding:4px 6px;text-decoration:none;display:inline}
+  .notes-btn:hover{color:var(--ink)}
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(16,35,63,.6);z-index:100;align-items:center;justify-content:center}
+  .modal-overlay.show{display:flex}
+  .modal{background:var(--card);border-radius:12px;padding:24px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 12px 40px rgba(16,35,63,.3)}
+  .modal h2{margin:0 0 12px 0;font-size:18px;color:var(--ink)}
+  .modal-textarea{width:100%;min-height:150px;padding:12px;border:1px solid var(--line);border-radius:8px;font-family:inherit;font-size:13px;resize:vertical}
+  .modal-textarea:focus{outline:2px solid var(--ok);outline-offset:-1px}
+  .modal-actions{display:flex;gap:12px;margin-top:16px;justify-content:flex-end}
+  .modal-actions button{padding:10px 20px;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px}
+  .modal-actions .btn-save{background:var(--ok);color:#fff}
+  .modal-actions .btn-save:hover{opacity:.9}
+  .modal-actions .btn-delete{background:var(--gap);color:#fff}
+  .modal-actions .btn-delete:hover{opacity:.9}
+  .modal-actions .btn-cancel{background:var(--line);color:var(--sub)}
+  .modal-actions .btn-cancel:hover{background:var(--paper)}
 </style>
 </head>
 <body>
@@ -105,6 +121,7 @@
             <div class="actions-cell">
               <a href="/reports/{{ r.id }}/coverage-summary" class="download" title="담보보장 요약">📊</a>
               <a href="/reports/{{ r.id }}/download-source" class="download" title="원본 파일 다운로드">⬇</a>
+              <button class="notes-btn" onclick="openNotesModal({{ r.id }}, '{{ r.customer_name }}')" title="수정사항">📝</button>
               <form action="/reports/{{ r.id }}/delete" method="post" onsubmit="return confirm('{{ r.customer_name }}님 리포트를 삭제할까요?')" style="margin:0">
                 <button type="submit" class="del">삭제</button>
               </form>
@@ -122,6 +139,18 @@
   {% else %}
   <div class="empty">아직 저장된 리포트가 없습니다. <a href="/">여기서 새 리포트를 생성</a>하면 자동으로 저장됩니다.</div>
   {% endif %}
+
+  <div class="modal-overlay" id="notesModal">
+    <div class="modal">
+      <h2 id="notesTitle"></h2>
+      <textarea class="modal-textarea" id="notesTextarea" placeholder="리포트에 대한 수정사항이나 노트를 입력하세요."></textarea>
+      <div class="modal-actions">
+        <button type="button" class="btn-delete" onclick="deleteNotes()" style="display:none" id="deleteBtn">삭제</button>
+        <button type="button" class="btn-cancel" onclick="closeNotesModal()">취소</button>
+        <button type="button" class="btn-save" onclick="saveNotes()">저장</button>
+      </div>
+    </div>
+  </div>
 </div>
 <script>
   const boxes = document.querySelectorAll('.cb');
@@ -133,6 +162,72 @@
     hint.textContent = n < 2 ? '2건 이상 선택하세요' : n + '건 선택됨';
   }
   boxes.forEach(b => b.addEventListener('change', update));
+
+  let currentReportId = null;
+  let currentCustomerName = null;
+
+  function openNotesModal(reportId, customerName){
+    currentReportId = reportId;
+    currentCustomerName = customerName;
+    document.getElementById('notesTitle').textContent = `"${customerName}" 수정사항`;
+    document.getElementById('notesTextarea').value = '';
+    document.getElementById('deleteBtn').style.display = 'none';
+    document.getElementById('notesModal').classList.add('show');
+
+    fetch(`/reports/${reportId}/notes`)
+      .then(r => r.json())
+      .then(data => {
+        if(data.notes){
+          document.getElementById('notesTextarea').value = data.notes;
+          document.getElementById('deleteBtn').style.display = 'block';
+        }
+      })
+      .catch(e => console.error('Failed to load notes:', e));
+  }
+
+  function closeNotesModal(){
+    document.getElementById('notesModal').classList.remove('show');
+    currentReportId = null;
+    currentCustomerName = null;
+  }
+
+  function saveNotes(){
+    const notes = document.getElementById('notesTextarea').value.trim();
+    fetch(`/reports/${currentReportId}/notes`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({notes: notes || null})
+    })
+      .then(r => {
+        if(r.status === 403) alert('이 리포트에 접근할 권한이 없습니다.');
+        else if(!r.ok) alert('저장 실패: ' + r.statusText);
+        else closeNotesModal();
+      })
+      .catch(e => {
+        alert('저장 중 오류 발생: ' + e.message);
+      });
+  }
+
+  function deleteNotes(){
+    if(!confirm(`"${currentCustomerName}"의 수정사항을 삭제할까요?`)) return;
+    fetch(`/reports/${currentReportId}/notes`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({notes: null})
+    })
+      .then(r => {
+        if(r.status === 403) alert('이 리포트에 접근할 권한이 없습니다.');
+        else if(!r.ok) alert('삭제 실패: ' + r.statusText);
+        else closeNotesModal();
+      })
+      .catch(e => {
+        alert('삭제 중 오류 발생: ' + e.message);
+      });
+  }
+
+  document.getElementById('notesModal').addEventListener('click', function(e){
+    if(e.target === this) closeNotesModal();
+  });
 </script>
 </body>
 </html>

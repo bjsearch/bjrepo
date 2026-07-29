@@ -1010,6 +1010,31 @@ def coverage_summary(report_id: int):
     return resp
 
 
+@app.post("/reports/<int:report_id>/notes")
+def save_report_notes(report_id: int):
+    user = current_user()
+    meta = storage.get_report_meta(report_id)
+    if not meta or not _can_access(meta, user):
+        abort(403)
+
+    body = request.get_json(silent=True) or {}
+    notes = body.get("notes", "").strip()
+
+    storage.save_notes(report_id, notes)
+    return {"success": True, "notes": notes}
+
+
+@app.get("/reports/<int:report_id>/notes")
+def get_report_notes(report_id: int):
+    user = current_user()
+    meta = storage.get_report_meta(report_id)
+    if not meta or not _can_access(meta, user):
+        abort(403)
+
+    notes = storage.get_notes(report_id)
+    return jsonify({"notes": notes or ""})
+
+
 @app.get("/reports/<int:report_id>/feedback")
 def get_feedback(report_id: int):
     user = current_user()

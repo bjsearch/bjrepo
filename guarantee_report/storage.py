@@ -53,7 +53,8 @@ CREATE TABLE IF NOT EXISTS guarantee_reports (
     total_contracts INTEGER,
     data_json TEXT NOT NULL,
     source_file_name TEXT,
-    source_file_path TEXT
+    source_file_path TEXT,
+    notes TEXT
 );
 CREATE TABLE IF NOT EXISTS guarantee_users (
     id SERIAL PRIMARY KEY,
@@ -91,7 +92,8 @@ CREATE TABLE IF NOT EXISTS guarantee_reports (
     total_contracts INTEGER,
     data_json TEXT NOT NULL,
     source_file_name TEXT,
-    source_file_path TEXT
+    source_file_path TEXT,
+    notes TEXT
 );
 CREATE TABLE IF NOT EXISTS guarantee_users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -170,6 +172,8 @@ def init_db() -> None:
         _add_column_if_missing(cur, "guarantee_reports", "source_file_path", "TEXT")
         # 사용자 비밀번호 컬럼 추가
         _add_column_if_missing(cur, "guarantee_users", "password_hash", "TEXT")
+        # 리포트 수정사항 컬럼 추가
+        _add_column_if_missing(cur, "guarantee_reports", "notes", "TEXT")
     global _initialized
     _initialized = True
 
@@ -424,6 +428,24 @@ def get_source_file(report_id: int, user_id: int | None = None) -> tuple[str, st
         if not row:
             return None
         return (row["source_file_name"], row["source_file_path"])
+
+
+def save_notes(report_id: int, notes: str) -> None:
+    """리포트 수정사항을 저장한다."""
+    _ensure_init()
+    with _connect() as conn:
+        cur = conn.cursor()
+        cur.execute(_q("UPDATE guarantee_reports SET notes = ? WHERE id = ?"), (notes, report_id))
+
+
+def get_notes(report_id: int) -> str | None:
+    """리포트 수정사항을 조회한다."""
+    _ensure_init()
+    with _connect() as conn:
+        cur = conn.cursor()
+        cur.execute(_q("SELECT notes FROM guarantee_reports WHERE id = ?"), (report_id,))
+        row = cur.fetchone()
+        return row["notes"] if row else None
 
 
 def clear_all_data() -> None:

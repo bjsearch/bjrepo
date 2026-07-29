@@ -151,13 +151,16 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 .hero .caption small{display:block;font-family:Pretendard,sans-serif;font-size:12px;font-weight:500;color:#A9765C;margin-top:3px}
 @media(max-width:640px){.hero .caption{font-size:14px;left:16px;bottom:12px;padding:8px 12px;max-width:78%}}
 
-.action-bar{position:fixed;top:22px;right:22px;z-index:40;display:flex;gap:8px}
-.action-bar button{display:inline-flex;align-items:center;gap:7px;padding:11px 20px;border:none;border-radius:99px;font-family:inherit;font-size:13.5px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(16,35,63,.28);transition:transform .15s,box-shadow .15s}
-.action-bar button:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(16,35,63,.34)}
-.action-bar button svg{width:15px;height:15px;flex:none}
+.action-bar{position:fixed;top:22px;right:22px;z-index:40;display:flex;gap:12px}
+.action-bar button{display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border:none;border-radius:99px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(16,35,63,.28);transition:transform .15s,box-shadow .15s}
+.action-bar button:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(16,35,63,.35)}
+.action-bar button svg{width:17px;height:17px;flex:none}
+.action-bar a{display:inline-flex;align-items:center;gap:8px;padding:14px 28px;font-size:14px;font-weight:700;text-decoration:none;border-radius:99px;box-shadow:0 4px 14px rgba(16,35,63,.28);transition:transform .15s,box-shadow .15s}
+.action-bar a:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(16,35,63,.35)}
+.action-bar a svg{width:17px;height:17px;flex:none}
 .download-btn{background:var(--ink);color:#fff}
 .share-btn{background:#FEE500;color:#3C1E1E}
-@media(max-width:640px){.action-bar{top:auto;bottom:18px;right:18px;flex-direction:column}.action-bar button{padding:14px}.action-bar button span{display:none}.action-bar button svg{width:18px;height:18px}}
+@media(max-width:640px){.action-bar{top:auto;bottom:18px;right:18px;flex-direction:column;gap:10px}.action-bar button,.action-bar a{padding:16px}.action-bar button span,.action-bar a span{display:none}.action-bar button svg,.action-bar a svg{width:20px;height:20px}}
 @media print{.action-bar{display:none}}
 .back-link{position:fixed;top:26px;left:22px;z-index:40;font-size:13px;font-weight:700;color:var(--sub);text-decoration:none;background:rgba(255,255,255,.85);padding:8px 14px;border-radius:99px}
 @media print{.back-link{display:none}}
