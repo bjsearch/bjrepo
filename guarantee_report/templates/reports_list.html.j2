@@ -118,14 +118,20 @@
               <span class="chip gap">미가입 {{ r.gap_count }}</span>
             </div>
           </td>
-          <td title="{% if r.latest_feedback %}최근 의견: {{ r.latest_feedback }}{% endif %}">
+          <td title="상세 보기는 리포트를 클릭하세요">
             {% if r.feedback_count %}
-              <div style="display:flex;flex-direction:column;gap:4px;max-width:200px">
-                <span class="chip ok">💬 {{ r.feedback_count }}</span>
-                {% if r.latest_feedback %}
-                  <span style="font-size:12px;color:var(--sub);line-height:1.4;word-break:break-word">{{ r.latest_feedback[:50] }}{% if r.latest_feedback|length > 50 %}...{% endif %}</span>
-                {% endif %}
-              </div>
+              <a href="/reports/{{ r.id }}" style="text-decoration:none;color:inherit">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span class="chip {% if r.feedback_resolved_count == r.feedback_count %}ok{% elif r.feedback_resolved_count > 0 %}warn{% else %}gap{% endif %}">
+                    💬 {{ r.feedback_resolved_count }}/{{ r.feedback_count }}
+                  </span>
+                  {% if r.feedback_count > 0 %}
+                    <div style="flex:1;height:6px;background:var(--line);border-radius:3px;overflow:hidden">
+                      <div style="height:100%;background:{% if r.feedback_resolved_count == r.feedback_count %}#1D5BD8{% elif r.feedback_resolved_count > 0 %}#C77700{% else %}#C93030{% endif %};width:{{ (r.feedback_resolved_count / r.feedback_count * 100)|int }}%"></div>
+                    </div>
+                  {% endif %}
+                </div>
+              </a>
             {% else %}
               <span style="color:var(--sub);font-size:12px">-</span>
             {% endif %}

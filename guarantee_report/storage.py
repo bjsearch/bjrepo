@@ -304,6 +304,7 @@ def list_reports(created_by_user_id: int | None = None) -> list[dict]:
         query = _q(f"""
             SELECT {_SUMMARY_COLS},
                    COALESCE((SELECT COUNT(*) FROM report_feedback WHERE report_feedback.report_id = guarantee_reports.id), 0) as feedback_count,
+                   COALESCE((SELECT COUNT(*) FROM report_feedback WHERE report_feedback.report_id = guarantee_reports.id AND report_feedback.resolved_at IS NOT NULL), 0) as feedback_resolved_count,
                    (SELECT content FROM report_feedback WHERE report_feedback.report_id = guarantee_reports.id ORDER BY created_at DESC LIMIT 1) as latest_feedback
             FROM guarantee_reports
         """)
