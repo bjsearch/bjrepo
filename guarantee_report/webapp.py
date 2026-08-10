@@ -251,8 +251,8 @@ def login():
                 need_password=bool(TEAM_PASSWORD),
                 next_url=next_url,
                 logo_mark=LOGO_MARK,
-                name=name,
-                phone=phone_raw,
+                user_name=name,
+                user_phone=phone_raw,
             ),
             status,
         )
@@ -322,8 +322,8 @@ def signup():
             render_template(
                 "signup.html.j2",
                 error=msg,
-                name=name,
-                phone=phone_raw,
+                user_name=name,
+                user_phone=phone_raw,
                 logo_mark=LOGO_MARK,
             ),
             status,

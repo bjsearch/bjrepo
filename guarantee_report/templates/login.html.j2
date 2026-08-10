@@ -55,11 +55,11 @@
         <input type="hidden" name="next" value="{{ next_url or '' }}">
         <div class="form-group">
           <label for="name">이름</label>
-          <input type="text" id="name" name="name" required placeholder="홍길동" value="{{ name or '' }}">
+          <input type="text" id="name" name="name" required placeholder="홍길동" value="{{ user_name or '' }}">
         </div>
         <div class="form-group">
           <label for="phone">휴대폰번호</label>
-          <input type="tel" id="phone" name="phone" required placeholder="010-1234-5678" value="{{ phone or '' }}">
+          <input type="tel" id="phone" name="phone" required placeholder="010-1234-5678" value="{{ user_phone or '' }}">
         </div>
         {% if need_password %}
         <div class="form-group">
