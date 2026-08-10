@@ -301,20 +301,27 @@ def list_reports(created_by_user_id: int | None = None) -> list[dict]:
     _ensure_init()
     with _connect() as conn:
         cur = conn.cursor()
-        query = _q(f"""
-            SELECT {_SUMMARY_COLS},
-                   COALESCE((SELECT COUNT(*) FROM report_feedback WHERE report_feedback.report_id = guarantee_reports.id), 0) as feedback_count,
-                   COALESCE((SELECT COUNT(*) FROM report_feedback WHERE report_feedback.report_id = guarantee_reports.id AND report_feedback.resolved_at IS NOT NULL), 0) as feedback_resolved_count,
-                   (SELECT content FROM report_feedback WHERE report_feedback.report_id = guarantee_reports.id ORDER BY created_at DESC LIMIT 1) as latest_feedback
-            FROM guarantee_reports
-        """)
         if created_by_user_id is None:
-            cur.execute(query + " ORDER BY created_at DESC")
+            query = _q(f"""
+                SELECT {_SUMMARY_COLS},
+                       COALESCE((SELECT COUNT(*) FROM report_feedback WHERE report_feedback.report_id = guarantee_reports.id), 0) as feedback_count,
+                       COALESCE((SELECT COUNT(*) FROM report_feedback WHERE report_feedback.report_id = guarantee_reports.id AND report_feedback.resolved_at IS NOT NULL), 0) as feedback_resolved_count,
+                       (SELECT content FROM report_feedback WHERE report_feedback.report_id = guarantee_reports.id ORDER BY created_at DESC LIMIT 1) as latest_feedback
+                FROM guarantee_reports
+                ORDER BY created_at DESC
+            """)
+            cur.execute(query)
         else:
-            cur.execute(
-                query + " WHERE created_by_user_id = ? ORDER BY created_at DESC",
-                (created_by_user_id,),
-            )
+            query = _q(f"""
+                SELECT {_SUMMARY_COLS},
+                       COALESCE((SELECT COUNT(*) FROM report_feedback WHERE report_feedback.report_id = guarantee_reports.id), 0) as feedback_count,
+                       COALESCE((SELECT COUNT(*) FROM report_feedback WHERE report_feedback.report_id = guarantee_reports.id AND report_feedback.resolved_at IS NOT NULL), 0) as feedback_resolved_count,
+                       (SELECT content FROM report_feedback WHERE report_feedback.report_id = guarantee_reports.id ORDER BY created_at DESC LIMIT 1) as latest_feedback
+                FROM guarantee_reports
+                WHERE created_by_user_id = ?
+                ORDER BY created_at DESC
+            """)
+            cur.execute(query, (created_by_user_id,))
         return [dict(r) for r in cur.fetchall()]
 
 
