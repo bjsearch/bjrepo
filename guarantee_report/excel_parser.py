@@ -52,20 +52,7 @@ class ExcelParseResult:
 
         detail_items = []
         for product in self.insurance_products:
-            coverages = product.get("coverages", [])
-            category = ""
-            if coverages:
-                category = coverages[0].get("name", "")
-            else:
-                category = product.get("product_name", "")[:20]
-
-            total_premium = product.get("total_premium", 0)
-            if total_premium > 0:
-                amount_man = total_premium // 10000
-            else:
-                monthly_premium = product.get("monthly_premium", 0)
-                amount_man = (monthly_premium * 12) // 10000
-
+            # 계약 정보 준비
             contract_date_str = product.get("contract_date", "")
             if contract_date_str:
                 if isinstance(contract_date_str, date):
@@ -88,21 +75,47 @@ class ExcelParseResult:
                 if pay_years < 1:
                     pay_years = 1
 
-            detail_item = DetailItem(
-                company=product.get("company", ""),
-                product=product.get("product_name", ""),
-                start=start_str,
-                end=str(end_str),
-                pay_years=pay_years,
-                pay_method="월납",
-                premium_won=monthly_premium,
-                rider_name="",
-                category=category,
-                amount_man=int(amount_man) if amount_man > 0 else 0,
-                status="",
-                renewal_type=product.get("renewal_type", "black")
-            )
-            detail_items.append(detail_item)
+            # 각 보장별로 detail_item 생성
+            coverages = product.get("coverages", [])
+            if coverages:
+                # 보장이 있으면 각 보장별로 detail_item 생성
+                for coverage in coverages:
+                    cov_name = coverage.get("name", "")
+                    cov_amount = coverage.get("amount", 0)
+
+                    if cov_name:
+                        detail_item = DetailItem(
+                            company=product.get("company", ""),
+                            product=product.get("product_name", ""),
+                            start=start_str,
+                            end=str(end_str),
+                            pay_years=pay_years,
+                            pay_method="월납",
+                            premium_won=monthly_premium,
+                            rider_name="",
+                            category=cov_name,
+                            amount_man=int(cov_amount) if cov_amount > 0 else 0,
+                            status="",
+                            renewal_type=product.get("renewal_type", "black")
+                        )
+                        detail_items.append(detail_item)
+            else:
+                # 보장이 없는 경우 상품명을 카테고리로 사용 (실손보험 등)
+                detail_item = DetailItem(
+                    company=product.get("company", ""),
+                    product=product.get("product_name", ""),
+                    start=start_str,
+                    end=str(end_str),
+                    pay_years=pay_years,
+                    pay_method="월납",
+                    premium_won=monthly_premium,
+                    rider_name="",
+                    category=product.get("product_name", "")[:20],
+                    amount_man=0,
+                    status="",
+                    renewal_type=product.get("renewal_type", "black")
+                )
+                detail_items.append(detail_item)
 
         category_totals = []
         category_map = {}
