@@ -204,6 +204,7 @@ def _safe_value(val) -> str | None:
 
 def _get_font_colors(zf) -> dict:
     """styles.xml에서 폰트 색상 정보 추출 (style_id -> 'red'|'yellow'|'black')"""
+    import xml.etree.ElementTree as ET
     try:
         styles_xml = zf.read('xl/styles.xml')
         styles_root = ET.fromstring(styles_xml)
@@ -267,7 +268,7 @@ def _get_font_colors(zf) -> dict:
                     color_map[i] = font_colors[font_id]
 
         return color_map
-    except:
+    except Exception:
         return {}
 
 
