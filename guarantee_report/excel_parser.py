@@ -18,7 +18,7 @@ import math
 from datetime import date, datetime
 from dataclasses import dataclass
 
-from .parser import Customer, DetailItem, ParsedReport
+from .parser import Customer, DetailItem, ParsedReport, CategoryTotal
 
 
 @dataclass
@@ -103,7 +103,39 @@ class ExcelParseResult:
             )
             detail_items.append(detail_item)
 
-        return ParsedReport(customer=customer, detail_items=detail_items)
+        category_totals = []
+        category_map = {}
+
+        for product in self.insurance_products:
+            coverages = product.get("coverages", [])
+            for coverage in coverages:
+                cov_name = coverage.get("name", "")
+                cov_amount = coverage.get("amount", 0)
+
+                if cov_name:
+                    if cov_name not in category_map:
+                        category_map[cov_name] = {"count": 0, "total": 0}
+                    category_map[cov_name]["count"] += 1
+                    category_map[cov_name]["total"] += cov_amount
+
+        seq = 1
+        for category_name in sorted(category_map.keys()):
+            data = category_map[category_name]
+            category_totals.append(
+                CategoryTotal(
+                    seq=seq,
+                    category=category_name,
+                    count=data["count"],
+                    total_amount_man=int(data["total"]) if data["total"] > 0 else 0
+                )
+            )
+            seq += 1
+
+        return ParsedReport(
+            customer=customer,
+            detail_items=detail_items,
+            category_totals=category_totals
+        )
 
 
 def parse_excel(file_path: str) -> ExcelParseResult:
