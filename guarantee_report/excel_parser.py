@@ -559,6 +559,9 @@ def _parse_excel_alternative(file_path: str) -> ExcelParseResult:
         except KeyError:
             pass
 
+        # 폰트 색상 추출
+        font_colors = _get_font_colors(zf)
+
         # 첫 번째 시트 찾기
         try:
             workbook_xml = zf.read('xl/workbook.xml')
@@ -605,10 +608,12 @@ def _parse_excel_alternative(file_path: str) -> ExcelParseResult:
 
                     # 셀 데이터 추출
                     cells = {}
+                    cell_colors = {}
                     for c in sheet_root.iter():
                         if c.tag.endswith('}c'):
                             r = c.get('r', '')
                             cell_type = c.get('t', '')
+                            style_id = int(c.get('s', '0'))
                             value = None
 
                             for child in c:
@@ -630,6 +635,8 @@ def _parse_excel_alternative(file_path: str) -> ExcelParseResult:
 
                             if r and value:
                                 cells[r] = value
+                                if style_id in font_colors:
+                                    cell_colors[r] = font_colors[style_id]
 
                     # 보고서 형식에서 고객명 추출 (B2에서 "xxx님의 보장분석..." 형식)
                     if 'B2' in cells:
@@ -724,6 +731,33 @@ def _parse_excel_alternative(file_path: str) -> ExcelParseResult:
                             remaining_premium = _parse_number(remaining_premium_str)
                             contract_end = cells.get(f'{col}15', '')
 
+                            # 갱신유무 추출 (row 9-13 중에서 값 찾기)
+                            renewal_type = 'black'
+                            for row_candidate in [9, 10, 11, 12, 13]:
+                                renewal_value = cells.get(f'{col}{row_candidate}', '')
+                                if renewal_value:
+                                    renewal_value_lower = str(renewal_value).strip().lower()
+                                    if any(x in renewal_value_lower for x in ['갱신형', '갱신', 'renewal']) or renewal_value_lower in ['1', 'yes', 'true', 'y']:
+                                        renewal_type = 'red'
+                                        break
+                                    elif any(x in renewal_value_lower for x in ['혼합', 'mixed']) or renewal_value_lower == '2':
+                                        renewal_type = 'yellow'
+                                        break
+                                    elif any(x in renewal_value_lower for x in ['비갱신', 'non', 'fixed']) or renewal_value_lower in ['0', 'no', 'false', 'n']:
+                                        renewal_type = 'black'
+                                        break
+
+                            # 값이 없으면 폰트 색상으로 판별
+                            if renewal_type == 'black':
+                                for row_candidate in [9, 10, 11, 12, 13]:
+                                    cell_ref = f'{col}{row_candidate}'
+                                    if cell_ref in cell_colors:
+                                        renewal_type = cell_colors[cell_ref]
+                                        break
+                                # 여전히 찾지 못했으면 상품명 셀의 색상 사용
+                                if renewal_type == 'black':
+                                    renewal_type = cell_colors.get(f'{col}6', 'black')
+
                             # 이 상품의 카테고리 정보 추출
                             coverages = []
                             if col in category_amounts_by_col:
@@ -739,7 +773,8 @@ def _parse_excel_alternative(file_path: str) -> ExcelParseResult:
                                 "total_premium": total_premium,
                                 "remaining_premium": remaining_premium,
                                 "coverages": coverages,
-                                "contract_end": contract_end or "9999-12-31"
+                                "contract_end": contract_end or "9999-12-31",
+                                "renewal_type": renewal_type
                             }
                             insurance_products.append(product)
 
