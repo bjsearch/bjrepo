@@ -399,6 +399,14 @@ def _parse_excel_manual(file_path: str, sheet_names: list = None) -> ExcelParseR
 
                 # 보험상품 시트인 경우
                 elif sheet_name == "보험상품":
+                    # 갱신유무 컬럼 찾기 (헤더 행 스캔)
+                    renewal_column = None
+                    for col in ['I', 'J', 'K', 'L', 'M', 'N', 'O', 'P']:
+                        header = cells.get(f'{col}1', '').lower()
+                        if '갱신' in header or '갱신유무' in header:
+                            renewal_column = col
+                            break
+
                     row = 2
                     while row <= 1000:  # 최대 1000행
                         company = cells.get(f'A{row}')
@@ -407,9 +415,21 @@ def _parse_excel_manual(file_path: str, sheet_names: list = None) -> ExcelParseR
 
                         product_name = cells.get(f'B{row}')
                         if product_name:
-                            # 제품명 셀의 폰트 색상으로 갱신형 타입 결정
-                            # red = 갱신형보험, yellow = 갱신형 특약, black/none = 비갱신형
-                            renewal_type = cell_colors.get(f'B{row}', 'black')
+                            # 갱신유무 컬럼이 있으면 그 값으로 갱신형 타입 결정
+                            # 없으면 제품명 셀의 폰트 색상으로 결정
+                            renewal_type = 'black'  # default
+
+                            if renewal_column:
+                                renewal_value = cells.get(f'{renewal_column}{row}', '').lower()
+                                if '갱신' in renewal_value or renewal_value == '1' or renewal_value == 'true':
+                                    renewal_type = 'red'
+                                elif '혼합' in renewal_value or renewal_value == '2':
+                                    renewal_type = 'yellow'
+                                else:
+                                    renewal_type = 'black'
+                            else:
+                                # 폰트 색상 사용
+                                renewal_type = cell_colors.get(f'B{row}', 'black')
 
                             product = {
                                 "company": company,
