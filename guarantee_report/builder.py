@@ -15,6 +15,28 @@ def _fmt_man(n: float) -> str:
     return f"{round(n):,.0f}"
 
 
+def _fmt_currency(n: float) -> str:
+    """큰 단위 통화 포맷: 억 단위, 천만 단위, 만원 단위"""
+    if n == 0:
+        return "0"
+    abs_n = abs(n)
+
+    if abs_n >= 10000:  # 억 단위 (10000 만원 = 1억)
+        eok = n / 10000
+        if abs_n >= 100000:  # 1000억 이상이면 정수로
+            return f"{round(eok):,.0f}억"
+        else:
+            return f"{eok:,.1f}억".rstrip('0').rstrip('.')
+    elif abs_n >= 1000:  # 천만 단위 (1000 만원 = 1천만)
+        cheonman = n / 1000
+        if abs_n >= 10000:  # 만 단위가 더 나을 때
+            return f"{round(n):,.0f}만원"
+        else:
+            return f"{cheonman:,.1f}천만원".rstrip('0').rstrip('.')
+    else:
+        return f"{round(n):,.0f}만원"
+
+
 def _parse_leading_number(s: str) -> float:
     """'각 10', '10,000', '10 / 20', '—' 등에서 첫 숫자를 안전하게 뽑는다."""
     m = re.search(r"[\d,]+(?:\.\d+)?", s or "")
@@ -421,8 +443,11 @@ def build_report_data(parsed: ParsedReport, rules_path: str | None = None) -> di
     kpis = {
         "monthly_premium": f"{total_premium:,}",
         "paid_total_man": _fmt_man(paid_total / 10000),
+        "paid_total_currency": _fmt_currency(paid_total / 10000),
         "scheduled_total_man": _fmt_man(scheduled_total / 10000),
+        "scheduled_total_currency": _fmt_currency(scheduled_total / 10000),
         "grand_total_man": _fmt_man((paid_total + scheduled_total) / 10000),
+        "grand_total_currency": _fmt_currency((paid_total + scheduled_total) / 10000),
         "ok_count": ok,
         "warn_count": warn,
         "gap_count": gap,
