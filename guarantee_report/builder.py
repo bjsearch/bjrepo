@@ -459,12 +459,12 @@ def build_report_data(parsed: ParsedReport, rules_path: str | None = None) -> di
 
     kpis = {
         "monthly_premium": f"{total_premium:,}",
-        "paid_total_man": _fmt_man(paid_total / 10000),
-        "paid_total_currency": _fmt_currency(paid_total / 10000),
-        "scheduled_total_man": _fmt_man(scheduled_total / 10000),
-        "scheduled_total_currency": _fmt_currency(scheduled_total / 10000),
-        "grand_total_man": _fmt_man((paid_total + scheduled_total) / 10000),
-        "grand_total_currency": _fmt_currency((paid_total + scheduled_total) / 10000),
+        "paid_total_man": _fmt_man(paid_total / 10000000),
+        "paid_total_currency": _fmt_currency(paid_total / 10000000),
+        "scheduled_total_man": _fmt_man(scheduled_total / 10000000),
+        "scheduled_total_currency": _fmt_currency(scheduled_total / 10000000),
+        "grand_total_man": _fmt_man((paid_total + scheduled_total) / 10000000),
+        "grand_total_currency": _fmt_currency((paid_total + scheduled_total) / 10000000),
         "ok_count": ok,
         "warn_count": warn,
         "gap_count": gap,
