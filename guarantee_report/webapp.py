@@ -607,7 +607,7 @@ def edit_report(draft_id: str):
 
         # 생성일시 포맷
         created_at = draft.get("created_at", time.time())
-        created_datetime = datetime.fromtimestamp(created_at).strftime("%Y년 %m월 %d일 %H:%M:%S")
+        created_datetime = datetime.fromtimestamp(created_at).strftime("%Y-%m-%d %H:%M")
 
         html = f"""<!DOCTYPE html>
 <html lang="ko">
@@ -823,7 +823,7 @@ function removeNewInsightPanel(idx) {{
     from datetime import datetime
     created_at = draft.get("created_at", time.time())
     data["created_at"] = created_at
-    data["created_datetime"] = datetime.fromtimestamp(created_at).strftime("%Y년 %m월 %d일 %H:%M:%S")
+    data["created_datetime"] = datetime.fromtimestamp(created_at).strftime("%Y-%m-%d %H:%M")
 
     # DB에 저장
     report_id = storage.save_report(
