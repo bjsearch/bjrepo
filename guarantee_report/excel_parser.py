@@ -399,11 +399,11 @@ def _parse_excel_manual(file_path: str, sheet_names: list = None) -> ExcelParseR
 
                 # 보험상품 시트인 경우
                 elif sheet_name == "보험상품":
-                    # 갱신유무 컬럼 찾기 (헤더 행 스캔)
+                    # 갱신유무 컬럼 찾기 (헤더 행 스캔) - 전체 범위 검색
                     renewal_column = None
-                    for col in ['I', 'J', 'K', 'L', 'M', 'N', 'O', 'P']:
-                        header = cells.get(f'{col}1', '').lower()
-                        if '갱신' in header or '갱신유무' in header:
+                    for col in ['B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q']:
+                        header = cells.get(f'{col}1', '').lower().strip()
+                        if '갱신유무' in header or (header == '갱신' and cells.get(f'{col}1', '') != ''):
                             renewal_column = col
                             break
 
@@ -420,15 +420,23 @@ def _parse_excel_manual(file_path: str, sheet_names: list = None) -> ExcelParseR
                             renewal_type = 'black'  # default
 
                             if renewal_column:
-                                renewal_value = cells.get(f'{renewal_column}{row}', '').lower()
-                                if '갱신' in renewal_value or renewal_value == '1' or renewal_value == 'true':
-                                    renewal_type = 'red'
-                                elif '혼합' in renewal_value or renewal_value == '2':
-                                    renewal_type = 'yellow'
+                                renewal_value = cells.get(f'{renewal_column}{row}', '')
+                                if renewal_value:
+                                    renewal_value_lower = str(renewal_value).strip().lower()
+                                    # 갱신형 판별
+                                    if any(x in renewal_value_lower for x in ['갱신형', '갱신', 'renewal']) or renewal_value_lower in ['1', 'yes', 'true', 'y']:
+                                        renewal_type = 'red'
+                                    # 혼합형 판별
+                                    elif any(x in renewal_value_lower for x in ['혼합', 'mixed']) or renewal_value_lower == '2':
+                                        renewal_type = 'yellow'
+                                    # 비갱신형 판별
+                                    else:
+                                        renewal_type = 'black'
                                 else:
-                                    renewal_type = 'black'
+                                    # 값이 없으면 기본값 사용 (폰트 색상)
+                                    renewal_type = cell_colors.get(f'B{row}', 'black')
                             else:
-                                # 폰트 색상 사용
+                                # 갱신유무 컬럼이 없으면 폰트 색상 사용
                                 renewal_type = cell_colors.get(f'B{row}', 'black')
 
                             product = {
