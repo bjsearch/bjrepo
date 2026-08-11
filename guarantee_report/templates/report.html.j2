@@ -761,16 +761,7 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
     <div class="coverage-item" style="{% if not loop.last %}margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--line){% else %}margin-bottom:0{% endif %}display:flex;align-items:start;justify-content:space-between;gap:12px">
       <div style="flex:1">
         <div style="font-weight:600;font-size:14px;color:var(--ink);margin-bottom:6px">{{ cov.name }}</div>
-        <div style="font-size:13px;color:var(--sub);font-weight:500" class="coverage-amount" data-original="{{ cov.amount }}">
-          <span class="amount-display">{{ cov.amount }}</span>
-          <input type="text" class="amount-edit" style="display:none;padding:4px 8px;border:1px solid var(--line);border-radius:4px;font-size:13px;width:150px" value="{{ cov.amount }}">
-          <button class="amount-edit-btn" style="display:none;margin-left:6px;padding:2px 8px;background:var(--ok);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px">저장</button>
-          <button class="amount-cancel-btn" style="display:none;margin-left:4px;padding:2px 8px;background:var(--sub);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px">취소</button>
-        </div>
-      </div>
-      <div style="display:flex;gap:6px">
-        <button class="edit-amount-btn" style="padding:6px 10px;background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok);border-radius:4px;cursor:pointer;font-size:11px;font-weight:600">수정</button>
-        <button class="delete-coverage-btn" style="padding:6px 10px;background:var(--gap-bg);color:var(--gap);border:1px solid var(--gap);border-radius:4px;cursor:pointer;font-size:11px;font-weight:600">삭제</button>
+        <div style="font-size:13px;color:var(--sub);font-weight:500">{{ cov.amount }}</div>
       </div>
     </div>
     {% endfor %}
