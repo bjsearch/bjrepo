@@ -672,16 +672,27 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 </div>
 <script>
 function downloadReport(){
+  // Overlay 숨기기
+  var saveProgress = document.getElementById('saveProgress');
+  if (saveProgress) {
+    saveProgress.style.display = 'none';
+  }
+
   var html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
   var blob = new Blob([html], {type: 'text/html;charset=utf-8'});
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
   a.href = url;
-  a.download = '{{ header.name }}_성우아빠의보장분석리포트.html';
+  a.download = '{{ header.name }}_보장분석리포트.html';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+
+  // Overlay 복구
+  if (saveProgress) {
+    saveProgress.style.display = '';
+  }
 }
 
 function downloadReportWithProgress(){
