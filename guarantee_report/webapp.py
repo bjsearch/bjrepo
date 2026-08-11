@@ -708,11 +708,11 @@ def generate_batch():
                     "brands_legend": data.get("brands_legend"),
                 }
                 report_id = storage.save_report(
-                    user["id"],
-                    customer_name,
-                    f.filename,
-                    report_data,
-                    share_token=secrets.token_urlsafe(32),
+                    data=report_data,
+                    created_by_user_id=user["id"],
+                    created_by_name=customer_name,
+                    source_file_name=f.filename,
+                    source_file_path=str(upload_file_path) if upload_file_path else None,
                 )
                 generated_count += 1
             except Exception as e:
