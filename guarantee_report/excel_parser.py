@@ -214,6 +214,37 @@ def _get_font_colors(zf) -> dict:
         # 폰트 색상 맵
         color_map = {}
 
+        def _classify_rgb_color(rgb_hex: str) -> str:
+            """RGB hex값에서 색상 분류 (red/yellow/black)"""
+            if not rgb_hex or len(rgb_hex) < 6:
+                return None
+
+            rgb_hex = rgb_hex.upper()
+            # FF는 alpha channel
+            if len(rgb_hex) == 8:
+                r_hex, g_hex, b_hex = rgb_hex[2:4], rgb_hex[4:6], rgb_hex[6:8]
+            else:
+                r_hex, g_hex, b_hex = rgb_hex[0:2], rgb_hex[2:4], rgb_hex[4:6]
+
+            try:
+                r = int(r_hex, 16)
+                g = int(g_hex, 16)
+                b = int(b_hex, 16)
+
+                # Black/Dark color (all values low)
+                if r < 50 and g < 50 and b < 50:
+                    return 'black'
+                # Red (R is highest, significant red component)
+                elif r > 150 and r > g and r > b and g < 150 and b < 150:
+                    return 'red'
+                # Yellow (R and G are high, B is low)
+                elif r > 150 and g > 150 and b < 150:
+                    return 'yellow'
+                # Default to black
+                return 'black'
+            except:
+                return None
+
         # fonts 섹션에서 색상 찾기
         font_colors = {}
         fonts = styles_root.find('.//ss:fonts', ns)
@@ -222,17 +253,10 @@ def _get_font_colors(zf) -> dict:
                 color_elem = font.find('ss:color', ns)
                 if color_elem is not None:
                     rgb = color_elem.get('rgb', '')
-                    if rgb and len(rgb) >= 6:
-                        rgb_upper = rgb.upper()
-                        # Red color: FF0000 또는 C00000 등 빨간색
-                        if rgb_upper in ('FF0000', 'C00000', 'E74C3C', 'F44336'):
-                            font_colors[i] = 'red'
-                        # Yellow color: FFFF00 또는 FFC000 등 노란색
-                        elif rgb_upper in ('FFFF00', 'FFC000', 'FDD835', 'FFD700'):
-                            font_colors[i] = 'yellow'
-                        # Black: 000000
-                        elif rgb_upper == '000000' or color_elem.get('theme') == '1':
-                            font_colors[i] = 'black'
+                    if rgb:
+                        color = _classify_rgb_color(rgb)
+                        if color:
+                            font_colors[i] = color
 
         # cellXfs 섹션에서 각 style에 font 매핑
         cell_xfs = styles_root.find('.//ss:cellXfs', ns)
