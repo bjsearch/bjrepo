@@ -527,15 +527,25 @@ def _parse_excel_alternative(file_path: str) -> ExcelParseResult:
                             customer_name = title.split('님')[0].strip()
 
                     # 각 열(E, F, G 등)을 하나의 상품으로 처리
-                    # 행 6에서 상품명이 있는 열 찾기
+                    # 행 6에서 상품명이 있는 열 찾기 (E열부터 시작, 제한 없음)
                     product_cols = set()
+                    # 알파벳 순서로 열을 생성 (E부터 ZZ까지)
+                    def col_num_to_letter(n):
+                        """열 번호(0: A, 1: B...)를 알파벳으로 변환"""
+                        result = ''
+                        while n >= 0:
+                            result = chr(ord('A') + (n % 26)) + result
+                            n = n // 26 - 1
+                        return result
+
                     for cell_ref in cells:
                         match = re.match(r'([A-Z]+)(\d+)', cell_ref)
                         if match:
                             col = match.group(1)
                             row = int(match.group(2))
                             # 행 6(보험명) 또는 행 7(보험사명)에 데이터가 있으면 해당 열이 상품 열
-                            if row in [6, 7] and col in ['E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M']:
+                            # E열(4) 이상의 모든 열 지원
+                            if row in [6, 7] and col >= 'E':
                                 product_cols.add(col)
 
                     # 카테고리 매핑: Excel 파일의 카테고리명 -> 규칙 시스템의 표준 카테고리명

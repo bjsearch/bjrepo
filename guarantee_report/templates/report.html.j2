@@ -124,11 +124,39 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 .matrix tbody tr.grp td{background:#F0F3F8;padding:5px 8px}
 
 @media(max-width:640px){
-  .kpis{grid-template-columns:repeat(2,1fr)}
+  .page{padding:24px 12px 60px}
+  .kpis{grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:28px}
+  .kpi{padding:14px 12px}
+  .kpi .label{font-size:11px;margin-bottom:4px}
+  .kpi .value{font-size:20px}
+  .kpi .unit{font-size:11px}
   .contract{grid-template-columns:1fr}
-  .contract .prem{border-left:none;border-top:1px solid var(--line);text-align:left;flex-direction:row;gap:8px;align-items:baseline}
-  .gauge-cell{width:85px}
-  h1{font-size:26px}
+  .contract .body{padding:12px 14px}
+  .contract .prem{border-left:none;border-top:1px solid var(--line);text-align:left;flex-direction:row;gap:6px;align-items:baseline;padding:12px 14px}
+  .contract .prem small{font-size:10px}
+  .gauge-cell{width:70px;font-size:12px}
+  h1{font-size:24px;margin-bottom:12px}
+  h2{font-size:18px;margin-bottom:8px}
+  header{padding-bottom:16px;margin-bottom:20px}
+  .meta{gap:4px 16px;font-size:12px}
+  .brands{gap:6px;margin-bottom:16px}
+  .brand{font-size:11px;padding:5px 10px}
+  section{margin-bottom:32px}
+  table{font-size:12px}
+  thead th{padding:6px 8px;font-size:10px}
+  tbody td{padding:6px 8px}
+  .chip{font-size:10px;padding:1px 6px}
+}
+@media(max-width:500px){
+  .page{padding:16px 8px 48px}
+  body{font-size:13px}
+  h1{font-size:20px}
+  h2{font-size:16px}
+  .kpis{grid-template-columns:1fr}
+  .meta{gap:2px 12px;font-size:11px}
+  table{font-size:11px;width:calc(100vw - 20px);overflow-x:auto;display:block}
+  .contract .title{font-size:14px}
+  .contract .detail{font-size:12px}
 }
 @media print{
   body{background:#fff}
@@ -384,8 +412,8 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 <div class="kpis">
   <div class="kpi hl"><div class="label">월 납입 보험료</div><div class="value num">{{ kpis.monthly_premium }}<span class="unit">원</span></div></div>
   <div class="kpi"><div class="label">총 보험료</div><div class="value num">{{ kpis.grand_total_man }}<span class="unit">만원</span></div></div>
+  <div class="kpi"><div class="label">납입한 보험료</div><div class="value num">{{ kpis.paid_total_man }}<span class="unit">만원</span></div></div>
   <div class="kpi" style="background:white"><div class="label">잔여보험료</div><div class="value num" style="color:red">{{ kpis.scheduled_total_man }}<span class="unit">만원</span></div></div>
-  <div class="kpi"><div class="label">진단 결과</div><div class="value" style="font-size:14px;line-height:1.6"><span class="chip ok">적정 {{ kpis.ok_count }}</span> <span class="chip warn">주의·부족 {{ kpis.warn_count }}</span> <span class="chip gap">미가입 {{ kpis.gap_count }}</span></div></div>
 </div>
 </div>
 
@@ -544,7 +572,7 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 </section>
 
 <section class="section-page">
-  <h2><span class="no">04</span>핵심 진단 및 제언</h2>
+  <h2><span class="no">04</span>보장분석 총 평가 및 추천안</h2>
   <div class="insights">
     {% for ins in insights %}
     <div class="insight {{ 'urgent' if ins.urgent else '' }}">
@@ -584,6 +612,12 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
           <div class="label" style="font-size:12px">총 보험료</div>
           <div class="value num" style="font-size:18px">{{ c.total_premium_display or '정보 없음' }}</div>
         </div>
+        <div class="kpi" style="border:1px solid var(--line);border-radius:10px;padding:14px 16px">
+          <div class="label" style="font-size:12px">납입한 보험료</div>
+          <div class="value num" style="font-size:18px">{{ c.paid_premium_display or '정보 없음' }}</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr;gap:12px;margin-top:12px">
         <div class="kpi" style="border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:white">
           <div class="label" style="font-size:12px">잔여 보험료</div>
           <div class="value num" style="font-size:18px;color:red">{{ c.remaining_premium_display or '정보 없음' }}</div>
@@ -658,6 +692,10 @@ function downloadReportWithProgress(){
   setTimeout(function(){
     message.textContent = '완료!';
 
+    // Hide overlay before capturing HTML
+    var overlay = progress.parentElement;
+    overlay.style.display = 'none';
+
     var html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
     var blob = new Blob([html], {type: 'text/html;charset=utf-8'});
     var url = URL.createObjectURL(blob);
@@ -668,6 +706,9 @@ function downloadReportWithProgress(){
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+
+    // Restore overlay
+    overlay.style.display = '';
 
     setTimeout(function(){
       btn.disabled = false;

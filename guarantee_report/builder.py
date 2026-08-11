@@ -91,8 +91,9 @@ def _build_contracts(parsed: ParsedReport, brand_registry: BrandRegistry) -> lis
         top_str_formatted = top_str.replace(' · ', '\n· ')
         detail_line = f"{period_str}\n· {pay_str}{progress}\n주요 담보:\n· {top_str_formatted}{more}"
 
-        # 총 보험료 및 잔여 보험료 계산
+        # 총 보험료, 납입한 보험료, 잔여 보험료 계산
         total_premium_won = (total_months * premium) if total_months else None
+        paid_premium_won = (elapsed_months * premium) if elapsed_months else None
         remaining_months = max(0, total_months - elapsed_months) if total_months else None
         remaining_premium_won = (remaining_months * premium) if remaining_months is not None else None
 
@@ -115,6 +116,7 @@ def _build_contracts(parsed: ParsedReport, brand_registry: BrandRegistry) -> lis
                 "premium_won": premium,
                 "premium_display": f"{premium:,}원",
                 "total_premium_display": f"{total_premium_won:,}원" if total_premium_won is not None else "정보 없음",
+                "paid_premium_display": f"{paid_premium_won:,}원" if paid_premium_won is not None else "정보 없음",
                 "remaining_premium_display": f"{remaining_premium_won:,}원" if remaining_premium_won is not None else "정보 없음",
                 "is_complete": is_complete,
                 "coverages": [
