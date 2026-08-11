@@ -68,18 +68,18 @@
 <div class="wrap">
   <h1>보험 보장 분석 리포트</h1>
   <p class="sub">신용정보원 보험신용정보 통합조회 결과서를 업로드하면, AI가 분석하여 맞춤형 리포트를 생성해드립니다.</p>
-  <div class="emphasis">📊 PDF 업로드 시 상세 분석, Excel 업로드 시 빠른 분석이 가능합니다. (최대 20MB)<br>💡 여러 개의 파일을 한 번에 업로드할 수 있습니다. 각 파일별로 개별 리포트가 생성됩니다.</div>
+  <div class="emphasis">📊 PDF 업로드 시 상세 분석, Excel 업로드 시 빠른 분석이 가능합니다. (최대 20MB)</div>
 
   {% if error %}<div class="err">{{ error }}</div>{% endif %}
 
-  <form action="/generate-batch" method="post" enctype="multipart/form-data" id="f">
+  <form action="/generate" method="post" enctype="multipart/form-data" id="f">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
     <label class="drop" id="drop">
-      <input type="file" name="files" accept=".pdf,.xlsx" id="file" required multiple>
+      <input type="file" name="file" accept=".pdf,.xlsx" id="file" required>
       <div class="drop-content">
         <span class="drop-icon">📄</span>
         <div class="drop-main" id="label">파일을 드래그하거나 클릭하세요</div>
-        <div class="hint">보험신용정보 통합조회 결과서 (.pdf, .xlsx) - 여러 개 선택 가능</div>
+        <div class="hint">보험신용정보 통합조회 결과서 (.pdf, .xlsx)</div>
         <div class="filename" id="fname"></div>
       </div>
     </label>
@@ -132,7 +132,7 @@
     } else if (input.files.length === 1) {
       fname.textContent = input.files[0].name;
     } else {
-      fname.textContent = `${input.files.length}개 파일 선택됨`;
+      fname.textContent = input.files.length ? `${input.files[0].name} 선택됨` : '';
     }
   }
 
@@ -153,12 +153,12 @@
   form.addEventListener('submit', (e) => {
     if (!input.files.length) {
       e.preventDefault();
-      alert('📄 파일 첨부\n\n리포트를 생성하려면 먼저 PDF 또는 Excel 파일을 첨부해주세요.\n\n• 신용정보원 보험신용정보 통합조회 결과서 (PDF)\n• 보험정보 파일 (Excel)\n\n여러 개의 파일을 한 번에 선택할 수 있습니다.');
+      alert('📄 파일 첨부\n\n리포트를 생성하려면 먼저 PDF 또는 Excel 파일을 첨부해주세요.\n\n• 신용정보원 보험신용정보 통합조회 결과서 (PDF)\n• 보험정보 파일 (Excel)');
       input.focus();
       return;
     }
     submitBtn.disabled = true;
-    submitBtn.textContent = `${input.files.length}개 파일 생성 중...`;
+    submitBtn.textContent = '리포트 생성 중...';
     overlay.classList.add('show');
     let stepIdx = 0, progress = 8;
     statusEl.textContent = steps[0];
