@@ -79,14 +79,23 @@ class ExcelParseResult:
             if isinstance(end_str, date):
                 end_str = end_str.strftime("%Y-%m-%d")
 
+            monthly_premium = product.get("monthly_premium", 0)
+            total_premium_val = product.get("total_premium", 0)
+
+            pay_years = None
+            if monthly_premium > 0 and total_premium_val > 0:
+                pay_years = total_premium_val // (monthly_premium * 12)
+                if pay_years < 1:
+                    pay_years = 1
+
             detail_item = DetailItem(
                 company=product.get("company", ""),
                 product=product.get("product_name", ""),
                 start=start_str,
                 end=str(end_str),
-                pay_years=None,
+                pay_years=pay_years,
                 pay_method="월납",
-                premium_won=product.get("monthly_premium", 0),
+                premium_won=monthly_premium,
                 rider_name="",
                 category=category,
                 amount_man=int(amount_man) if amount_man > 0 else 0,
