@@ -725,7 +725,7 @@ def generate_batch():
     # 결과에 따라 처리
     if generated_count > 0:
         # 리포트 생성 완료 후 저장된 리포트 목록으로 이동
-        return redirect(url_for("reports", _anchor=f"created"))
+        return redirect(url_for("reports_list", _anchor="created"))
     else:
         # 모든 파일이 실패한 경우
         error_msg = "모든 파일 처리에 실패했습니다: " + "; ".join(f"{fn}: {err}" for fn, err in error_files[:3])
