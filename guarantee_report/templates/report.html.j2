@@ -399,6 +399,7 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
   <div class="meta">
     <span>피보험자 <b>{{ header.name }} ({{ header.gender }}, {{ header.birth_display }}{% if header.age %} · 보험나이 {{ header.age }}세{% endif %})</b></span>
     <span>분석 기준 <b>{{ header.basis_date_display }} 발행 Team DIN 보장분석기</b></span>
+    <span>생성일시 <b>{{ created_datetime or header.basis_date_display }}</b></span>
     <span>계약 <b>총 {{ header.total_contracts }}건 (생보 {{ header.life_count }} · 손보 {{ header.nonlife_count }} · 기타 {{ header.coop_count }})</b></span>
   </div>
 </header>

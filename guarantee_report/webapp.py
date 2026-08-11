@@ -599,10 +599,15 @@ def edit_report(draft_id: str):
     if request.method == "GET":
         # 편집 UI 표시
         import json
+        from datetime import datetime
         recommendations = data.get("recommendations", [])
         insights = data.get("insights", [])
         header = data.get("header", {})
         csrf_token = _get_csrf_token()
+
+        # 생성일시 포맷
+        created_at = draft.get("created_at", time.time())
+        created_datetime = datetime.fromtimestamp(created_at).strftime("%Y년 %m월 %d일 %H:%M:%S")
 
         html = f"""<!DOCTYPE html>
 <html lang="ko">
@@ -615,7 +620,8 @@ def edit_report(draft_id: str):
 *{{margin:0;padding:0;box-sizing:border-box}}
 body{{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;background:#F6F7F9;color:#10233F;padding:24px}}
 .container{{max-width:880px;margin:0 auto}}
-h1{{font-size:24px;margin-bottom:28px}}
+h1{{font-size:24px;margin-bottom:8px}}
+.meta{{font-size:12px;color:#5B6B82;margin-bottom:28px}}
 .section{{background:#fff;border-radius:12px;margin-bottom:24px;padding:24px;border:1px solid #E3E7EE}}
 .section h2{{font-size:18px;margin-bottom:16px;color:#10233F}}
 .form-group{{margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #F0F3F8}}
@@ -638,6 +644,7 @@ h1{{font-size:24px;margin-bottom:28px}}
 <body>
 <div class="container">
 <h1>{header.get('name', '')}님 리포트 편집</h1>
+<p class="meta">생성일시: {created_datetime}</p>
 
 <form method="POST">
   <input type="hidden" name="_csrf_token" value="{csrf_token}">
@@ -811,6 +818,12 @@ function removeNewInsightPanel(idx) {{
     # 데이터 업데이트
     data["recommendations"] = modified_recommendations
     data["insights"] = modified_insights
+
+    # 생성일시 추가
+    from datetime import datetime
+    created_at = draft.get("created_at", time.time())
+    data["created_at"] = created_at
+    data["created_datetime"] = datetime.fromtimestamp(created_at).strftime("%Y년 %m월 %d일 %H:%M:%S")
 
     # DB에 저장
     report_id = storage.save_report(
