@@ -647,14 +647,19 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 
   {% for sec in coverage_sections %}
   <table>
-    <thead><tr><th>{{ sec.title }}</th><th class="r">가입</th><th class="gauge-cell">충족도</th><th class="r">진단</th></tr></thead>
+    <thead><tr><th>{{ sec.title }}</th><th class="r">가입</th><th class="gauge-cell">충족도</th><th class="r">진단</th><th style="width:80px">수정</th></tr></thead>
     <tbody>
       {% for row in sec.rows %}
-      <tr>
+      <tr class="diagnosis-row" data-original-held="{{ row.held_display }}">
         <td>{{ row.label }}{% if row.source_brand_codes %}<span class="src">{% for code in row.source_brand_codes %}<span class="dot" style="background:var(--{{ code }},#8A96A6)"></span>{% endfor %}</span>{% endif %}{% if row.note %}<span class="info-note" title="{{ row.note }}">ⓘ</span>{% endif %}</td>
-        <td class="r num">{{ row.held_display }}</td>
+        <td class="r num held-cell"><span class="held-display">{{ row.held_display }}</span><input type="text" class="held-input" style="display:none;width:80px;padding:4px 8px;border:1px solid var(--line);border-radius:4px" value="{{ row.held_display }}"></td>
         <td><div class="gauge"><div class="fill {{ '' if row.status=='ok' else row.status }}" style="width:{{ (row.ratio*100)|round(0,'floor') }}%"></div></div></td>
         <td class="r"><span class="chip {{ row.status }}">{{ row.diagnosis }}</span></td>
+        <td style="text-align:center;padding:8px 6px">
+          <button class="edit-diagnosis-btn" style="padding:4px 8px;background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok);border-radius:4px;cursor:pointer;font-size:11px;font-weight:600">수정</button>
+          <button class="save-diagnosis-btn" style="display:none;padding:4px 8px;background:var(--ok);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600">저장</button>
+          <button class="cancel-diagnosis-btn" style="display:none;padding:4px 8px;background:var(--sub);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;margin-left:2px">취소</button>
+        </td>
       </tr>
       {% endfor %}
     </tbody>
@@ -1102,6 +1107,53 @@ document.getElementById('shareBtn')?.addEventListener('click', shareReport);
     if (e.key === 'Enter' && e.ctrlKey) addFeedback();
   });
 })();
+
+// 영역별 보장 진단 수정 기능
+document.addEventListener('DOMContentLoaded', function(){
+  document.querySelectorAll('.diagnosis-row').forEach(function(row){
+    var editBtn = row.querySelector('.edit-diagnosis-btn');
+    var saveBtn = row.querySelector('.save-diagnosis-btn');
+    var cancelBtn = row.querySelector('.cancel-diagnosis-btn');
+    var heldDisplay = row.querySelector('.held-display');
+    var heldInput = row.querySelector('.held-input');
+
+    if (editBtn) {
+      editBtn.addEventListener('click', function(){
+        heldDisplay.style.display = 'none';
+        heldInput.style.display = 'inline-block';
+        editBtn.style.display = 'none';
+        saveBtn.style.display = 'inline-block';
+        cancelBtn.style.display = 'inline-block';
+        heldInput.focus();
+      });
+    }
+
+    if (saveBtn) {
+      saveBtn.addEventListener('click', function(){
+        var newValue = heldInput.value.trim();
+        if (newValue) {
+          heldDisplay.textContent = newValue;
+          heldDisplay.style.display = 'inline';
+          heldInput.style.display = 'none';
+          saveBtn.style.display = 'none';
+          cancelBtn.style.display = 'none';
+          editBtn.style.display = 'inline-block';
+        }
+      });
+    }
+
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', function(){
+        heldInput.value = heldDisplay.textContent;
+        heldDisplay.style.display = 'inline';
+        heldInput.style.display = 'none';
+        saveBtn.style.display = 'none';
+        cancelBtn.style.display = 'none';
+        editBtn.style.display = 'inline-block';
+      });
+    }
+  });
+});
 
 // 보장 내용 삭제 및 수정 기능
 document.addEventListener('DOMContentLoaded', function(){
