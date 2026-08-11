@@ -60,6 +60,7 @@ class DetailItem:
     category: str
     amount_man: int
     status: str
+    renewal_type: str = "black"  # 'red' | 'yellow' | 'black'
 
 
 @dataclass

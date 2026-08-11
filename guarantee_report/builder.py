@@ -83,6 +83,7 @@ def _build_contracts(parsed: ParsedReport, brand_registry: BrandRegistry) -> lis
         end = _parse_ymd(end_raw)
         pay_years = items[0].pay_years
         premium = items[0].premium_won
+        renewal_type = items[0].renewal_type
 
         is_lifetime = end_raw == "9999-12-31"
         end_label = "종신" if is_lifetime else (_fmt_date_dot(end) if end else "-")
@@ -124,6 +125,19 @@ def _build_contracts(parsed: ParsedReport, brand_registry: BrandRegistry) -> lis
             if ind.company == company and ind.start == items[0].start and ind.end == items[0].end:
                 covered_indemnity_ids.add(idx)
 
+        # 갱신 타입별 라벨 생성
+        renewal_label = ""
+        renewal_color = "black"
+        if renewal_type == "red":
+            renewal_label = "갱신형보험"
+            renewal_color = "red"
+        elif renewal_type == "yellow":
+            renewal_label = "갱신형 특약"
+            renewal_color = "gold"
+        else:  # black
+            renewal_label = "비갱신형"
+            renewal_color = "black"
+
         contracts.append(
             {
                 "company": company,
@@ -141,6 +155,9 @@ def _build_contracts(parsed: ParsedReport, brand_registry: BrandRegistry) -> lis
                 "paid_premium_display": f"{paid_premium_won:,}원" if paid_premium_won is not None else "정보 없음",
                 "remaining_premium_display": f"{remaining_premium_won:,}원" if remaining_premium_won is not None else "정보 없음",
                 "is_complete": is_complete,
+                "renewal_type": renewal_type,
+                "renewal_label": renewal_label,
+                "renewal_color": renewal_color,
                 "coverages": [
                     {"name": cat, "amount": f"{_fmt_man(amt)}"}
                     for cat, amt in top

@@ -99,7 +99,8 @@ class ExcelParseResult:
                 rider_name="",
                 category=category,
                 amount_man=int(amount_man) if amount_man > 0 else 0,
-                status=""
+                status="",
+                renewal_type=product.get("renewal_type", "black")
             )
             detail_items.append(detail_item)
 
@@ -201,8 +202,53 @@ def _safe_value(val) -> str | None:
     return val_str if val_str else None
 
 
+def _get_font_colors(zf) -> dict:
+    """styles.xml에서 폰트 색상 정보 추출 (style_id -> 'red'|'yellow'|'black')"""
+    try:
+        styles_xml = zf.read('xl/styles.xml')
+        styles_root = ET.fromstring(styles_xml)
+
+        # namespace 처리
+        ns = {'ss': 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
+
+        # 폰트 색상 맵
+        color_map = {}
+
+        # fonts 섹션에서 색상 찾기
+        font_colors = {}
+        fonts = styles_root.find('.//ss:fonts', ns)
+        if fonts is not None:
+            for i, font in enumerate(fonts.findall('ss:font', ns)):
+                color_elem = font.find('ss:color', ns)
+                if color_elem is not None:
+                    rgb = color_elem.get('rgb', '')
+                    if rgb and len(rgb) >= 6:
+                        rgb_upper = rgb.upper()
+                        # Red color: FF0000 또는 C00000 등 빨간색
+                        if rgb_upper in ('FF0000', 'C00000', 'E74C3C', 'F44336'):
+                            font_colors[i] = 'red'
+                        # Yellow color: FFFF00 또는 FFC000 등 노란색
+                        elif rgb_upper in ('FFFF00', 'FFC000', 'FDD835', 'FFD700'):
+                            font_colors[i] = 'yellow'
+                        # Black: 000000
+                        elif rgb_upper == '000000' or color_elem.get('theme') == '1':
+                            font_colors[i] = 'black'
+
+        # cellXfs 섹션에서 각 style에 font 매핑
+        cell_xfs = styles_root.find('.//ss:cellXfs', ns)
+        if cell_xfs is not None:
+            for i, xf in enumerate(cell_xfs.findall('ss:xf', ns)):
+                font_id = int(xf.get('fontId', '0'))
+                if font_id in font_colors:
+                    color_map[i] = font_colors[font_id]
+
+        return color_map
+    except:
+        return {}
+
+
 def _parse_excel_manual(file_path: str, sheet_names: list = None) -> ExcelParseResult:
-    """ZIP 기반 Excel 파싱 (스타일 무시, 모든 색상 오류 우회)"""
+    """ZIP 기반 Excel 파싱 (색상 정보 포함)"""
     import zipfile
     import xml.etree.ElementTree as ET
 
@@ -221,6 +267,9 @@ def _parse_excel_manual(file_path: str, sheet_names: list = None) -> ExcelParseR
                             break
         except KeyError:
             pass  # SharedStrings.xml이 없어도 괜찮음 (인라인 문자열만 사용)
+
+        # 폰트 색상 정보 로드
+        font_colors = _get_font_colors(zf)
 
         # 워크북 정보 읽기
         try:
@@ -274,12 +323,14 @@ def _parse_excel_manual(file_path: str, sheet_names: list = None) -> ExcelParseR
                 sheet_xml = zf.read(sheet_path)
                 sheet_root = ET.fromstring(sheet_xml)
 
-                # 셀 데이터 추출
+                # 셀 데이터 및 폰트 색상 추출
                 cells = {}
+                cell_colors = {}
                 for c in sheet_root.iter():
                     if c.tag.endswith('}c'):
                         r = c.get('r', '')  # 셀 참조 (A1, B2 등)
                         cell_type = c.get('t', '')  # 셀 타입 (s=shared string, n=numeric, 등)
+                        style_id = int(c.get('s', '0'))  # 스타일 ID
                         value = None
 
                         for child in c:
@@ -303,6 +354,8 @@ def _parse_excel_manual(file_path: str, sheet_names: list = None) -> ExcelParseR
 
                         if r and value:
                             cells[r] = value
+                            if style_id in font_colors:
+                                cell_colors[r] = font_colors[style_id]
 
                 # 고객정보 시트인 경우
                 if sheet_name == "고객정보":
@@ -329,6 +382,10 @@ def _parse_excel_manual(file_path: str, sheet_names: list = None) -> ExcelParseR
 
                         product_name = cells.get(f'B{row}')
                         if product_name:
+                            # 제품명 셀의 폰트 색상으로 갱신형 타입 결정
+                            # red = 갱신형보험, yellow = 갱신형 특약, black/none = 비갱신형
+                            renewal_type = cell_colors.get(f'B{row}', 'black')
+
                             product = {
                                 "company": company,
                                 "product_name": product_name,
@@ -337,7 +394,8 @@ def _parse_excel_manual(file_path: str, sheet_names: list = None) -> ExcelParseR
                                 "total_premium": _parse_number(cells.get(f'E{row}')),
                                 "remaining_premium": _parse_number(cells.get(f'F{row}')),
                                 "coverages": _parse_coverages(cells.get(f'G{row}')),
-                                "contract_end": cells.get(f'H{row}', '')
+                                "contract_end": cells.get(f'H{row}', ''),
+                                "renewal_type": renewal_type
                             }
                             insurance_products.append(product)
                         row += 1
