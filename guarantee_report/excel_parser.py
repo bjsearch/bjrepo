@@ -423,15 +423,15 @@ def _parse_excel_manual(file_path: str, sheet_names: list = None) -> ExcelParseR
                                 renewal_value = cells.get(f'{renewal_column}{row}', '')
                                 if renewal_value:
                                     renewal_value_lower = str(renewal_value).strip().lower()
-                                    # 갱신형 판별
-                                    if any(x in renewal_value_lower for x in ['갱신형', '갱신', 'renewal']) or renewal_value_lower in ['1', 'yes', 'true', 'y']:
-                                        renewal_type = 'red'
+                                    # 비갱신형 판별 (먼저 체크해야 '갱신' 포함 확인 전에)
+                                    if any(x in renewal_value_lower for x in ['비갱신', 'non', 'fixed']) or renewal_value_lower in ['0', 'no', 'false', 'n']:
+                                        renewal_type = 'black'
                                     # 혼합형 판별
                                     elif any(x in renewal_value_lower for x in ['혼합', 'mixed']) or renewal_value_lower == '2':
                                         renewal_type = 'yellow'
-                                    # 비갱신형 판별
-                                    else:
-                                        renewal_type = 'black'
+                                    # 갱신형 판별
+                                    elif any(x in renewal_value_lower for x in ['갱신형', '갱신', 'renewal']) or renewal_value_lower in ['1', 'yes', 'true', 'y']:
+                                        renewal_type = 'red'
                                 else:
                                     # 값이 없으면 기본값 사용 (폰트 색상)
                                     renewal_type = cell_colors.get(f'B{row}', 'black')
@@ -737,14 +737,17 @@ def _parse_excel_alternative(file_path: str) -> ExcelParseResult:
                                 renewal_value = cells.get(f'{col}{row_candidate}', '')
                                 if renewal_value:
                                     renewal_value_lower = str(renewal_value).strip().lower()
-                                    if any(x in renewal_value_lower for x in ['갱신형', '갱신', 'renewal']) or renewal_value_lower in ['1', 'yes', 'true', 'y']:
-                                        renewal_type = 'red'
+                                    # 비갱신형 판별 (먼저 체크해야 '갱신' 포함 확인 전에)
+                                    if any(x in renewal_value_lower for x in ['비갱신', 'non', 'fixed']) or renewal_value_lower in ['0', 'no', 'false', 'n']:
+                                        renewal_type = 'black'
                                         break
+                                    # 혼합형 판별
                                     elif any(x in renewal_value_lower for x in ['혼합', 'mixed']) or renewal_value_lower == '2':
                                         renewal_type = 'yellow'
                                         break
-                                    elif any(x in renewal_value_lower for x in ['비갱신', 'non', 'fixed']) or renewal_value_lower in ['0', 'no', 'false', 'n']:
-                                        renewal_type = 'black'
+                                    # 갱신형 판별
+                                    elif any(x in renewal_value_lower for x in ['갱신형', '갱신', 'renewal']) or renewal_value_lower in ['1', 'yes', 'true', 'y']:
+                                        renewal_type = 'red'
                                         break
 
                             # 값이 없으면 폰트 색상으로 판별
