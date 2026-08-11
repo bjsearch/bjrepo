@@ -602,6 +602,7 @@ def edit_report(draft_id: str):
         from datetime import datetime
         recommendations = data.get("recommendations", [])
         insights = data.get("insights", [])
+        coverage_sections = data.get("coverage_sections", [])
         header = data.get("header", {})
         csrf_token = _get_csrf_token()
 
@@ -717,6 +718,43 @@ h1{{font-size:24px;margin-bottom:8px}}
     <button type="button" class="btn btn-secondary" style="margin-top:16px" onclick="addNewInsightPanel()">+ 새 항목 추가</button>
   </div>
 
+  <div class="section">
+    <h2>3. 영역별 보장 진단</h2>
+    <p style="font-size:12px;color:#5B6B82;margin-bottom:16px">각 보장 영역의 진단 금액을 수정할 수 있습니다.</p>
+"""
+
+        coverage_section_idx = 0
+        for sec in coverage_sections:
+            html += f"""    <div style="margin-bottom:24px;padding:16px;background:#FAFBFC;border-radius:8px;border:1px solid #E3E7EE">
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:12px">{sec.get('title', '')}</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:#F0F3F8">
+            <th style="padding:8px;text-align:left;border-bottom:1px solid #E3E7EE">항목</th>
+            <th style="padding:8px;text-align:right;border-bottom:1px solid #E3E7EE">가입</th>
+          </tr>
+        </thead>
+        <tbody>
+"""
+            for row_idx, row in enumerate(sec.get('rows', [])):
+                row_id = f"cov_{coverage_section_idx}_{row_idx}"
+                held_value = row.get('held_display', '')
+                html += f"""          <tr style="border-bottom:1px solid #E3E7EE">
+            <td style="padding:8px">{row.get('label', '')}</td>
+            <td style="padding:8px;text-align:right">
+              <input type="text" name="cov_held_{coverage_section_idx}_{row_idx}" value="{held_value}"
+                     style="width:100px;padding:4px 8px;border:1px solid #E3E7EE;border-radius:4px;text-align:right" />
+            </td>
+          </tr>
+"""
+            html += """        </tbody>
+      </table>
+    </div>
+"""
+            coverage_section_idx += 1
+
+        html += f"""  </div>
+
   <div class="action-bar">
     <button type="submit" class="btn btn-primary">완성된 리포트 저장</button>
     <button type="button" class="btn btn-secondary" onclick="window.history.back()">취소</button>
@@ -725,6 +763,7 @@ h1{{font-size:24px;margin-bottom:8px}}
   <input type="hidden" name="draft_id" value="{draft_id}">
   <input type="hidden" name="insights_count" value="{len(insights)}">
   <input type="hidden" name="new_insights_count" value="0" id="new_insights_count">
+  <input type="hidden" name="coverage_sections_count" value="{len(coverage_sections)}">
 </form>
 </div>
 
@@ -780,6 +819,7 @@ function removeNewInsightPanel(idx) {{
 
     recommendations = data.get("recommendations", [])
     insights = data.get("insights", [])
+    coverage_sections = data.get("coverage_sections", [])
 
     # 추천 항목 처리
     modified_recommendations = []
@@ -815,9 +855,28 @@ function removeNewInsightPanel(idx) {{
                 "urgent": bool(request.form.get(f"new_insight_urgent_{idx}")),
             })
 
+    # 보장 진단 항목 처리
+    modified_coverage_sections = []
+    coverage_sections_count = int(request.form.get("coverage_sections_count", 0))
+    for sec_idx in range(coverage_sections_count):
+        if sec_idx < len(coverage_sections):
+            original_section = coverage_sections[sec_idx]
+            modified_section = {
+                "title": original_section.get("title"),
+                "rows": []
+            }
+            for row_idx, row in enumerate(original_section.get("rows", [])):
+                modified_row = dict(row)
+                new_held = request.form.get(f"cov_held_{sec_idx}_{row_idx}", "")
+                if new_held:
+                    modified_row["held_display"] = new_held
+                modified_section["rows"].append(modified_row)
+            modified_coverage_sections.append(modified_section)
+
     # 데이터 업데이트
     data["recommendations"] = modified_recommendations
     data["insights"] = modified_insights
+    data["coverage_sections"] = modified_coverage_sections if modified_coverage_sections else coverage_sections
 
     # 생성일시 추가
     from datetime import datetime
