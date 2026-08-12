@@ -94,7 +94,7 @@ def _source_brands(detail_items: list[DetailItem], categories: list[str], brand_
         if d.category in categories and d.company not in seen:
             seen.add(d.company)
             brand = brand_registry.get(d.company)
-            brands.append({"code": brand.code, "name": d.company})
+            brands.append({"code": brand.code, "name": d.company, "color": brand.color})
     return brands
 
 
