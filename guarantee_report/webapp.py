@@ -737,8 +737,7 @@ h1{{font-size:24px;margin-bottom:8px}}
         <thead>
           <tr style="background:#F0F3F8">
             <th style="padding:8px;text-align:left;border-bottom:1px solid #E3E7EE">항목</th>
-            <th style="padding:8px;text-align:right;border-bottom:1px solid #E3E7EE">가입금액</th>
-            <th style="padding:8px;text-align:right;border-bottom:1px solid #E3E7EE">권장금액</th>
+            <th style="padding:8px;text-align:right;border-bottom:1px solid #E3E7EE">가입</th>
           </tr>
         </thead>
         <tbody>
@@ -746,15 +745,10 @@ h1{{font-size:24px;margin-bottom:8px}}
             for row_idx, row in enumerate(editable_rows):
                 row_id = f"cov_{coverage_section_idx}_{row_idx}"
                 held_value = row.get('held_display', '')
-                recommend_value = row.get('recommend_display', '')
                 html += f"""          <tr style="border-bottom:1px solid #E3E7EE">
             <td style="padding:8px">{row.get('label', '')}</td>
             <td style="padding:8px;text-align:right">
               <input type="text" name="cov_held_{coverage_section_idx}_{row_idx}" value="{held_value}"
-                     style="width:100px;padding:4px 8px;border:1px solid #E3E7EE;border-radius:4px;text-align:right;background:#E3E7EE" readonly />
-            </td>
-            <td style="padding:8px;text-align:right">
-              <input type="text" name="cov_recommend_{coverage_section_idx}_{row_idx}" value="{recommend_value}"
                      style="width:100px;padding:4px 8px;border:1px solid #E3E7EE;border-radius:4px;text-align:right" />
             </td>
           </tr>
@@ -879,9 +873,9 @@ function removeNewInsightPanel(idx) {{
             }
             for row_idx, row in enumerate(original_section.get("rows", [])):
                 modified_row = dict(row)
-                new_recommend = request.form.get(f"cov_recommend_{sec_idx}_{row_idx}", "")
-                if new_recommend:
-                    modified_row["recommend_display"] = new_recommend
+                new_held = request.form.get(f"cov_held_{sec_idx}_{row_idx}", "")
+                if new_held:
+                    modified_row["held_display"] = new_held
                 modified_section["rows"].append(modified_row)
             modified_coverage_sections.append(modified_section)
 
