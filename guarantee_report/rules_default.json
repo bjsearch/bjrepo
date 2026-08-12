@@ -15,23 +15,25 @@
     {
       "title": "암 보장",
       "rows": [
-        {"label": "3대질병 진단", "categories": ["3대진단"], "recommend": 3000},
         {"label": "일반암 진단", "categories": ["암진단"], "recommend": 3000},
+        {"label": "특정암진단", "categories_contains": ["특정암"], "recommend": 3000},
+        {"label": "통합암진단", "categories_contains": ["통합암"], "recommend": 3000},
         {"label": "유사암(소액암) 진단", "categories": ["소액암진단"], "recommend": 1000},
-        {"label": "항암방사선치료", "categories": ["항암방사선약물치료비"], "recommend": 1000},
         {"label": "고액암 진단", "categories_contains": ["고액암"], "recommend": 5000},
-        {"label": "표적항암약물치료", "categories_contains": ["표적항암"], "recommend": 3000},
-        {"label": "이차암 진단", "categories_contains": ["이차암"], "recommend": 1000}
+        {"label": "표적항암방사선치료", "categories_contains": ["표적항암"], "recommend": 3000},
+        {"label": "암주요치료비", "categories_contains": ["암주요치료비"], "recommend": 3000},
+        {"label": "하이클래스 암주요치료비", "categories_contains": ["하이클래스"], "recommend": 5000}
       ]
     },
     {
       "title": "뇌 · 심장 질환",
       "rows": [
         {"label": "뇌혈관질환 진단", "categories": ["뇌혈관질환진단"], "recommend": 1000},
-        {"label": "허혈성심장질환 진단", "categories": ["허혈성심장질환진단"], "recommend": 1000},
         {"label": "뇌졸중 진단", "categories": ["뇌졸중진단"], "recommend": 3000},
-        {"label": "급성심근경색 진단", "categories": ["급성심근경색진단"], "recommend": 3000},
-        {"label": "뇌출혈 진단", "categories_contains": ["뇌출혈"], "recommend": 3000}
+        {"label": "뇌출혈 진단", "categories_contains": ["뇌출혈"], "recommend": 3000},
+        {"label": "심장질환진단", "categories": ["심장질환진단"], "recommend": 1000},
+        {"label": "허혈성심장질환 진단", "categories": ["허혈성심장질환진단"], "recommend": 1000},
+        {"label": "급성심근경색 진단", "categories": ["급성심근경색진단"], "recommend": 3000}
       ]
     },
     {
