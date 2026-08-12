@@ -725,6 +725,12 @@ h1{{font-size:24px;margin-bottom:8px}}
 
         coverage_section_idx = 0
         for sec in coverage_sections:
+            # 편집 대상이 아닌 항목들을 제외
+            editable_rows = [row for row in sec.get('rows', []) if not row.get('excluded_from_editing', False)]
+            if not editable_rows:
+                coverage_section_idx += 1
+                continue
+
             html += f"""    <div style="margin-bottom:24px;padding:16px;background:#FAFBFC;border-radius:8px;border:1px solid #E3E7EE">
       <h3 style="font-size:15px;font-weight:600;margin-bottom:12px">{sec.get('title', '')}</h3>
       <table style="width:100%;border-collapse:collapse;font-size:13px">
@@ -736,7 +742,7 @@ h1{{font-size:24px;margin-bottom:8px}}
         </thead>
         <tbody>
 """
-            for row_idx, row in enumerate(sec.get('rows', [])):
+            for row_idx, row in enumerate(editable_rows):
                 row_id = f"cov_{coverage_section_idx}_{row_idx}"
                 held_value = row.get('held_display', '')
                 html += f"""          <tr style="border-bottom:1px solid #E3E7EE">

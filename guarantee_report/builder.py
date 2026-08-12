@@ -237,27 +237,29 @@ def _build_recommendations(sections: list[EvaluatedSection], contracts: list[dic
             }
         )
 
-    dementia_gap = False
-    for sec in sections:
-        if "치매" in sec.title or any("치매" in r.label for r in sec.rows):
-            for r in sec.rows:
-                if "치매" in r.label and r.status == "gap":
-                    dementia_gap = True
-    if dementia_gap:
-        recos.append(
-            {
-                "why": "치매 · 간병 전면 공백",
-                "title": "치매 · 간병보험 (LTC)",
-                "detail": "치매(LTC) 진단 및 경증치매 진단 담보 신규 확보 · 간병인 지원 일당 보강",
-                "premium_note": "설계 필요 · 진단형 우선",
-            }
-        )
+    # LTC(치매/간병) 제외 - 사용자 요청에 따라 제거
+    # dementia_gap = False
+    # for sec in sections:
+    #     if "치매" in sec.title or any("치매" in r.label for r in sec.rows):
+    #         for r in sec.rows:
+    #             if "치매" in r.label and r.status == "gap":
+    #                 dementia_gap = True
+    # if dementia_gap:
+    #     recos.append(...)
 
+    # 80% 후유장해 제외 항목들도 반영하지 않도록 필터링
     gaps = []
+    excluded_labels_for_reco = {
+        "상해 80% 이상 후유장해",
+        "질병 80% 이상 후유장해",
+        "치매(LTC) · 경증치매 진단",
+    }
     for sec in sections:
         for r in sec.rows:
             if r.status == "gap" and r.recommend_display != "—":
-                gaps.append((sec.title, r))
+                # LTC 관련 항목과 80% 후유장해는 제외
+                if "치매" not in r.label and "간병" not in r.label and r.label not in excluded_labels_for_reco:
+                    gaps.append((sec.title, r))
     gaps.sort(key=lambda t: -_parse_leading_number(t[1].recommend_display))
     for sec_title, r in gaps:
         if len(recos) >= 3:
@@ -302,8 +304,20 @@ def _build_insights(
         )
 
     # 2. 섹션별 보장 공백 분석
+    excluded_labels_for_insights = {
+        "상해 80% 이상 후유장해",
+        "질병 80% 이상 후유장해",
+        "치매(LTC) · 경증치매 진단",
+    }
     for sec in sections:
-        gap_rows = [r for r in sec.rows if r.status == "gap"]
+        # LTC와 80% 후유장해 제외
+        gap_rows = [
+            r for r in sec.rows
+            if r.status == "gap"
+            and "치매" not in r.label
+            and "간병" not in r.label
+            and r.label not in excluded_labels_for_insights
+        ]
         if len(gap_rows) >= 1:  # 1개 이상으로 변경 (이전: 2개 이상)
             labels = ", ".join(r.label for r in gap_rows[:4])
             insights.append(
@@ -314,24 +328,22 @@ def _build_insights(
                 }
             )
 
-    # 3. 사망보장 구조 분석
+    # 3. 사망보장 구조 분석 (질병사망만 언급)
     death_sec = next((s for s in sections if "사망" in s.title), None)
     if death_sec:
         by_label = {r.label: r for r in death_sec.rows}
-        injury = by_label.get("상해사망")
         disease = by_label.get("질병사망")
-        if injury and disease:
-            iv = _parse_leading_number(injury.held_display)
+        if disease:
             dv = _parse_leading_number(disease.held_display)
-            if iv > 0 and dv > 0 and iv > dv * 2:
+            if dv > 0 and dv < 10000:  # 추천 수준(10,000만원)보다 낮으면
                 insights.append(
                     {
                         "urgent": False,
-                        "title": "사망보장의 상해 편중 — 질병 계열 보강 필요",
+                        "title": "질병사망 보장 확대 필요",
                         "text": (
-                            f"상해사망 {_fmt_man(iv)}만원 대비 질병사망은 {_fmt_man(dv)}만원으로 구조가 "
-                            f"역전되어 있습니다. 연령이 높아질수록 실제 리스크는 질병 쪽이 커지므로, "
-                            f"사망보장의 목적(생활비 · 정리자금)을 정한 뒤 질병 계열 중심으로 재배분할 필요가 있습니다."
+                            f"질병사망 보장이 {_fmt_man(dv)}만원으로 충분하지 않습니다. "
+                            f"연령이 높아질수록 질병 리스크가 커지므로, "
+                            f"질병사망 보장을 우선적으로 확대하여 적절한 수준의 생활비 · 정리자금을 확보할 필요가 있습니다."
                         ),
                     }
                 )
@@ -386,7 +398,14 @@ def _build_insights(
             }
         )
 
-    return insights
+    # LTC(치매/간병) 관련 내용 제거
+    filtered_insights = [
+        i for i in insights
+        if not any(ltc_keyword in (i.get("title", "") + i.get("text", ""))
+                   for ltc_keyword in ["치매", "간병", "LTC"])
+    ]
+
+    return filtered_insights
 
 
 def build_report_data(parsed: ParsedReport, rules_path: str | None = None) -> dict:
@@ -472,6 +491,20 @@ def build_report_data(parsed: ParsedReport, rules_path: str | None = None) -> di
 
     matrix = _build_matrix(parsed, contracts, registry, rules)
 
+    # 리포트 편집에서 제외할 항목들 (90% 후유장해, 치매/간병 관련)
+    excluded_labels = {
+        "상해 80% 이상 후유장해",
+        "질병 80% 이상 후유장해",
+        "치매(LTC) · 경증치매 진단",
+    }
+
+    def should_exclude_from_editing(label: str) -> bool:
+        if label in excluded_labels:
+            return True
+        if "간병" in label and "LTC" in label:
+            return True
+        return False
+
     return {
         "header": header,
         "brands_legend": brands_legend,
@@ -481,7 +514,10 @@ def build_report_data(parsed: ParsedReport, rules_path: str | None = None) -> di
         "coverage_sections": [
             {
                 "title": sec.title,
-                "rows": [asdict(r) for r in sec.rows],
+                "rows": [
+                    {**asdict(r), "excluded_from_editing": should_exclude_from_editing(r.label)}
+                    for r in sec.rows
+                ],
             }
             for sec in sections
         ],
