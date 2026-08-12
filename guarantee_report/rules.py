@@ -87,14 +87,15 @@ def _classify(held: float, recommend: float | None) -> tuple[str, str, float]:
     return "warn", f"{word} −{_fmt(diff)}", ratio
 
 
-def _source_brands(detail_items: list[DetailItem], categories: list[str], brand_registry) -> list[str]:
-    codes = []
+def _source_brands(detail_items: list[DetailItem], categories: list[str], brand_registry) -> list[dict]:
+    brands = []
     seen = set()
     for d in detail_items:
         if d.category in categories and d.company not in seen:
             seen.add(d.company)
-            codes.append(brand_registry.get(d.company).code)
-    return codes
+            brand = brand_registry.get(d.company)
+            brands.append({"code": brand.code, "name": d.company})
+    return brands
 
 
 def evaluate(
