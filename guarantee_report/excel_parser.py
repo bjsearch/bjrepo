@@ -818,16 +818,17 @@ def _parse_excel_alternative(file_path: str) -> ExcelParseResult:
                             for row_candidate in [9, 10, 11, 12, 13]:
                                 renewal_value = cells.get(f'{col}{row_candidate}', '')
                                 if renewal_value:
-                                    renewal_value_lower = str(renewal_value).strip().lower()
+                                    renewal_value_str = str(renewal_value).strip()
+                                    renewal_value_lower = renewal_value_str.lower()
                                     # 비갱신형 판별 (먼저 체크해야 '갱신' 포함 확인 전에)
                                     if any(x in renewal_value_lower for x in ['비갱신', 'non', 'fixed']) or renewal_value_lower in ['0', 'no', 'false', 'n']:
                                         renewal_type = 'black'
                                         break
-                                    # 혼합형 판별
-                                    elif any(x in renewal_value_lower for x in ['혼합', 'mixed']) or renewal_value_lower == '2':
+                                    # 갱신형 특약 판별 (특약이 명시된 경우)
+                                    elif '특약' in renewal_value_str or any(x in renewal_value_lower for x in ['혼합', 'mixed', 'rider']) or renewal_value_lower == '2':
                                         renewal_type = 'yellow'
                                         break
-                                    # 갱신형 판별
+                                    # 갱신형 보험 판별 (특약이 아닌 갱신형)
                                     elif any(x in renewal_value_lower for x in ['갱신형', '갱신', 'renewal']) or renewal_value_lower in ['1', 'yes', 'true', 'y']:
                                         renewal_type = 'red'
                                         break
