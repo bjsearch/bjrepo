@@ -876,6 +876,38 @@ function removeNewInsightPanel(idx) {{
                 new_held = request.form.get(f"cov_held_{sec_idx}_{row_idx}", "")
                 if new_held:
                     modified_row["held_display"] = new_held
+                    # 수정된 금액을 기반으로 진단 재계산
+                    try:
+                        held_num = float(new_held.replace(',', ''))
+                        recommend_num = None
+                        if row.get('recommend_display') and row.get('recommend_display') != '—':
+                            try:
+                                recommend_num = float(row.get('recommend_display', '0').replace(',', ''))
+                            except:
+                                pass
+
+                        # 진단 재계산 (간단한 로직)
+                        if held_num <= 0:
+                            modified_row["status"] = "gap"
+                            modified_row["diagnosis"] = "미가입"
+                            modified_row["ratio"] = 0.02
+                        elif recommend_num is None:
+                            modified_row["status"] = "ok" if held_num > 0 else "gap"
+                            modified_row["diagnosis"] = "보유" if held_num > 0 else "미가입"
+                            modified_row["ratio"] = 1.0 if held_num > 0 else 0.02
+                        else:
+                            ratio = held_num / recommend_num if recommend_num > 0 else 0
+                            if ratio >= 1:
+                                modified_row["status"] = "ok"
+                                modified_row["diagnosis"] = "적정" if ratio == 1 else f"적정 +{int(held_num - recommend_num):,}"
+                                modified_row["ratio"] = 1.0
+                            else:
+                                modified_row["status"] = "warn"
+                                word = "주의" if ratio >= 0.5 else "부족"
+                                modified_row["diagnosis"] = f"{word} −{int(recommend_num - held_num):,}"
+                                modified_row["ratio"] = ratio
+                    except:
+                        pass
                 modified_section["rows"].append(modified_row)
             modified_coverage_sections.append(modified_section)
 
