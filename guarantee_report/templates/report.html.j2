@@ -115,32 +115,34 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 .matrix-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--card);-webkit-overflow-scrolling:touch}
 .matrix{width:100%;border-collapse:collapse;font-size:12.5px;min-width:760px;border:none;line-height:1.6}
 .matrix thead th{padding:10px 8px;font-size:11px;line-height:1.4;text-align:center;color:#fff;border-bottom:none;border-left:1px solid rgba(255,255,255,.25);background:var(--th-color,var(--ink));font-weight:600;word-break:keep-all}
-.matrix thead th:first-child{background:var(--ink);text-align:left;border-left:none;font-size:12px;font-weight:700}
+.matrix thead th:first-child{background:var(--ink);text-align:left;border-left:none;font-size:12px;font-weight:700;position:sticky;left:0;z-index:10}
 .matrix thead th small{display:block;font-weight:500;opacity:.85;font-size:10px;margin-top:2px}
 .matrix tbody td{padding:8px 8px;text-align:right;border-left:1px solid var(--line);line-height:1.6}
-.matrix tbody td:first-child{text-align:left;font-weight:600;border-left:none;white-space:nowrap;font-size:12px}
+.matrix tbody td:first-child{text-align:left;font-weight:600;border-left:none;white-space:nowrap;font-size:12px;position:sticky;left:0;z-index:9;background:var(--card)}
 .matrix tbody td.empty{color:#C4CCD7;font-size:11px}
 .matrix tbody td.sum{font-weight:700;background:#F5F7FA;font-size:12px}
-.matrix tbody tr.grp td:first-child{color:var(--sub);font-size:11px;font-weight:700;background:#F0F3F8;letter-spacing:.03em;padding:6px 8px}
+.matrix tbody tr.grp td:first-child{color:var(--sub);font-size:11px;font-weight:700;background:#F0F3F8;letter-spacing:.03em;padding:6px 8px;position:sticky;left:0;z-index:9}
 .matrix tbody tr.grp td{background:#F0F3F8;padding:6px 8px;font-size:11px}
 @media(max-width:768px){
   .matrix-wrap{border-radius:8px}
   .matrix{font-size:12px}
   .matrix thead th{padding:8px 7px;font-size:10px}
-  .matrix thead th:first-child{font-size:11px}
+  .matrix thead th:first-child{font-size:11px;position:sticky;left:0;z-index:10}
   .matrix thead th small{font-size:9px}
   .matrix tbody td{padding:7px 7px}
-  .matrix tbody td:first-child{font-size:11px}
+  .matrix tbody td:first-child{font-size:11px;position:sticky;left:0;z-index:9}
   .matrix tbody tr.grp td{font-size:10px;padding:5px 7px}
+  .matrix tbody tr.grp td:first-child{position:sticky;left:0;z-index:9}
 }
 @media(max-width:640px){
   .matrix{font-size:11px;min-width:600px}
   .matrix thead th{padding:7px 6px;font-size:9px}
-  .matrix thead th:first-child{font-size:10px}
+  .matrix thead th:first-child{font-size:10px;position:sticky;left:0;z-index:10}
   .matrix thead th small{font-size:8px}
   .matrix tbody td{padding:6px 6px;font-size:11px}
-  .matrix tbody td:first-child{font-size:10px}
+  .matrix tbody td:first-child{font-size:10px;position:sticky;left:0;z-index:9}
   .matrix tbody tr.grp td{font-size:9px;padding:4px 6px}
+  .matrix tbody tr.grp td:first-child{position:sticky;left:0;z-index:9}
 }
 @media(max-width:500px){
   .matrix{font-size:10px;min-width:500px}
