@@ -15,6 +15,7 @@
     {
       "title": "암 보장",
       "rows": [
+        {"label": "3대질병 진단", "categories": ["3대진단"], "recommend": 3000},
         {"label": "일반암 진단", "categories": ["암진단"], "recommend": 3000},
         {"label": "유사암(소액암) 진단", "categories": ["소액암진단"], "recommend": 1000},
         {"label": "항암방사선치료", "categories": ["항암방사선약물치료비"], "recommend": 1000},
