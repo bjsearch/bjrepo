@@ -783,6 +783,11 @@ def _parse_excel_alternative(file_path: str) -> ExcelParseResult:
                             remaining_premium = _parse_number(remaining_premium_str)
                             contract_end = cells.get(f'{col}15', '')
 
+                            # 납입여부 확인: 납입완료/납입종료면 월 납입 보험료 제외
+                            payment_status = cells.get(f'{col}13', '').strip()
+                            if payment_status and any(x in payment_status for x in ['납입완료', '납입종료']):
+                                monthly_premium = 0
+
                             # 갱신유무 추출 (row 9-13 중에서 값 찾기)
                             renewal_type = 'black'
                             for row_candidate in [9, 10, 11, 12, 13]:
