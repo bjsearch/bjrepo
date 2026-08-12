@@ -769,6 +769,9 @@ def _parse_excel_alternative(file_path: str) -> ExcelParseResult:
                         if not category_label_cell:
                             continue
 
+                        # 카테고리명 정규화 (공백 제거)
+                        category_label_cell = str(category_label_cell).strip()
+
                         mapped_category = category_mapping.get(category_label_cell)
                         if not mapped_category:
                             continue
