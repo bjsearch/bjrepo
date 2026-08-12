@@ -761,10 +761,10 @@ def _parse_excel_alternative(file_path: str) -> ExcelParseResult:
                         '자동차부상치료비': '자동차부상치료비',
                     }
 
-                    # 카테고리 금액 추출 (행 25-52에서)
+                    # 카테고리 금액 추출 (행 25부터 끝까지)
                     # 구조: 행 25 = 헤더, 행 26~ = 데이터 (B=대분류, C=소분류, E~= 각 상품별 금액)
                     category_amounts_by_col = {}
-                    for row_num in range(26, 53):  # 실제 데이터는 행 26부터 시작
+                    for row_num in range(26, 200):  # 행 26부터 200까지 스캔 (행 54+ 추가 데이터 포함)
                         # 카테고리명은 C열에 있음 (B열은 대분류)
                         category_label_cell = cells.get(f'C{row_num}')
                         if not category_label_cell:
