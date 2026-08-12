@@ -365,7 +365,25 @@ def _build_insights(
             }
         )
 
-    # 5. 보험료 구조 분석
+    # 5. 운전자보험 평가
+    driver_sec = next((s for s in sections if any("교통" in r.label or "벌금" in r.label or "부상치료" in r.label for r in s.rows)), None)
+    if driver_sec:
+        # 운전자보험 관련 항목들의 합계 계산
+        driver_items = [r for r in driver_sec.rows if "교통" in r.label or "벌금" in r.label or "부상치료" in r.label]
+        total_driver = sum(_parse_leading_number(r.held_display) for r in driver_items)
+        if total_driver > 0 and total_driver <= 300:  # 30만원 이하
+            insights.append(
+                {
+                    "urgent": False,
+                    "title": "운전자보험 보강 필요",
+                    "text": (
+                        f"교통사고 관련 보장이 {_fmt_man(total_driver)}만원으로 부족합니다. "
+                        f"자동차부상치료비, 교통사고처리지원금, 벌금 등을 종합적으로 검토하여 적절한 수준으로 보강할 필요가 있습니다."
+                    ),
+                }
+            )
+
+    # 6. 보험료 구조 분석
     total_premium = sum(c["premium_won"] or 0 for c in contracts)
     top_contracts = sorted((c for c in contracts if c["premium_won"]), key=lambda c: -c["premium_won"])[:2]
     if top_contracts and total_premium:
@@ -383,7 +401,7 @@ def _build_insights(
             }
         )
 
-    # 6. 기본 리포트 - insights가 없으면 최소한 기본 분석 추가
+    # 7. 기본 리포트 - insights가 없으면 최소한 기본 분석 추가
     if not insights:
         ok_count = sum(len([r for r in sec.rows if r.status == "ok"]) for sec in sections)
         total_rows = sum(len(sec.rows) for sec in sections)
