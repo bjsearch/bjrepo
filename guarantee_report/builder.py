@@ -202,6 +202,9 @@ def _build_contracts(parsed: ParsedReport, brand_registry: BrandRegistry) -> lis
                 "total_premium_display": "정보 없음",
                 "remaining_premium_display": "정보 없음",
                 "is_complete": False,
+                "renewal_type": "black",
+                "renewal_label": "비갱신형",
+                "renewal_color": "black",
                 "coverages": [
                     {"name": i.coverage_name, "amount": f"{_fmt_man(i.amount_won / 10000)}"}
                     for i in items

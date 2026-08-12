@@ -18,7 +18,7 @@ import math
 from datetime import date, datetime
 from dataclasses import dataclass
 
-from .parser import Customer, DetailItem, ParsedReport, CategoryTotal
+from .parser import Customer, DetailItem, ParsedReport, CategoryTotal, IndemnityItem
 
 
 @dataclass
@@ -51,6 +51,10 @@ class ExcelParseResult:
         )
 
         detail_items = []
+        indemnity_items = []
+        category_map = {}
+        indemnity_seq = 1
+
         for product in self.insurance_products:
             # 계약 정보 준비
             contract_date_str = product.get("contract_date", "")
@@ -75,63 +79,82 @@ class ExcelParseResult:
                 if pay_years < 1:
                     pay_years = 1
 
-            # 각 보장별로 detail_item 생성
+            product_name = product.get("product_name", "")
+            company = product.get("company", "")
+            is_indemnity = "실손" in product_name
+
+            # 각 보장별로 아이템 생성
             coverages = product.get("coverages", [])
             if coverages:
-                # 보장이 있으면 각 보장별로 detail_item 생성
                 for coverage in coverages:
                     cov_name = coverage.get("name", "")
                     cov_amount = coverage.get("amount", 0)
 
                     if cov_name:
-                        detail_item = DetailItem(
-                            company=product.get("company", ""),
-                            product=product.get("product_name", ""),
-                            start=start_str,
-                            end=str(end_str),
-                            pay_years=pay_years,
-                            pay_method="월납",
-                            premium_won=monthly_premium,
-                            rider_name="",
-                            category=cov_name,
-                            amount_man=int(cov_amount) if cov_amount > 0 else 0,
-                            status="",
-                            renewal_type=product.get("renewal_type", "black")
-                        )
-                        detail_items.append(detail_item)
+                        # 실손의료비 상품인 경우 IndemnityItem 생성
+                        if is_indemnity:
+                            detail_type = ""
+                            if "입원의료비" in cov_name:
+                                detail_type = "입원의료비"
+                            elif "외래의료비" in cov_name:
+                                detail_type = "외래의료비"
+                            elif "처방조제료" in cov_name:
+                                detail_type = "처방조제료"
+
+                            indemnity_item = IndemnityItem(
+                                seq=indemnity_seq,
+                                company=company,
+                                start=start_str,
+                                end=str(end_str),
+                                amount_won=int(cov_amount * 10000) if cov_amount > 0 else 0,
+                                coverage_name=cov_name,
+                                detail_type=detail_type
+                            )
+                            indemnity_items.append(indemnity_item)
+                            indemnity_seq += 1
+                        else:
+                            # 정액담보 상품인 경우 DetailItem 생성
+                            detail_item = DetailItem(
+                                company=company,
+                                product=product_name,
+                                start=start_str,
+                                end=str(end_str),
+                                pay_years=pay_years,
+                                pay_method="월납",
+                                premium_won=monthly_premium,
+                                rider_name="",
+                                category=cov_name,
+                                amount_man=int(cov_amount) if cov_amount > 0 else 0,
+                                status="",
+                                renewal_type=product.get("renewal_type", "black")
+                            )
+                            detail_items.append(detail_item)
+
+                        # 카테고리 맵에 추가 (정액, 실손 모두 포함)
+                        if cov_name not in category_map:
+                            category_map[cov_name] = {"count": 0, "total": 0}
+                        category_map[cov_name]["count"] += 1
+                        category_map[cov_name]["total"] += cov_amount
             else:
-                # 보장이 없는 경우 상품명을 카테고리로 사용 (실손보험 등)
-                detail_item = DetailItem(
-                    company=product.get("company", ""),
-                    product=product.get("product_name", ""),
-                    start=start_str,
-                    end=str(end_str),
-                    pay_years=pay_years,
-                    pay_method="월납",
-                    premium_won=monthly_premium,
-                    rider_name="",
-                    category=product.get("product_name", "")[:20],
-                    amount_man=0,
-                    status="",
-                    renewal_type=product.get("renewal_type", "black")
-                )
-                detail_items.append(detail_item)
+                # 보장이 없는 경우 상품명을 카테고리로 사용
+                if not is_indemnity:
+                    detail_item = DetailItem(
+                        company=company,
+                        product=product_name,
+                        start=start_str,
+                        end=str(end_str),
+                        pay_years=pay_years,
+                        pay_method="월납",
+                        premium_won=monthly_premium,
+                        rider_name="",
+                        category=product_name[:20],
+                        amount_man=0,
+                        status="",
+                        renewal_type=product.get("renewal_type", "black")
+                    )
+                    detail_items.append(detail_item)
 
         category_totals = []
-        category_map = {}
-
-        for product in self.insurance_products:
-            coverages = product.get("coverages", [])
-            for coverage in coverages:
-                cov_name = coverage.get("name", "")
-                cov_amount = coverage.get("amount", 0)
-
-                if cov_name:
-                    if cov_name not in category_map:
-                        category_map[cov_name] = {"count": 0, "total": 0}
-                    category_map[cov_name]["count"] += 1
-                    category_map[cov_name]["total"] += cov_amount
-
         seq = 1
         for category_name in sorted(category_map.keys()):
             data = category_map[category_name]
@@ -147,6 +170,7 @@ class ExcelParseResult:
 
         return ParsedReport(
             customer=customer,
+            indemnity_items=indemnity_items,
             detail_items=detail_items,
             category_totals=category_totals
         )
