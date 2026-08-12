@@ -13,7 +13,7 @@ class Brand:
     logo_html: str
 
 
-# 이미 CSS(.samsung/.meritz/.hyundai/.mg)에 정의된 4개 보험사 + 범용 폴백.
+# 이미 CSS(.samsung/.meritz/.hyundai/.mg)에 정의된 보험사 + 추가 브랜드
 _KNOWN: dict[str, Brand] = {
     "삼성생명": Brand(
         code="samsung", color="#1428A0", color_bg="#EEF0FA", kind="생보",
@@ -34,6 +34,78 @@ _KNOWN: dict[str, Brand] = {
     "새마을금고": Brand(
         code="mg", color="#0067AC", color_bg="#E9F2F9", kind="공제",
         logo_html='<span class="sym-mg">MG</span>',
+    ),
+    "한화생명": Brand(
+        code="hanwha", color="#FF9800", color_bg="#FFF3E0", kind="생보",
+        logo_html='<span class="sym-generic">한화</span>',
+    ),
+    "한화손해": Brand(
+        code="hanwha", color="#FF9800", color_bg="#FFF3E0", kind="손보",
+        logo_html='<span class="sym-generic">한화</span>',
+    ),
+    "흥국생명": Brand(
+        code="hungkuk", color="#E91E63", color_bg="#FCE4EC", kind="생보",
+        logo_html='<span class="sym-generic">흥국</span>',
+    ),
+    "흥국화재": Brand(
+        code="hungkuk", color="#E91E63", color_bg="#FCE4EC", kind="손보",
+        logo_html='<span class="sym-generic">흥국</span>',
+    ),
+    "하나생명": Brand(
+        code="hana", color="#4CAF50", color_bg="#E8F5E9", kind="생보",
+        logo_html='<span class="sym-generic">하나</span>',
+    ),
+    "하나손해": Brand(
+        code="hana", color="#4CAF50", color_bg="#E8F5E9", kind="손보",
+        logo_html='<span class="sym-generic">하나</span>',
+    ),
+    "DB생명": Brand(
+        code="db", color="#8BC34A", color_bg="#F1F8E9", kind="생보",
+        logo_html='<span class="sym-generic">DB</span>',
+    ),
+    "DB손해": Brand(
+        code="db", color="#8BC34A", color_bg="#F1F8E9", kind="손보",
+        logo_html='<span class="sym-generic">DB</span>',
+    ),
+    "KB생명": Brand(
+        code="kb", color="#FFC107", color_bg="#FFFBF0", kind="생보",
+        logo_html='<span class="sym-generic">KB</span>',
+    ),
+    "KB손해": Brand(
+        code="kb", color="#FFC107", color_bg="#FFFBF0", kind="손보",
+        logo_html='<span class="sym-generic">KB</span>',
+    ),
+    "라이나생명": Brand(
+        code="lina", color="#0066CC", color_bg="#E3F2FD", kind="생보",
+        logo_html='<span class="sym-generic">라이나</span>',
+    ),
+    "라이나손해": Brand(
+        code="lina", color="#0066CC", color_bg="#E3F2FD", kind="손보",
+        logo_html='<span class="sym-generic">라이나</span>',
+    ),
+    "롯데손해": Brand(
+        code="lotte", color="#F44336", color_bg="#FFEBEE", kind="손보",
+        logo_html='<span class="sym-generic">롯데</span>',
+    ),
+    "농협손해": Brand(
+        code="nonghyup", color="#003366", color_bg="#E3F2FD", kind="손보",
+        logo_html='<span class="sym-generic">농협</span>',
+    ),
+    "동양생명": Brand(
+        code="dongyang", color="#29B6F6", color_bg="#E1F5FE", kind="생보",
+        logo_html='<span class="sym-generic">동양</span>',
+    ),
+    "메트라이프": Brand(
+        code="metlife", color="#4CAF50", color_bg="#E8F5E9", kind="생보",
+        logo_html='<span class="sym-generic">메트라</span>',
+    ),
+    "카디프생명": Brand(
+        code="cardif", color="#4CAF50", color_bg="#E8F5E9", kind="생보",
+        logo_html='<span class="sym-generic">카디프</span>',
+    ),
+    "미래에셋생명": Brand(
+        code="miraeasset", color="#FF9800", color_bg="#FFF3E0", kind="생보",
+        logo_html='<span class="sym-generic">미래에셋</span>',
     ),
 }
 
