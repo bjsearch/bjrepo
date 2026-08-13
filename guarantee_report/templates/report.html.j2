@@ -673,10 +673,10 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
     <thead>
       <tr>
         <th>보장 항목</th>
+        <th>합계</th>
         {% for col in matrix.columns %}
         <th style="--th-color:{{ col.brand_color }}">{{ col.short_title }}<small>{{ col.period }}</small></th>
         {% endfor %}
-        <th>합계</th>
       </tr>
     </thead>
     <tbody>
@@ -685,10 +685,10 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
       {% for row in grp.rows %}
       <tr>
         <td>{{ row.label }}</td>
+        <td class="sum num">{{ row.total }}</td>
         {% for cell in row.cells %}
         <td class="{{ 'empty' if not cell else '' }} num">{{ cell if cell else '—' }}</td>
         {% endfor %}
-        <td class="sum num">{{ row.total }}</td>
       </tr>
       {% endfor %}
       {% endfor %}

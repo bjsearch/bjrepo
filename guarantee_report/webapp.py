@@ -878,7 +878,21 @@ function removeNewInsightPanel(idx) {{
                     modified_row["held_display"] = new_held
                     # 수정된 금액을 기반으로 진단 재계산
                     try:
-                        held_num = float(new_held.replace(',', ''))
+                        # indemnity_pair 처리: "disease / injury" 형식
+                        if row.get("source_brand_codes") and " / " in new_held:
+                            parts = new_held.split(" / ")
+                            if len(parts) == 2:
+                                try:
+                                    disease_num = float(parts[0].replace(',', ''))
+                                    injury_num = float(parts[1].replace(',', ''))
+                                    held_num = min(disease_num, injury_num)
+                                except:
+                                    held_num = 0
+                            else:
+                                held_num = 0
+                        else:
+                            held_num = float(new_held.replace(',', ''))
+
                         recommend_num = None
                         if row.get('recommend_display') and row.get('recommend_display') != '—':
                             try:
@@ -886,7 +900,7 @@ function removeNewInsightPanel(idx) {{
                             except:
                                 pass
 
-                        # 진단 재계산 (간단한 로직)
+                        # 진단 재계산
                         if held_num <= 0:
                             modified_row["status"] = "gap"
                             modified_row["diagnosis"] = "미가입"
@@ -900,13 +914,13 @@ function removeNewInsightPanel(idx) {{
                             if ratio >= 1:
                                 modified_row["status"] = "ok"
                                 modified_row["diagnosis"] = "적정" if ratio == 1 else f"적정 +{int(held_num - recommend_num):,}"
-                                modified_row["ratio"] = 1.0
+                                modified_row["ratio"] = min(ratio, 1.0)
                             else:
                                 modified_row["status"] = "warn"
                                 word = "주의" if ratio >= 0.5 else "부족"
                                 modified_row["diagnosis"] = f"{word} −{int(recommend_num - held_num):,}"
                                 modified_row["ratio"] = ratio
-                    except:
+                    except Exception as e:
                         pass
                 modified_section["rows"].append(modified_row)
             modified_coverage_sections.append(modified_section)
