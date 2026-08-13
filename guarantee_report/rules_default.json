@@ -20,7 +20,8 @@
         {"label": "통합암진단", "categories_contains": ["통합암"], "recommend": 3000},
         {"label": "유사암(소액암) 진단", "categories": ["소액암진단"], "recommend": 1000},
         {"label": "고액암 진단", "categories_contains": ["고액암"], "recommend": 5000},
-        {"label": "표적항암방사선치료", "categories_contains": ["표적항암"], "recommend": 3000},
+        {"label": "표적항암방사선치료", "categories_contains": ["표적항암방사선"], "recommend": 3000},
+        {"label": "표적항암약물치료", "categories_contains": ["표적항암약물"], "recommend": 3000},
         {"label": "암주요치료비", "categories_contains": ["암주요치료비"], "recommend": 3000},
         {"label": "하이클래스 암주요치료비", "categories_contains": ["하이클래스"], "recommend": 5000}
       ]
