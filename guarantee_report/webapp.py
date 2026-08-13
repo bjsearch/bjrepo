@@ -878,13 +878,13 @@ function removeNewInsightPanel(idx) {{
                     modified_row["held_display"] = new_held
                     # 수정된 금액을 기반으로 진단 재계산
                     try:
-                        # indemnity_pair 처리: "disease / injury" 형식
+                        # indemnity_pair 처리: "injury / disease" 형식 (rules.py에서는 injury가 먼저)
                         if row.get("source_brand_codes") and " / " in new_held:
                             parts = new_held.split(" / ")
                             if len(parts) == 2:
                                 try:
-                                    disease_num = float(parts[0].replace(',', ''))
-                                    injury_num = float(parts[1].replace(',', ''))
+                                    injury_num = float(parts[0].replace(',', ''))
+                                    disease_num = float(parts[1].replace(',', ''))
                                     held_num = min(disease_num, injury_num)
                                 except:
                                     held_num = 0
