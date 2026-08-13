@@ -94,11 +94,12 @@ class ExcelParseResult:
                         # 실손의료비 상품인 경우 IndemnityItem 생성
                         if is_indemnity:
                             detail_type = ""
-                            if "입원의료비" in cov_name:
+                            # 더 유연한 매칭: 정확한 문자열 매칭 또는 키워드 조합
+                            if "입원의료비" in cov_name or ("입원" in cov_name and "의료" in cov_name):
                                 detail_type = "입원의료비"
-                            elif "외래의료비" in cov_name:
+                            elif "외래의료비" in cov_name or ("외래" in cov_name and "의료" in cov_name):
                                 detail_type = "외래의료비"
-                            elif "처방조제료" in cov_name:
+                            elif "처방조제료" in cov_name or ("처방" in cov_name and "조제" in cov_name):
                                 detail_type = "처방조제료"
 
                             indemnity_item = IndemnityItem(

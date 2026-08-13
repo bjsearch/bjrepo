@@ -119,9 +119,12 @@ def evaluate(
 
             if kind == "indemnity_pair" or kind == "indemnity_sum":
                 match = r["match"]
+                # 더 유연한 매칭: 정확한 문자열 또는 한글자 포함 매칭
                 matched = [
                     i for i in indemnity_items
-                    if match in i.detail_type or match in i.coverage_name
+                    if (match in i.detail_type) or
+                       (match in i.coverage_name) or
+                       (match.replace("의료비", "") in i.coverage_name and "의료" in i.coverage_name)
                 ]
                 disease = sum(i.amount_won for i in matched if "질병" in i.coverage_name) // 10000
                 injury = sum(i.amount_won for i in matched if "질병" not in i.coverage_name) // 10000
