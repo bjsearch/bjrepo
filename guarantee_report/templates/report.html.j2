@@ -699,7 +699,7 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
         <td>{{ row.label }}</td>
         <td class="sum num">{{ row.total }}</td>
         {% for cell in row.cells %}
-        <td class="{{ 'empty' if not cell else '' }} num">{{ cell if cell else '—' }}</td>
+        <td class="{{ 'empty' if not cell else '' }} num">{{ cell or '—' }}</td>
         {% endfor %}
       </tr>
       {% endfor %}

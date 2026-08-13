@@ -601,9 +601,9 @@ def _build_matrix(parsed: ParsedReport, contracts: list[dict], registry: BrandRe
             total = 0
             for company, product in order:
                 amt = sum(d.amount_man for d in groups[(company, product)] if d.category == cat)
-                cells.append(amt if amt else None)
+                cells.append(f"{amt:,}" if amt else None)
                 total += amt
-            rows.append({"label": cat, "cells": cells, "total": total})
+            rows.append({"label": cat, "cells": cells, "total": f"{total:,}" if total else "—"})
         matrix_groups.append({"title": gtitle, "rows": rows})
 
     return {"columns": columns, "groups": matrix_groups}
