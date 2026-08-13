@@ -56,7 +56,7 @@
       "rows": [
         {"label": "실손 입원 (질병 · 상해 각)", "kind": "indemnity_pair", "match": "입원의료비", "recommend": 5000},
         {"label": "실손 외래 (질병 · 상해 각)", "kind": "indemnity_pair", "match": "외래의료비", "recommend": 30},
-        {"label": "일상생활(가족)배상책임", "kind": "indemnity_sum", "match": "배상책임", "recommend": 10000},
+        {"label": "일상생활(가족)배상책임", "categories_contains": ["배상책임"], "recommend": 10000},
         {"label": "골절진단", "categories": ["골절진단", "중대골절진단"], "recommend": 30},
         {"label": "중대화상진단", "categories": ["중대화상진단"], "kind": "info", "recommend": null},
         {"label": "화상진단", "categories": ["화상진단"], "recommend": 50},

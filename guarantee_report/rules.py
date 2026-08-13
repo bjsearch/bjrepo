@@ -125,6 +125,16 @@ def evaluate(
                 ]
                 disease = sum(i.amount_won for i in matched if "질병" in i.coverage_name) // 10000
                 injury = sum(i.amount_won for i in matched if "질병" not in i.coverage_name) // 10000
+
+                # Extract source brands from matched indemnity items
+                src_brands = []
+                src_companies = set()
+                for item in matched:
+                    if item.company not in src_companies:
+                        src_companies.add(item.company)
+                        brand = brand_registry.get(item.company)
+                        src_brands.append({"code": brand.code, "name": item.company, "color": brand.color})
+
                 if kind == "indemnity_sum":
                     held = disease + injury
                     recommend = r.get("recommend")
@@ -138,7 +148,7 @@ def evaluate(
                     min_held = min(injury, disease) if matched else 0
                     status, diag, ratio = _classify(min_held, recommend)
                 rows.append(
-                    EvaluatedRow(r["label"], rec_disp, held_disp, ratio, status, diag, [], GUIDELINE_NOTES.get(r["label"], ""))
+                    EvaluatedRow(r["label"], rec_disp, held_disp, ratio, status, diag, src_brands, GUIDELINE_NOTES.get(r["label"], ""))
                 )
                 continue
 
@@ -148,6 +158,9 @@ def evaluate(
                 held = _held_for_categories(totals_by_cat, categories)
                 mult = r.get("multiplier")
                 if mult:
+                    # Don't show multiplier-based items if base category has no data
+                    if held <= 0:
+                        continue
                     held = held * mult
 
             recommend = r.get("recommend")

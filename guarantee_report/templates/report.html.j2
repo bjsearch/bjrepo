@@ -613,7 +613,19 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 </div>
 
 <section class="section-page">
-  <h2><span class="no">01</span>계약 현황 — 보험사별</h2>
+  <h2><span class="no">01</span>보장분석 총 평가 및 추천안</h2>
+  <div class="insights">
+    {% for ins in insights %}
+    <div class="insight {{ 'urgent' if ins.urgent else '' }}">
+      <b>{{ ins.title }}</b>
+      <p>{{ ins.text }}</p>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="section-page">
+  <h2><span class="no">02</span>계약 현황 — 보험사별</h2>
   <div class="sec-note">{{ brands_legend|length }}개 보험사 {{ header.total_contracts }}건 유지 중 · 카드 색상은 각 보험사 브랜드 컬러 기준</div>
   <div class="contracts">
     {% for c in contracts %}
@@ -644,7 +656,7 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 </section>
 
 <section class="section-page">
-  <h2><span class="no">02</span>영역별 보장 진단</h2>
+  <h2><span class="no">03</span>영역별 보장 진단</h2>
   <div class="sec-note">단위: 만원 · 항목 옆 보험사명은 해당 담보를 보유한 보험사</div>
 
   {% for sec in coverage_sections %}
@@ -666,7 +678,7 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 </section>
 
 <section class="section-page">
-  <h2><span class="no">03</span>상품별 보장 매트릭스</h2>
+  <h2><span class="no">04</span>상품별 보장 매트릭스</h2>
   <div class="sec-note">각 보장이 어느 계약에서 지급되는지 계약 단위로 분해 · 단위: 만원</div>
   <div class="matrix-wrap">
   <table class="matrix">
@@ -694,18 +706,6 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
       {% endfor %}
     </tbody>
   </table>
-  </div>
-</section>
-
-<section class="section-page">
-  <h2><span class="no">04</span>보장분석 총 평가 및 추천안</h2>
-  <div class="insights">
-    {% for ins in insights %}
-    <div class="insight {{ 'urgent' if ins.urgent else '' }}">
-      <b>{{ ins.title }}</b>
-      <p>{{ ins.text }}</p>
-    </div>
-    {% endfor %}
   </div>
 </section>
 
