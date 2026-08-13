@@ -128,20 +128,14 @@ def evaluate(
                 if kind == "indemnity_sum":
                     held = disease + injury
                     recommend = r.get("recommend")
-                    # 데이터가 없고 권장금액이 있으면 제외
-                    if held == 0 and recommend is not None:
-                        continue
                     status, diag, ratio = _classify(held, recommend)
                     held_disp = _fmt(held)
                     rec_disp = _fmt(recommend) if recommend is not None else "—"
                 else:
                     recommend = r.get("recommend")
-                    min_held = min(injury, disease) if matched else 0
-                    # 데이터가 없고 권장금액이 있으면 제외
-                    if min_held == 0 and recommend is not None:
-                        continue
                     held_disp = f"{_fmt(injury)} / {_fmt(disease)}"
                     rec_disp = f"{_fmt(recommend)}" if recommend is not None else "—"
+                    min_held = min(injury, disease) if matched else 0
                     status, diag, ratio = _classify(min_held, recommend)
                 rows.append(
                     EvaluatedRow(r["label"], rec_disp, held_disp, ratio, status, diag, [], GUIDELINE_NOTES.get(r["label"], ""))
@@ -162,12 +156,9 @@ def evaluate(
                 a_cat, b_cat = categories[0], categories[1]
                 a = totals_by_cat.get(a_cat, 0)
                 b = totals_by_cat.get(b_cat, 0)
-                min_held = min(a, b)
-                # 데이터가 없고 권장금액이 있으면 제외
-                if min_held == 0 and recommend is not None:
-                    continue
                 held_disp = f"각 {_fmt(a)}" if a == b else f"{_fmt(a)} / {_fmt(b)}"
                 rec_disp = f"각 {_fmt(recommend)}" if recommend is not None else "—"
+                min_held = min(a, b)
                 status, diag, ratio = _classify(min_held, recommend)
                 if recommend and min_held > 0 and status == "warn":
                     word = "주의" if (min_held / recommend) >= 0.5 else "부족"
@@ -177,9 +168,6 @@ def evaluate(
                 rec_disp = "—"
                 status, diag, ratio = _classify(held, None)
             else:
-                # 데이터가 없고 권장금액이 있으면 제외
-                if held == 0 and recommend is not None:
-                    continue
                 held_disp = _fmt(held) if held else "—"
                 rec_disp = _fmt(recommend) if recommend is not None else "—"
                 status, diag, ratio = _classify(held, recommend)
