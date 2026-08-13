@@ -81,7 +81,7 @@ class ExcelParseResult:
 
             product_name = product.get("product_name", "")
             company = product.get("company", "")
-            is_indemnity = "실손" in product_name
+            product_is_indemnity = "실손" in product_name
 
             # 각 보장별로 아이템 생성
             coverages = product.get("coverages", [])
@@ -91,6 +91,10 @@ class ExcelParseResult:
                     cov_amount = coverage.get("amount", 0)
 
                     if cov_name:
+                        # 실손의료비 여부 판단: 상품명 또는 보장명에서 의료비 키워드 확인
+                        is_coverage_indemnity = any(kw in cov_name for kw in ["의료비", "입원", "외래", "처방조제"])
+                        is_indemnity = product_is_indemnity or is_coverage_indemnity
+
                         # 실손의료비 상품인 경우 IndemnityItem 생성
                         if is_indemnity:
                             detail_type = ""
