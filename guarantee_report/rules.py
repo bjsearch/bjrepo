@@ -109,6 +109,15 @@ def evaluate(
     consumed: set[str] = set()
     sections: list[EvaluatedSection] = []
 
+    # 디버깅: 파싱된 데이터 로깅
+    import sys
+    print(f"[DEBUG] category_totals: {len(category_totals)} items", file=sys.stderr)
+    print(f"[DEBUG] indemnity_items: {len(indemnity_items)} items", file=sys.stderr)
+    if indemnity_items:
+        for item in indemnity_items[:3]:
+            print(f"  - {item.company}: {item.coverage_name} ({item.detail_type}) = {item.amount_won}", file=sys.stderr)
+    print(f"[DEBUG] 카테고리 맵: {list(totals_by_cat.keys())[:5]}", file=sys.stderr)
+
     for sec in rules["sections"]:
         rows: list[EvaluatedRow] = []
         for r in sec["rows"]:
@@ -126,6 +135,12 @@ def evaluate(
                        (match in i.coverage_name) or
                        (match.replace("의료비", "") in i.coverage_name and "의료" in i.coverage_name)
                 ]
+                # 디버깅: 매칭 결과
+                import sys
+                print(f"[DEBUG] {r['label']}: match='{match}', matched={len(matched)}", file=sys.stderr)
+                if matched:
+                    for m in matched[:2]:
+                        print(f"  → {m.company}: {m.coverage_name} ({m.detail_type})", file=sys.stderr)
                 disease = sum(i.amount_won for i in matched if "질병" in i.coverage_name) // 10000
                 injury = sum(i.amount_won for i in matched if "질병" not in i.coverage_name) // 10000
 
