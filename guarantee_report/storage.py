@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS guarantee_users (
     phone TEXT NOT NULL UNIQUE,
     password_hash TEXT,
     role TEXT NOT NULL DEFAULT 'user',
+    approval_status TEXT NOT NULL DEFAULT 'approved',
     created_at TEXT NOT NULL,
     last_login_at TEXT
 );
@@ -104,6 +105,7 @@ CREATE TABLE IF NOT EXISTS guarantee_users (
     phone TEXT NOT NULL UNIQUE,
     password_hash TEXT,
     role TEXT NOT NULL DEFAULT 'user',
+    approval_status TEXT NOT NULL DEFAULT 'approved',
     created_at TEXT NOT NULL,
     last_login_at TEXT
 );
@@ -151,12 +153,16 @@ def _connect():
         conn.close()
 
 
-def _add_column_if_missing(cur, table: str, column: str, coltype: str) -> None:
+def _add_column_if_missing(cur, table: str, column: str, coltype: str, default: str | None = None) -> None:
+    col_def = f"{column} {coltype}"
+    if default:
+        col_def += f" DEFAULT {default}"
+
     if BACKEND == "postgres":
-        cur.execute(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {coltype}")
+        cur.execute(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {col_def}")
         return
     try:
-        cur.execute(f"ALTER TABLE {table} ADD COLUMN {column} {coltype}")
+        cur.execute(f"ALTER TABLE {table} ADD COLUMN {col_def}")
     except Exception:
         pass  # SQLite는 IF NOT EXISTS를 지원하지 않음 — 이미 있으면 무시
 
@@ -183,6 +189,8 @@ def init_db() -> None:
         # 피드백 반영 완료 여부 컬럼 추가
         _add_column_if_missing(cur, "report_feedback", "resolved_at", "TEXT")
         _add_column_if_missing(cur, "report_feedback", "resolved_by_user_id", "INTEGER")
+        # 사용자 승인 상태 컬럼 추가
+        _add_column_if_missing(cur, "guarantee_users", "approval_status", "TEXT", default="'approved'")
     global _initialized
     _initialized = True
 
@@ -209,7 +217,7 @@ def _to_int(value) -> int | None:
 # --- 사용자 ---
 
 
-def upsert_user(name: str, phone: str, role: str, password: str | None = None) -> dict:
+def upsert_user(name: str, phone: str, role: str, password: str | None = None, approval_status: str = "approved") -> dict:
     """전화번호를 키로 사용자 정보를 갱신(또는 신규 생성)하고, 항상 최신 역할을 반영한다."""
     _ensure_init()
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -228,14 +236,14 @@ def upsert_user(name: str, phone: str, role: str, password: str | None = None) -
         else:
             # 신규 사용자: 비밀번호 해시 저장
             password_hash = hash_password(password) if password else None
-            insert_sql = "INSERT INTO guarantee_users (name, phone, password_hash, role, created_at, last_login_at) VALUES (?,?,?,?,?,?)"
+            insert_sql = "INSERT INTO guarantee_users (name, phone, password_hash, role, approval_status, created_at, last_login_at) VALUES (?,?,?,?,?,?,?)"
             if BACKEND == "postgres":
-                cur.execute(_q(insert_sql) + " RETURNING id", (name, phone, password_hash, role, now, now))
+                cur.execute(_q(insert_sql) + " RETURNING id", (name, phone, password_hash, role, approval_status, now, now))
                 user_id = cur.fetchone()["id"]
             else:
-                cur.execute(insert_sql, (name, phone, password_hash, role, now, now))
+                cur.execute(insert_sql, (name, phone, password_hash, role, approval_status, now, now))
                 user_id = cur.lastrowid
-        return {"id": user_id, "name": name, "phone": phone, "role": role}
+        return {"id": user_id, "name": name, "phone": phone, "role": role, "approval_status": approval_status}
 
 
 def get_user_by_phone(phone: str) -> dict | None:
@@ -243,19 +251,54 @@ def get_user_by_phone(phone: str) -> dict | None:
     _ensure_init()
     with _connect() as conn:
         cur = conn.cursor()
-        cur.execute(_q("SELECT id, name, phone, password_hash, role FROM guarantee_users WHERE phone = ?"), (phone,))
+        cur.execute(_q("SELECT id, name, phone, password_hash, role, approval_status FROM guarantee_users WHERE phone = ?"), (phone,))
         row = cur.fetchone()
         return dict(row) if row else None
 
 
-def list_users() -> list[dict]:
+def list_users(include_pending: bool = False) -> list[dict]:
+    """사용자 목록을 조회한다. include_pending=True면 승인 대기 중인 사용자도 포함."""
+    _ensure_init()
+    with _connect() as conn:
+        cur = conn.cursor()
+        if include_pending:
+            cur.execute(
+                "SELECT id, name, phone, role, approval_status, created_at, last_login_at FROM guarantee_users ORDER BY created_at DESC"
+            )
+        else:
+            cur.execute(
+                _q("SELECT id, name, phone, role, approval_status, created_at, last_login_at FROM guarantee_users WHERE approval_status = 'approved' ORDER BY last_login_at DESC")
+            )
+        return [dict(r) for r in cur.fetchall()]
+
+
+def get_pending_users() -> list[dict]:
+    """승인 대기 중인 사용자 목록을 조회한다."""
     _ensure_init()
     with _connect() as conn:
         cur = conn.cursor()
         cur.execute(
-            "SELECT id, name, phone, role, created_at, last_login_at FROM guarantee_users ORDER BY last_login_at DESC"
+            _q("SELECT id, name, phone, role, created_at FROM guarantee_users WHERE approval_status = 'pending' ORDER BY created_at ASC")
         )
         return [dict(r) for r in cur.fetchall()]
+
+
+def approve_user(user_id: int) -> bool:
+    """사용자를 승인한다."""
+    _ensure_init()
+    with _connect() as conn:
+        cur = conn.cursor()
+        cur.execute(_q("UPDATE guarantee_users SET approval_status = 'approved' WHERE id = ?"), (user_id,))
+        return cur.rowcount > 0
+
+
+def reject_user(user_id: int) -> bool:
+    """사용자 승인을 거부한다."""
+    _ensure_init()
+    with _connect() as conn:
+        cur = conn.cursor()
+        cur.execute(_q("UPDATE guarantee_users SET approval_status = 'rejected' WHERE id = ?"), (user_id,))
+        return cur.rowcount > 0
 
 
 # --- 리포트 ---

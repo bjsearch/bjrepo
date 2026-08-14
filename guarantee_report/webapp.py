@@ -63,6 +63,8 @@ except Exception as e:  # noqa: BLE001 — DB가 기동 시점에 잠깐 응답 
 
 TEAM_PASSWORD = os.environ.get("APP_PASSWORD")
 ADMIN_PHONES = {re.sub(r"\D", "", p) for p in os.environ.get("ADMIN_PHONES", "").split(",") if p.strip()}
+# 승인자 목록 (관리자만 신규 가입자를 승인할 수 있음)
+APPROVER_PHONES = {re.sub(r"\D", "", p) for p in os.environ.get("APPROVER_PHONES", "").split(",") if p.strip()}
 KAKAO_JS_KEY = os.environ.get("KAKAO_JS_KEY")  # 설정 시 카카오톡 공유가 SDK 카드 형태로 동작 (없으면 웹 공유/링크복사로 대체)
 
 _secret = os.environ.get("SECRET_KEY")
@@ -277,6 +279,23 @@ def login():
         # 기존 사용자 확인
         existing_user = storage.get_user_by_phone(phone)
         if existing_user:
+            # 승인 상태 확인
+            approval_status = existing_user.get("approval_status", "approved")
+            if approval_status == "pending":
+                return _fail(
+                    "❌ 승인 대기 중입니다.\n\n"
+                    "귀하의 계정이 관리자의 승인을 기다리고 있습니다.\n"
+                    "승인되면 로그인할 수 있습니다.",
+                    401
+                )
+            elif approval_status == "rejected":
+                return _fail(
+                    "❌ 가입이 거부되었습니다.\n\n"
+                    "관리자가 귀하의 가입을 거부했습니다.\n"
+                    "자세한 사항은 관리자에게 문의하세요.",
+                    403
+                )
+
             # 기존 사용자: 비밀번호 검증
             password_hash = existing_user.get("password_hash")
             if not storage.verify_password(user_password, password_hash):
@@ -358,8 +377,21 @@ def signup():
                 )
             user = storage.upsert_user(name, phone, role)
         else:
-            # 신규 사용자: 계정 생성
-            user = storage.upsert_user(name, phone, role, password)
+            # 신규 사용자: 관리자면 approved, 일반 사용자면 pending 상태로 생성
+            approval_status = "approved" if role == "admin" else "pending"
+            user = storage.upsert_user(name, phone, role, password, approval_status=approval_status)
+
+            # 신규 사용자가 pending 상태면 승인 대기 페이지로 이동
+            if approval_status == "pending":
+                return (
+                    render_template(
+                        "signup_pending.html.j2",
+                        user_name=name,
+                        logo_mark=LOGO_MARK,
+                    ),
+                    200,
+                )
+
         session["user"] = {"id": user["id"], "name": user["name"], "role": user["role"]}
         return redirect(url_for("index"))
     except Exception as e:  # noqa: BLE001
@@ -1410,6 +1442,149 @@ def admin_dashboard():
         users=users,
         active_users=active_users_display,
     )
+
+
+@app.route("/admin/approve-users", methods=["GET"])
+@admin_required
+def admin_approve_users():
+    """신규 가입자 승인 페이지"""
+    user = current_user()
+    if not user or user["role"] != "admin":
+        abort(403)
+
+    pending_users = storage.get_pending_users()
+
+    html = f"""<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http%3A//www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'><path%20d='M4%2021%20A16%2015%200%200%201%2036%2021%20Z'%20fill='%2310233F'/><rect%20x='9'%20y='21'%20width='4.4'%20height='6'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='17.8'%20y='21'%20width='4.4'%20height='10'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='26.6'%20y='21'%20width='4.4'%20height='14'%20rx='1.6'%20fill='%231D5BD8'/></svg>">
+<title>신규 가입자 승인</title>
+<style>
+  :root{{--ink:#10233F;--paper:#F6F7F9;--card:#FFFFFF;--line:#E3E7EE;--sub:#5B6B82;--ok:#1D5BD8;--gap:#C93030}}
+  *{{box-sizing:border-box}}
+  body{{font-family:-apple-system,"Pretendard",sans-serif;background:var(--paper);color:var(--ink);margin:0;padding:40px 20px;line-height:1.6}}
+  .wrap{{max-width:600px;margin:0 auto}}
+  h1{{font-size:24px;margin-bottom:6px}}
+  p.sub{{color:var(--sub);font-size:13.5px;margin-bottom:24px}}
+  .user-list{{display:flex;flex-direction:column;gap:12px}}
+  .user-card{{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px;display:flex;justify-content:space-between;align-items:center}}
+  .user-info{{flex:1}}
+  .user-name{{font-weight:600;font-size:15px;margin-bottom:4px}}
+  .user-phone{{color:var(--sub);font-size:13px}}
+  .user-date{{color:var(--sub);font-size:12px;margin-top:4px}}
+  .actions{{display:flex;gap:8px}}
+  button{{padding:8px 14px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s}}
+  .btn-approve{{background:var(--ok);color:#fff}}
+  .btn-approve:hover{{opacity:0.9}}
+  .btn-reject{{background:#F0F0F0;color:var(--gap)}}
+  .btn-reject:hover{{background:#E8E8E8}}
+  .empty{{text-align:center;padding:40px 20px;color:var(--sub)}}
+  .back-link{{display:inline-block;margin-top:20px;font-size:13px;color:var(--ok);text-decoration:none;font-weight:600}}
+  .back-link:hover{{text-decoration:underline}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>👥 신규 가입자 승인</h1>
+  <p class="sub">관리자만 접근 가능한 기능입니다.</p>
+
+  {'<div class="user-list">' if pending_users else ''}
+  {''.join(f'''<div class="user-card">
+    <div class="user-info">
+      <div class="user-name">{u["name"]}</div>
+      <div class="user-phone">{u["phone"]}</div>
+      <div class="user-date">{u["created_at"].split("T")[0]}</div>
+    </div>
+    <div class="actions">
+      <button class="btn-approve" onclick="approve({u["id"]})">승인</button>
+      <button class="btn-reject" onclick="reject({u["id"]})">거부</button>
+    </div>
+  </div>''' for u in pending_users)}
+  {'</div>' if pending_users else ''}
+
+  {'' if pending_users else '<div class="empty">승인 대기 중인 사용자가 없습니다.</div>'}
+
+  <a class="back-link" href="/admin">← 관리자 대시보드</a>
+</div>
+
+<script>
+function approve(userId) {{
+  if (confirm('이 사용자를 승인하시겠습니까?')) {{
+    fetch('/api/admin/approve', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{user_id: userId}})
+    }}).then(r => r.json()).then(data => {{
+      if (data.success) {{
+        location.reload();
+      }} else {{
+        alert('오류: ' + (data.error || '알 수 없는 오류'));
+      }}
+    }});
+  }}
+}}
+
+function reject(userId) {{
+  if (confirm('이 사용자의 가입을 거부하시겠습니까?')) {{
+    fetch('/api/admin/reject', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{user_id: userId}})
+    }}).then(r => r.json()).then(data => {{
+      if (data.success) {{
+        location.reload();
+      }} else {{
+        alert('오류: ' + (data.error || '알 수 없는 오류'));
+      }}
+    }});
+  }}
+}}
+</script>
+</body>
+</html>"""
+    return html
+
+
+@app.route("/api/admin/approve", methods=["POST"])
+@admin_required
+def api_admin_approve():
+    """신규 가입자 승인 API"""
+    user = current_user()
+    if not user or user["role"] != "admin":
+        return jsonify({"success": False, "error": "권한 없음"}), 403
+
+    data = request.get_json() or {}
+    user_id = data.get("user_id")
+
+    if not user_id:
+        return jsonify({"success": False, "error": "user_id 필수"}), 400
+
+    if storage.approve_user(user_id):
+        return jsonify({"success": True})
+    else:
+        return jsonify({"success": False, "error": "사용자를 찾을 수 없습니다"}), 404
+
+
+@app.route("/api/admin/reject", methods=["POST"])
+@admin_required
+def api_admin_reject():
+    """신규 가입자 거부 API"""
+    user = current_user()
+    if not user or user["role"] != "admin":
+        return jsonify({"success": False, "error": "권한 없음"}), 403
+
+    data = request.get_json() or {}
+    user_id = data.get("user_id")
+
+    if not user_id:
+        return jsonify({"success": False, "error": "user_id 필수"}), 400
+
+    if storage.reject_user(user_id):
+        return jsonify({"success": True})
+    else:
+        return jsonify({"success": False, "error": "사용자를 찾을 수 없습니다"}), 404
 
 
 @app.route("/admin/init-db", methods=["GET", "POST"])
