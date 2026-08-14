@@ -113,7 +113,8 @@ class ExcelParseResult:
                                 end=str(end_str),
                                 amount_won=int(cov_amount * 10000) if cov_amount > 0 else 0,
                                 coverage_name=cov_name,
-                                detail_type=detail_type
+                                detail_type=detail_type,
+                                premium_won=monthly_premium
                             )
                             indemnity_items.append(indemnity_item)
                             indemnity_seq += 1

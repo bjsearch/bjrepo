@@ -35,6 +35,7 @@ class IndemnityItem:
     amount_won: int
     coverage_name: str  # 보장내용 (예: "상해(일반상해...)", "가족생활배상책임담보")
     detail_type: str = ""  # 담보특성 (예: "입원의료비", "외래의료비")
+    premium_won: int = 0  # 월납 보험료 (원)
 
 
 @dataclass

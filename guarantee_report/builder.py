@@ -151,13 +151,9 @@ def _build_contracts(parsed: ParsedReport, brand_registry: BrandRegistry) -> lis
                 "detail": detail_line,
                 "premium_won": premium,
                 "premium_display": f"{premium:,}원",
-                "premium_display_man": f"{premium // 10000:,}만원" if premium else "정보 없음",
                 "total_premium_display": f"{total_premium_won:,}원" if total_premium_won is not None else "정보 없음",
-                "total_premium_display_man": f"{total_premium_won // 10000:,}만원" if total_premium_won is not None else "정보 없음",
                 "paid_premium_display": f"{paid_premium_won:,}원" if paid_premium_won is not None else "정보 없음",
-                "paid_premium_display_man": f"{paid_premium_won // 10000:,}만원" if paid_premium_won is not None else "정보 없음",
                 "remaining_premium_display": f"{remaining_premium_won:,}원" if remaining_premium_won is not None else "정보 없음",
-                "remaining_premium_display_man": f"{remaining_premium_won // 10000:,}만원" if remaining_premium_won is not None else "정보 없음",
                 "is_complete": is_complete,
                 "renewal_type": renewal_type,
                 "renewal_label": renewal_label,
@@ -190,6 +186,14 @@ def _build_contracts(parsed: ParsedReport, brand_registry: BrandRegistry) -> lis
         )
         title = "실손의료보험"
         detail_line = f"{_fmt_date_dot(start) if start else '-'} 가입 · {cov_str}"
+
+        # 실손 항목의 첫 번째 프리미엄 사용 (모두 같은 계약의 프리미엄)
+        premium_won = items[0].premium_won if items else 0
+
+        # 실손 계약의 납입 기간 계산
+        basis = parsed.customer.basis_date or date.today()
+        elapsed_months = _months_between(start, basis) if start else 0
+
         contracts.append(
             {
                 "company": company,
@@ -201,9 +205,10 @@ def _build_contracts(parsed: ParsedReport, brand_registry: BrandRegistry) -> lis
                 "badge": badge,
                 "end_date_iso": None if is_lifetime else end_s,
                 "detail": detail_line,
-                "premium_won": None,
-                "premium_display": "주계약 합산",
+                "premium_won": premium_won,
+                "premium_display": f"{premium_won:,}원" if premium_won else "정보 없음",
                 "total_premium_display": "정보 없음",
+                "paid_premium_display": f"{premium_won * elapsed_months:,}원" if premium_won and elapsed_months else "정보 없음",
                 "remaining_premium_display": "정보 없음",
                 "is_complete": False,
                 "renewal_type": "black",
@@ -489,6 +494,19 @@ def build_report_data(parsed: ParsedReport, rules_path: str | None = None) -> di
         paid_total += elapsed * premium
         scheduled_total += total * premium
 
+    # 실손의료비 항목도 포함
+    indemnity_groups = defaultdict(list)
+    for ind in parsed.indemnity_items:
+        indemnity_groups[(ind.company, ind.start, ind.end)].append(ind)
+    for (company, start_s, end_s), items in indemnity_groups.items():
+        start = _parse_ymd(start_s)
+        premium = items[0].premium_won if items else 0
+        if not premium or not start:
+            continue
+        elapsed = min(_months_between(start, basis), 600)  # 최대 50년
+        paid_total += elapsed * premium
+        scheduled_total += elapsed * premium  # 실손은 종신이므로 동일하게 계산
+
     header = {
         "name": parsed.customer.name,
         "gender": parsed.customer.gender or "-",
@@ -501,14 +519,18 @@ def build_report_data(parsed: ParsedReport, rules_path: str | None = None) -> di
         "coop_count": sum(1 for c in contracts if registry.get(c["company"]).kind == "공제"),
     }
 
+    grand_total = paid_total + scheduled_total
     kpis = {
         "monthly_premium": f"{total_premium:,}",
+        "paid_total": f"{paid_total:,}",
+        "scheduled_total": f"{scheduled_total:,}",
+        "grand_total": f"{grand_total:,}",
         "paid_total_man": _fmt_man(paid_total / 10000000),
         "paid_total_currency": _fmt_currency(paid_total / 10000000),
         "scheduled_total_man": _fmt_man(scheduled_total / 10000000),
         "scheduled_total_currency": _fmt_currency(scheduled_total / 10000000),
-        "grand_total_man": _fmt_man((paid_total + scheduled_total) / 10000000),
-        "grand_total_currency": _fmt_currency((paid_total + scheduled_total) / 10000000),
+        "grand_total_man": _fmt_man(grand_total / 10000000),
+        "grand_total_currency": _fmt_currency(grand_total / 10000000),
         "ok_count": ok,
         "warn_count": warn,
         "gap_count": gap,
