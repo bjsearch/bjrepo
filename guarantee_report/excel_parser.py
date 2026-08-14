@@ -82,6 +82,7 @@ class ExcelParseResult:
             product_name = product.get("product_name", "")
             company = product.get("company", "")
             product_is_indemnity = "실손" in product_name
+            is_indemnity = product_is_indemnity
 
             # 각 보장별로 아이템 생성
             coverages = product.get("coverages", [])
