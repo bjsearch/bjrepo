@@ -624,26 +624,9 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
   </div>
 </section>
 
-<section class="section-page">
-  <h2><span class="no">02</span>계약 현황 — 보험사별</h2>
-  <div class="sec-note">{{ brands_legend|length }}개 보험사 {{ header.total_contracts }}건 유지 중 · 카드 색상은 각 보험사 브랜드 컬러 기준</div>
-  <div class="contracts">
-    {% for c in contracts %}
-    <div class="contract" style="--brand-color:{{ c.brand_color }}">
-      <div class="body">
-        <div class="logo"><span>{{ c.logo_html|safe }}</span><span class="kr">{{ c.company }}</span></div>
-        <div class="title">{{ c.title }}{% if c.renewal_label %} <span class="badge" style="{% if c.renewal_color == 'red' %}background:#FFEBEE;color:#C62828{% elif c.renewal_color == 'gold' %}background:#FFFDE7;color:#F57F17{% else %}background:#F5F5F5;color:#424242{% endif %};margin-left:6px">{{ c.renewal_label }}</span>{% endif %}{% if c.is_complete %} <span class="badge" style="background:#E8F5E9;color:#2E7D32;margin-left:6px">완납</span>{% endif %}{% if c.badge %} <span class="badge">{{ c.badge }}</span>{% endif %}</div>
-        <div class="detail">{{ c.detail }}</div>
-      </div>
-      <div class="prem num">{{ c.premium_display }}{% if c.premium_won %}<small>월납</small>{% endif %}</div>
-    </div>
-    {% endfor %}
-  </div>
-</section>
-
 {% if recommendations %}
 <section class="section-page">
-  <h2><span class="no">03</span>보완 추천 — 보장 공백 기준 제안 (미가입)</h2>
+  <h2><span class="no">02</span>보완 추천 — 보장 공백 기준 제안 (미가입)</h2>
   <div class="sec-note">현재 보험 상품으로는 보장되지 않는 공백 영역에 대한 추천</div>
   <div class="contracts">
     {% for r in recommendations %}
@@ -659,6 +642,23 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
   </div>
 </section>
 {% endif %}
+
+<section class="section-page">
+  <h2><span class="no">{% if recommendations %}03{% else %}02{% endif %}</span>계약 현황 — 보험사별</h2>
+  <div class="sec-note">{{ brands_legend|length }}개 보험사 {{ header.total_contracts }}건 유지 중 · 카드 색상은 각 보험사 브랜드 컬러 기준</div>
+  <div class="contracts">
+    {% for c in contracts %}
+    <div class="contract" style="--brand-color:{{ c.brand_color }}">
+      <div class="body">
+        <div class="logo"><span>{{ c.logo_html|safe }}</span><span class="kr">{{ c.company }}</span></div>
+        <div class="title">{{ c.title }}{% if c.renewal_label %} <span class="badge" style="{% if c.renewal_color == 'red' %}background:#FFEBEE;color:#C62828{% elif c.renewal_color == 'gold' %}background:#FFFDE7;color:#F57F17{% else %}background:#F5F5F5;color:#424242{% endif %};margin-left:6px">{{ c.renewal_label }}</span>{% endif %}{% if c.is_complete %} <span class="badge" style="background:#E8F5E9;color:#2E7D32;margin-left:6px">완납</span>{% endif %}{% if c.badge %} <span class="badge">{{ c.badge }}</span>{% endif %}</div>
+        <div class="detail">{{ c.detail }}</div>
+      </div>
+      <div class="prem num">{{ c.premium_display }}{% if c.premium_won %}<small>월납</small>{% endif %}</div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
 
 <section class="section-page">
   <h2><span class="no">{% if recommendations %}04{% else %}03{% endif %}</span>영역별 보장 진단</h2>
@@ -683,7 +683,7 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 </section>
 
 <section class="section-page">
-  <h2><span class="no">04</span>상품별 보장 매트릭스</h2>
+  <h2><span class="no">{% if recommendations %}05{% else %}04{% endif %}</span>상품별 보장 매트릭스</h2>
   <div class="sec-note">각 보장이 어느 계약에서 지급되는지 계약 단위로 분해 · 단위: 만원</div>
   <div class="matrix-wrap">
   <table class="matrix">
@@ -720,7 +720,7 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 {% if not c.is_recommendation %}
 {% if ns.first_detail %}
 <section class="section-page" style="page-break-after:always">
-  <h2><span class="no">05</span>보험 상세</h2>
+  <h2><span class="no">{% if recommendations %}06{% else %}05{% endif %}</span>보험 상세</h2>
 </section>
 {% set ns.first_detail = False %}
 {% endif %}
