@@ -638,9 +638,14 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
       <div class="prem num">{{ c.premium_display }}{% if c.premium_won %}<small>월납</small>{% endif %}</div>
     </div>
     {% endfor %}
+  </div>
+</section>
 
-    {% if recommendations %}
-    <div class="reco-divider">보완 추천 — 보장 공백 기준 제안 (미가입)</div>
+{% if recommendations %}
+<section class="section-page">
+  <h2><span class="no">03</span>보완 추천 — 보장 공백 기준 제안 (미가입)</h2>
+  <div class="sec-note">현재 보험 상품으로는 보장되지 않는 공백 영역에 대한 추천</div>
+  <div class="contracts">
     {% for r in recommendations %}
     <div class="contract reco">
       <div class="body">
@@ -651,12 +656,12 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
       <div class="prem num">{{ r.premium_note }}</div>
     </div>
     {% endfor %}
-    {% endif %}
   </div>
 </section>
+{% endif %}
 
 <section class="section-page">
-  <h2><span class="no">03</span>영역별 보장 진단</h2>
+  <h2><span class="no">{% if recommendations %}04{% else %}03{% endif %}</span>영역별 보장 진단</h2>
   <div class="sec-note">단위: 만원 · 항목 옆 보험사명은 해당 담보를 보유한 보험사</div>
 
   {% for sec in coverage_sections %}
