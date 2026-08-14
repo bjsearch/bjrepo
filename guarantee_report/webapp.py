@@ -638,9 +638,11 @@ def edit_report(draft_id: str):
         header = data.get("header", {})
         csrf_token = _get_csrf_token()
 
-        # 생성일시 포맷
+        # 생성일시 포맷 (한국 시간)
+        from datetime import timezone, timedelta
         created_at = draft.get("created_at", time.time())
-        created_datetime = datetime.fromtimestamp(created_at).strftime("%Y-%m-%d %H:%M")
+        kst = timezone(timedelta(hours=9))
+        created_datetime = datetime.fromtimestamp(created_at, tz=kst).strftime("%Y-%m-%d %H:%M")
 
         html = f"""<!DOCTYPE html>
 <html lang="ko">
@@ -962,11 +964,12 @@ function removeNewInsightPanel(idx) {{
     data["insights"] = modified_insights
     data["coverage_sections"] = modified_coverage_sections if modified_coverage_sections else coverage_sections
 
-    # 생성일시 추가
-    from datetime import datetime
+    # 생성일시 추가 (한국 시간)
+    from datetime import datetime, timezone, timedelta
     created_at = draft.get("created_at", time.time())
+    kst = timezone(timedelta(hours=9))
     data["created_at"] = created_at
-    data["created_datetime"] = datetime.fromtimestamp(created_at).strftime("%Y-%m-%d %H:%M")
+    data["created_datetime"] = datetime.fromtimestamp(created_at, tz=kst).strftime("%Y-%m-%d %H:%M")
 
     # DB에 저장
     report_id = storage.save_report(
