@@ -54,8 +54,24 @@ async function ensureUsersTable() {
   // Migration: pre-answered profile questions for AI voice chat
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_answers JSONB`
 
+  // Migration: daily vocab delivery via KakaoTalk
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS vocab_enabled BOOLEAN NOT NULL DEFAULT FALSE`
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS vocab_times JSONB NOT NULL DEFAULT '["09:00"]'::jsonb`
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS vocab_level TEXT NOT NULL DEFAULT 'intermediate'`
+
   // Designated admin account: promote to admin role
   await sql`UPDATE users SET role = 'admin' WHERE username = ${ADMIN_USERNAME} AND role != 'admin'`
+}
+
+async function ensureVocabSendsTable() {
+  await sql`
+    CREATE TABLE IF NOT EXISTS vocab_sends (
+      user_id   TEXT NOT NULL,
+      sent_date TEXT NOT NULL,
+      sent_time TEXT NOT NULL,
+      PRIMARY KEY (user_id, sent_date, sent_time)
+    )
+  `
 }
 
 async function ensureLoginLogsTable() {
@@ -360,6 +376,62 @@ export async function getProfileAnswers(userId: string): Promise<string[]> {
 export async function setProfileAnswers(userId: string, answers: string[]): Promise<void> {
   await ensureUsersTable()
   await sql`UPDATE users SET profile_answers = ${JSON.stringify(answers)}::jsonb WHERE id = ${userId}`
+}
+
+// --- Vocab delivery functions ---
+
+export async function getVocabSettings(userId: string) {
+  await ensureUsersTable()
+  const { rows } = await sql`
+    SELECT vocab_enabled, vocab_times, vocab_level, kakao_access_token
+    FROM users WHERE id = ${userId}
+  `
+  if (rows.length === 0) return null
+  return {
+    enabled: rows[0].vocab_enabled as boolean,
+    times: (rows[0].vocab_times as string[]) ?? ['09:00'],
+    level: (rows[0].vocab_level as string) ?? 'intermediate',
+    kakaoConnected: !!rows[0].kakao_access_token,
+  }
+}
+
+export async function setVocabSettings(userId: string, enabled: boolean, times: string[], level: string): Promise<void> {
+  await ensureUsersTable()
+  await sql`
+    UPDATE users SET vocab_enabled = ${enabled}, vocab_times = ${JSON.stringify(times)}::jsonb, vocab_level = ${level}
+    WHERE id = ${userId}
+  `
+}
+
+export async function getUsersDueForVocab(currentTime: string, today: string) {
+  await ensureUsersTable()
+  await ensureVocabSendsTable()
+  const timeJson = JSON.stringify([currentTime])
+  const { rows } = await sql`
+    SELECT u.id, u.username, u.vocab_level
+    FROM users u
+    WHERE u.vocab_enabled = TRUE
+      AND u.kakao_access_token IS NOT NULL
+      AND u.vocab_times @> ${timeJson}::jsonb
+      AND NOT EXISTS (
+        SELECT 1 FROM vocab_sends vs
+        WHERE vs.user_id = u.id AND vs.sent_date = ${today} AND vs.sent_time = ${currentTime}
+      )
+  `
+  return rows.map(r => ({
+    id: r.id as string,
+    username: r.username as string,
+    level: (r.vocab_level as string) ?? 'intermediate',
+  }))
+}
+
+export async function markVocabSent(userId: string, today: string, time: string): Promise<void> {
+  await ensureVocabSendsTable()
+  await sql`
+    INSERT INTO vocab_sends (user_id, sent_date, sent_time)
+    VALUES (${userId}, ${today}, ${time})
+    ON CONFLICT DO NOTHING
+  `
 }
 
 function rowToEntry(row: Record<string, unknown>): DiaryEntry {

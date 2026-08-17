@@ -113,6 +113,46 @@ export async function sendKakaoMemo(accessToken: string, text: string, linkUrl: 
   return { ok: true }
 }
 
+export async function sendKakaoVocabMemo(
+  accessToken: string,
+  title: string,
+  description: string,
+  linkUrl: string
+): Promise<KakaoMemoResult> {
+  const buttonUrl = `${linkUrl}${linkUrl.includes('?') ? '&' : '?'}from=kakao_vocab`
+
+  const templateObject = {
+    object_type: 'feed',
+    content: {
+      title,
+      description,
+      link: { web_url: buttonUrl, mobile_web_url: buttonUrl },
+    },
+    buttons: [
+      { title: '일기 쓰러 가기', link: { web_url: buttonUrl, mobile_web_url: buttonUrl } },
+    ],
+  }
+
+  const res = await fetch(KAKAO_MEMO_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({ template_object: JSON.stringify(templateObject) }).toString(),
+  })
+
+  const data = await res.json().catch(() => null)
+
+  if (!res.ok) {
+    return { ok: false, error: data?.msg || `HTTP ${res.status}` }
+  }
+  if (data && typeof data.result_code === 'number' && data.result_code !== 0) {
+    return { ok: false, error: data.msg || `result_code ${data.result_code}` }
+  }
+  return { ok: true }
+}
+
 export async function unlinkKakao(accessToken: string): Promise<void> {
   await fetch(KAKAO_UNLINK_URL, {
     method: 'POST',
