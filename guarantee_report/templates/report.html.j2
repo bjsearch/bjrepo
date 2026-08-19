@@ -789,13 +789,13 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 {% endif %}
 {% endfor %}
 
-{% if shortfall_coverage.premium_data and shortfall_coverage.premium_data.items %}
+{% if shortfall_coverage.premium_data and shortfall_coverage.premium_data.get('items') %}
 <section class="section-page" style="background:#FEF3E2;border-left:4px solid #FF9500;padding:32px 28px;page-break-after:always">
   <h2><span class="no">07</span>부족 보장 추가 (선택 항목)</h2>
   <div style="margin-bottom:24px">
     <p style="font-size:13px;color:#5B6B82;margin-bottom:12px">다음 보장을 추가할 경우 예상 보험료입니다 (현재 나이: {{ shortfall_coverage.current_age }}세, 30년 납입 기준)</p>
     <div style="background:white;border:1px solid var(--line);border-radius:10px;padding:24px">
-      {% for item in shortfall_coverage.premium_data.items %}
+      {% for item in shortfall_coverage.premium_data['items'] %}
       <div style="{% if not loop.last %}margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--line){% else %}margin-bottom:0{% endif %}display:flex;align-items:center;justify-content:space-between;gap:12px">
         <div>
           <div style="font-weight:600;font-size:14px;color:var(--ink);margin-bottom:4px">{{ item.display_name }}</div>
