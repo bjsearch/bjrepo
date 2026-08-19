@@ -247,8 +247,9 @@ def _calculate_shortfall_premium(
         if product_name in gender_premiums_data.get(gender, {}):
             age_data = gender_premiums_data[gender][product_name]
             if age_key in age_data:
-                monthly_premium = age_data[age_key]
-                debug_log_lines.append(f"  Item {item_id}: Found premium {monthly_premium} from gender data")
+                # 성별 프리미엄 데이터는 원본 데이터의 1/10 스케일이므로 10을 곱함
+                monthly_premium = age_data[age_key] * 10
+                debug_log_lines.append(f"  Item {item_id}: Found premium {monthly_premium} from gender data (scaled from {age_data[age_key]})")
 
         # 성별 데이터가 없으면 기본 premiums_by_age 사용 (하위호환성)
         if monthly_premium is None:
