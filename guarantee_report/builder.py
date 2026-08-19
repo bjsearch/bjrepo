@@ -284,7 +284,7 @@ def _build_recommendations(sections: list[EvaluatedSection], contracts: list[dic
                     gaps.append((sec.title, r))
     gaps.sort(key=lambda t: -_parse_leading_number(t[1].recommend_display))
     for sec_title, r in gaps:
-        if len(recos) >= 3:
+        if len(recos) >= 5:
             break
         if any(r.label in existing["title"] for existing in recos):
             continue
@@ -309,9 +309,9 @@ def _build_recommendations(sections: list[EvaluatedSection], contracts: list[dic
 
         recos.append(reco_item)
 
-    for i, r in enumerate(recos[:3]):
+    for i, r in enumerate(recos[:5]):
         r["rank"] = i + 1
-    return recos[:3]
+    return recos[:5]
 
 
 def _build_insights(
