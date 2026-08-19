@@ -825,7 +825,7 @@ h1{{font-size:24px;margin-bottom:8px}}
         html += f"""  </div>
 
   <div class="action-bar">
-    <button type="submit" class="btn btn-primary">완성된 리포트 저장</button>
+    <button type="submit" class="btn btn-primary" onclick="syncShortfallCheckboxes()">완성된 리포트 저장</button>
     <button type="button" class="btn btn-secondary" onclick="window.history.back()">취소</button>
   </div>
 
@@ -833,6 +833,7 @@ h1{{font-size:24px;margin-bottom:8px}}
   <input type="hidden" name="insights_count" value="{len(insights)}">
   <input type="hidden" name="new_insights_count" value="0" id="new_insights_count">
   <input type="hidden" name="coverage_sections_count" value="{len(coverage_sections)}">
+  <input type="hidden" name="selected_shortfall_ids" id="selected_shortfall_ids" value="">
 </form>
 </div>
 
@@ -919,6 +920,22 @@ function removeNewInsightPanel(idx) {{
 document.addEventListener('DOMContentLoaded', function() {{
   initShortfallItemStyles();
 }});
+
+// 폼 제출 전 선택된 부족 보장 항목 동기화
+function syncShortfallCheckboxes() {{
+  const checkboxes = document.querySelectorAll('input[type="checkbox"][name^="shortfall_item_"]');
+  const selectedIds = [];
+  checkboxes.forEach(cb => {{
+    if (cb.checked) {{
+      const match = cb.name.match(/shortfall_item_(\d+)/);
+      if (match) {{
+        selectedIds.push(match[1]);
+      }}
+    }}
+  }});
+  document.getElementById('selected_shortfall_ids').value = selectedIds.join(',');
+  return true;
+}}
 </script>
 
 </body>
@@ -1034,27 +1051,13 @@ document.addEventListener('DOMContentLoaded', function() {{
             modified_coverage_sections.append(modified_section)
 
     # 부족 보장 추가 처리
-    with open("/tmp/shortfall_debug.log", "a") as f:
-        f.write(f"\n=== SHORTFALL PROCESSING ===\n")
-        f.write(f"All form keys: {list(request.form.keys())}\n")
-        f.write(f"shortfall_coverage: {shortfall_coverage}\n")
-
     modified_shortfall_coverage = dict(shortfall_coverage)
     selected_shortfall_ids = []
-    shortfall_items = shortfall_coverage.get("items", [])
 
-    for item in shortfall_items:
-        item_id = item.get("id")
-        key = f"shortfall_item_{item_id}"
-        value = request.form.get(key)
-        with open("/tmp/shortfall_debug.log", "a") as f:
-            f.write(f"Checking {key}: {value}\n")
-        if value:
-            selected_shortfall_ids.append(item_id)
-
-    with open("/tmp/shortfall_debug.log", "a") as f:
-        f.write(f"Final selected_ids: {selected_shortfall_ids}\n")
-        f.write(f"=== END ===\n")
+    # hidden input에서 선택된 항목 ID 읽기
+    selected_ids_str = request.form.get("selected_shortfall_ids", "")
+    if selected_ids_str:
+        selected_shortfall_ids = [int(x) for x in selected_ids_str.split(",") if x]
 
     modified_shortfall_coverage["selected_ids"] = selected_shortfall_ids
 
