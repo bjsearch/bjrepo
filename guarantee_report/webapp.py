@@ -810,6 +810,23 @@ h1{{font-size:24px;margin-bottom:8px}}
       <div style="font-size:11px;color:#999;margin-top:6px">
         ※ 계산 나이: (만 나이) + (생일 이후 6개월 경과 시 +1)
       </div>
+
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid #E3E7EE">
+        <label style="display:block;font-weight:600;font-size:13px;margin-bottom:8px;color:#10233F">성별</label>
+        <div style="display:flex;gap:12px">
+          <div style="display:flex;align-items:center">
+            <input type="radio" name="shortfall_gender" id="shortfall_male" value="M" {f'checked' if header.get('gender') == 'M' else ''} style="cursor:pointer;width:16px;height:16px">
+            <label for="shortfall_male" style="cursor:pointer;margin:0;margin-left:6px;font-size:13px">남성</label>
+          </div>
+          <div style="display:flex;align-items:center">
+            <input type="radio" name="shortfall_gender" id="shortfall_female" value="F" {f'checked' if header.get('gender') == 'F' else ''} style="cursor:pointer;width:16px;height:16px">
+            <label for="shortfall_female" style="cursor:pointer;margin:0;margin-left:6px;font-size:13px">여성</label>
+          </div>
+        </div>
+        <div style="font-size:11px;color:#999;margin-top:6px">
+          ※ 성별에 따라 보험료가 달라집니다
+        </div>
+      </div>
     </div>
 """
         shortfall_items = shortfall_coverage.get("items", [])
@@ -1117,6 +1134,17 @@ function syncShortfallCheckboxes() {{
             f.write("[POST HANDLER] selected_ids_str is empty or whitespace only\n")
 
     modified_shortfall_coverage["selected_ids"] = selected_shortfall_ids
+
+    # 성별 정보 수신
+    gender = request.form.get("shortfall_gender", "").strip()
+    if not gender:
+        # 폼에서 성별을 받지 못했으면 header의 성별 사용
+        gender = header.get("gender", "")
+    if gender:
+        modified_shortfall_coverage["gender"] = gender
+
+    with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
+        f.write(f"[POST HANDLER] Gender: {gender}\n")
 
     # 계산 나이 계산 (사용자 입력 생년월일 우선)
     from .builder import _calculate_calculation_age
