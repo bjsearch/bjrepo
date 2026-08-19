@@ -811,7 +811,7 @@ h1{{font-size:24px;margin-bottom:8px}}
                 checked = "checked" if item_id in selected_ids else ""
                 html += f"""      <div class="shortfall-item" style="padding:12px;background:#FAFBFC;border-radius:8px;border:2px solid #E3E7EE;cursor:pointer;transition:all 0.2s" onclick="toggleShortfallItem(event, {item_id})">
         <div class="checkbox-group" style="margin:0;pointer-events:none">
-          <input type="checkbox" name="shortfall_item_{item_id}" value="1" {checked} id="shortfall_{item_id}">
+          <input type="checkbox" name="shortfall_item_{item_id}" value="on" {checked} id="shortfall_{item_id}">
           <label for="shortfall_{item_id}" style="cursor:pointer;font-weight:600;font-size:13px;margin:0">{item.get('display_name', '')}</label>
         </div>
       </div>
