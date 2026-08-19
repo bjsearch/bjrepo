@@ -542,8 +542,35 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
   <div class="kpi"><div class="label">납입한 보험료</div><div class="value num">{{ kpis.paid_total }}<span class="unit">원</span></div></div>
   <div class="kpi" style="background:white"><div class="label">잔여보험료</div><div class="value num" style="color:red">{{ kpis.scheduled_total }}<span class="unit">원</span></div></div>
   {% if shortfall_coverage.premium_data and shortfall_coverage.premium_data.get('items') %}
-  <div class="kpi" style="background:#FFF3E2;border-left:4px solid #FF9500"><div class="label">추가 월 납입료<br><small style="font-weight:normal;font-size:11px">{{ kpis.monthly_premium }} + {{ shortfall_coverage.premium_data['monthly_total_display'] }}</small></div><div class="value num" style="color:#FF9500">{{ shortfall_coverage.combined_monthly_display }}<span class="unit">원</span></div></div>
-  <div class="kpi" style="background:#FFF3E2"><div class="label">추가 총 보험료<br><small style="font-weight:normal;font-size:11px">{{ kpis.grand_total }} + {{ shortfall_coverage.premium_data['total_premium_display'] }}</small></div><div class="value num" style="color:#FF9500">{{ shortfall_coverage.combined_total_display }}<span class="unit">원</span></div></div>
+  <div class="kpi" style="background:#FFF3E2;border-left:4px solid #FF9500">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <div class="label">추가 월 납입료</div>
+        <div style="font-size:12px;color:#666;margin-top:4px;line-height:1.4">
+          {{ kpis.monthly_premium }}<br>
+          <span style="color:#FF9500">+ {{ shortfall_coverage.premium_data['monthly_total_display'] }}</span><br>
+          <span style="font-weight:bold;color:#FF9500">= {{ shortfall_coverage.combined_monthly_display }}</span>
+        </div>
+      </div>
+      <div style="text-align:right;font-size:11px;color:#555;line-height:1.6">
+        {% for item in shortfall_coverage.premium_data.get('items', []) %}
+        <div>{{ item.name }}</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  <div class="kpi" style="background:#FFF3E2;border-left:4px solid #FF9500">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <div class="label">추가 총 보험료</div>
+        <div style="font-size:12px;color:#666;margin-top:4px;line-height:1.4">
+          {{ kpis.grand_total }}<br>
+          <span style="color:#FF9500">+ {{ shortfall_coverage.premium_data['total_premium_display'] }}</span><br>
+          <span style="font-weight:bold;color:#FF9500">= {{ shortfall_coverage.combined_total_display }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
   {% endif %}
 </div>
 </div>
