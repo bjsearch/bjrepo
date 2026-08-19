@@ -1034,13 +1034,28 @@ document.addEventListener('DOMContentLoaded', function() {{
             modified_coverage_sections.append(modified_section)
 
     # 부족 보장 추가 처리
+    with open("/tmp/shortfall_debug.log", "a") as f:
+        f.write(f"\n=== SHORTFALL PROCESSING ===\n")
+        f.write(f"All form keys: {list(request.form.keys())}\n")
+        f.write(f"shortfall_coverage: {shortfall_coverage}\n")
+
     modified_shortfall_coverage = dict(shortfall_coverage)
     selected_shortfall_ids = []
     shortfall_items = shortfall_coverage.get("items", [])
+
     for item in shortfall_items:
         item_id = item.get("id")
-        if request.form.get(f"shortfall_item_{item_id}"):
+        key = f"shortfall_item_{item_id}"
+        value = request.form.get(key)
+        with open("/tmp/shortfall_debug.log", "a") as f:
+            f.write(f"Checking {key}: {value}\n")
+        if value:
             selected_shortfall_ids.append(item_id)
+
+    with open("/tmp/shortfall_debug.log", "a") as f:
+        f.write(f"Final selected_ids: {selected_shortfall_ids}\n")
+        f.write(f"=== END ===\n")
+
     modified_shortfall_coverage["selected_ids"] = selected_shortfall_ids
 
     # 선택된 항목의 프리미엄 계산
