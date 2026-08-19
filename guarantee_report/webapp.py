@@ -1200,7 +1200,6 @@ function syncShortfallCheckboxes() {{
     data["shortfall_coverage"] = modified_shortfall_coverage
 
     # 생성일시 추가 (한국 시간)
-    from datetime import datetime, timezone, timedelta
     created_at = draft.get("created_at", time.time())
     kst = timezone(timedelta(hours=9))
     data["created_at"] = created_at
