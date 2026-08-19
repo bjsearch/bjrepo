@@ -16,9 +16,9 @@
       "title": "암 보장",
       "rows": [
         {"label": "일반암 진단", "categories": ["암진단"], "recommend": 3000},
+        {"label": "유사암(소액암) 진단", "categories": ["소액암진단"], "recommend": 1000},
         {"label": "특정암진단", "categories_contains": ["특정암"], "recommend": 3000},
         {"label": "통합암진단", "categories_contains": ["통합암"], "recommend": 3000},
-        {"label": "유사암(소액암) 진단", "categories": ["소액암진단"], "recommend": 1000},
         {"label": "고액암 진단", "categories_contains": ["고액암"], "recommend": 5000},
         {"label": "표적항암방사선치료", "categories_contains": ["표적항암방사선"], "recommend": 3000},
         {"label": "표적항암약물치료", "categories_contains": ["표적항암약물"], "recommend": 3000},
@@ -40,14 +40,15 @@
     {
       "title": "수술 · 입원 · 간병",
       "rows": [
+        {"label": "질병수술", "categories": ["질병수술"], "recommend": 50},
         {"label": "상해수술", "categories": ["상해수술"], "recommend": 50},
-        {"label": "질병 · 상해 종수술", "kind": "each_pair", "categories": ["질병종수술", "상해종수술"], "recommend": null},
-        {"label": "질병수술 (일반)", "categories": ["질병수술"], "recommend": 50},
+        {"label": "질병 / 상해 종수술", "kind": "each_pair", "categories": ["질병종수술", "상해종수술"], "recommend": null},
         {"label": "뇌혈관질환수술", "categories": ["뇌혈관질환수술"], "recommend": 300},
+        {"label": "허혈성심장질환수술", "categories": ["허혈성심장질환수술"], "recommend": 300},
         {"label": "암수술", "categories_contains": ["암수술"], "recommend": 500},
+        {"label": "질병 / 상해 입원일당", "kind": "each_pair", "categories": ["질병입원일당", "상해입원일당"], "recommend": 10},
         {"label": "특정질병입원일당", "categories": ["특정질병입원일당"], "kind": "info", "recommend": null},
-        {"label": "질병 · 상해 입원일당", "kind": "each_pair", "categories": ["질병입원일당", "상해입원일당"], "recommend": 10},
-        {"label": "간병인지원 입원일당", "kind": "each_pair", "categories": ["간병인지원질병입원일당", "간병인지원상해입원일당"], "recommend": 10},
+        {"label": "간병인사용/지원 입원일당", "kind": "each_pair", "categories": ["간병인지원질병입원일당", "간병인지원상해입원일당"], "recommend": 10},
         {"label": "간호간병통합서비스 일당", "kind": "each_pair", "categories": ["질병간호간병통합서비스사용일당", "상해간호간병통합서비스사용일당"], "recommend": null}
       ]
     },
@@ -61,9 +62,11 @@
         {"label": "중대화상진단", "categories": ["중대화상진단"], "kind": "info", "recommend": null},
         {"label": "화상진단", "categories": ["화상진단"], "recommend": 50},
         {"label": "임플란트", "categories_contains": ["임플란트"], "recommend": 150},
+        {"label": "크라운", "categories_contains": ["크라운"], "recommend": 150},
         {"label": "교통사고처리지원금", "categories_contains": ["교통사고처리"], "recommend": 20000},
         {"label": "벌금(대물)", "categories_contains": ["벌금"], "recommend": 500},
         {"label": "벌금(대인)", "categories_contains": ["벌금"], "recommend": 3000},
+        {"label": "변호사선임비용", "categories_contains": ["변호사선임", "선임비용"], "recommend": 1000},
         {"label": "자동차부상치료비", "categories_contains": ["자동차부상", "부상치료비"], "recommend": 3000}
       ]
     }
