@@ -196,7 +196,7 @@ def _calculate_shortfall_premium(
         item = items_by_id[item_id]
 
         # 성별 프리미엄 데이터에서 상품명으로 검색
-        coverage_amount_won = item["coverage_amount"] // 100000
+        coverage_amount_won = item["coverage_amount"] // 10000
         product_name = f"{item['name']}_{coverage_amount_won}만원"
 
         debug_log_lines.append(f"  Item {item_id}: Looking for product '{product_name}' at age {age_key}")

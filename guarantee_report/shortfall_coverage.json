@@ -9,8 +9,8 @@
     {
       "id": 2,
       "name": "유사암진단비",
-      "coverage_amount": 2000000,
-      "display_name": "유사암진단비 - 200만원"
+      "coverage_amount": 1000000,
+      "display_name": "유사암진단비 - 100만원"
     },
     {
       "id": 3,
@@ -63,13 +63,13 @@
     {
       "id": 11,
       "name": "간병인상해입원일당(요양병원포함)",
-      "coverage_amount": 2000000,
+      "coverage_amount": 200000,
       "display_name": "간병인상해입원일당 - 20만원"
     },
     {
       "id": 12,
       "name": "간병인질병입원일당(요양병원포함)",
-      "coverage_amount": 2000000,
+      "coverage_amount": 200000,
       "display_name": "간병인질병입원일당 - 20만원"
     }
   ],
