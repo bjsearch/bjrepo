@@ -1199,6 +1199,33 @@ function syncShortfallCheckboxes() {{
     data["coverage_sections"] = modified_coverage_sections if modified_coverage_sections else coverage_sections
     data["shortfall_coverage"] = modified_shortfall_coverage
 
+    # KPI 업데이트: 추가 항목이 있으면 기존 비용에 합산
+    if modified_shortfall_coverage.get("premium_data"):
+        kpis = data.get("kpis", {})
+        premium_data = modified_shortfall_coverage["premium_data"]
+
+        # 월 납입료 합산
+        if "monthly_premium" in kpis and "monthly_total" in premium_data:
+            try:
+                existing_monthly = int(kpis["monthly_premium"].replace(",", ""))
+                additional_monthly = premium_data["monthly_total"]
+                total_monthly = existing_monthly + additional_monthly
+                kpis["monthly_premium"] = f"{total_monthly:,}"
+            except (ValueError, TypeError):
+                pass
+
+        # 총 보험료 합산
+        if "grand_total" in kpis and "total_premium" in premium_data:
+            try:
+                existing_total = int(kpis["grand_total"].replace(",", ""))
+                additional_total = premium_data["total_premium"]
+                combined_total = existing_total + additional_total
+                kpis["grand_total"] = f"{combined_total:,}"
+            except (ValueError, TypeError):
+                pass
+
+        data["kpis"] = kpis
+
     # 생성일시 추가 (한국 시간)
     created_at = draft.get("created_at", time.time())
     kst = timezone(timedelta(hours=9))
