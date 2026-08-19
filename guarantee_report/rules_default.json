@@ -66,7 +66,7 @@
         {"label": "교통사고처리지원금", "categories_contains": ["교통사고처리"], "recommend": 20000},
         {"label": "벌금(대물)", "categories_contains": ["벌금"], "recommend": 500},
         {"label": "벌금(대인)", "categories_contains": ["벌금"], "recommend": 3000},
-        {"label": "변호사선임비용", "categories_contains": ["변호사선임", "선임비용"], "recommend": 1000},
+        {"label": "변호사선임비용", "categories_contains": ["변호사선임", "선임비용"], "recommend": 500},
         {"label": "자동차부상치료비", "categories_contains": ["자동차부상", "부상치료비"], "recommend": 3000}
       ]
     }
