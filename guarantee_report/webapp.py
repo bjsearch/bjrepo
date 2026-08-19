@@ -31,7 +31,12 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.utils import secure_filename
 
 from . import chatbot, storage
-from .builder import build_report_data
+from .builder import (
+    build_report_data,
+    _get_available_coverage_amounts,
+    _calculate_calculation_age,
+    _calculate_shortfall_premium,
+)
 from .compare import build_comparison
 from .parser import ReportParseError, parse_pdf
 from .excel_parser import parse_excel as parse_excel_file
@@ -834,8 +839,6 @@ h1{{font-size:24px;margin-bottom:8px}}
         selected_amounts = shortfall_coverage.get("selected_amounts", {})
 
         if shortfall_items:
-            from .builder import _get_available_coverage_amounts
-
             html += f"""    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" id="shortfall-items-container">
 """
             for item in shortfall_items:
@@ -1199,7 +1202,6 @@ function syncShortfallCheckboxes() {{
         f.write(f"[POST HANDLER] Gender: {gender}\n")
 
     # 계산 나이 계산 (사용자 입력 생년월일 우선)
-    from .builder import _calculate_calculation_age
     current_age = 0
 
     # 폼에서 제출된 생년월일 확인
@@ -1253,7 +1255,6 @@ function syncShortfallCheckboxes() {{
         try:
             with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
                 f.write(f"[POST HANDLER] Calculating premium for items: {selected_shortfall_ids}\n")
-            from .builder import _calculate_shortfall_premium
 
             with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
                 f.write(f"[POST HANDLER] Using current_age for calculation: {current_age}세\n")

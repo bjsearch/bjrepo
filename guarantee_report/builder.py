@@ -104,6 +104,24 @@ def _load_shortfall_coverage() -> dict:
         return {"items": [], "premiums_by_age": {}}
 
 
+_gender_premiums_cache = None
+
+def _load_gender_premiums() -> dict:
+    """성별별 프리미엄 데이터 로드 (캐시됨)"""
+    global _gender_premiums_cache
+    if _gender_premiums_cache is not None:
+        return _gender_premiums_cache
+
+    try:
+        path = Path(__file__).parent / "shortfall_premiums_by_gender.json"
+        with open(path, "r", encoding="utf-8") as f:
+            _gender_premiums_cache = json.load(f)
+            return _gender_premiums_cache
+    except Exception:
+        _gender_premiums_cache = {"M": {}, "F": {}}
+        return _gender_premiums_cache
+
+
 def _calculate_current_age(birth_date: date) -> int:
     """생년월일로부터 현재 나이 계산 (만 나이)"""
     if not birth_date:
@@ -151,35 +169,23 @@ def _calculate_calculation_age(birth_date: date, base_date: date | None = None) 
 def _get_available_coverage_amounts(item_name: str) -> list[int]:
     """각 상품별 가능한 보장금액 리스트 반환"""
     try:
-        import json
-        gender_premiums_file = Path(__file__).parent / "shortfall_premiums_by_gender.json"
-        with open(gender_premiums_file, "r", encoding="utf-8") as f:
-            gender_premiums_data = json.load(f)
-
-        # 남성 데이터에서 상품명으로 시작하는 모든 항목 찾기
+        gender_premiums_data = _load_gender_premiums()
         male_products = gender_premiums_data.get("M", {})
-        matching_products = [
-            product_name for product_name in male_products.keys()
-            if product_name.startswith(item_name + "_")
-        ]
 
-        # 보장금액 추출 및 정렬
+        # 상품명으로 시작하는 모든 항목에서 금액 추출
         coverage_amounts = []
-        for product_name in matching_products:
-            # "상품명_100만원" 형식에서 "100만원" 부분 추출
-            parts = product_name.rsplit("_", 1)
-            if len(parts) == 2:
-                amount_str = parts[1]  # "100만원"
-                # "100만원"에서 숫자만 추출
-                amount_text = amount_str.replace("만원", "")
+        prefix = item_name + "_"
+        for product_name in male_products.keys():
+            if product_name.startswith(prefix):
+                # "상품명_100만원" 형식에서 "100"만 추출
+                amount_str = product_name[len(prefix):].replace("만원", "")
                 try:
-                    amount = int(amount_text)
-                    coverage_amounts.append(amount)
+                    coverage_amounts.append(int(amount_str))
                 except ValueError:
                     pass
 
         return sorted(set(coverage_amounts))
-    except Exception as e:
+    except Exception:
         return []
 
 
@@ -199,15 +205,9 @@ def _calculate_shortfall_premium(
     items_by_id = {item["id"]: item for item in shortfall_data.get("items", [])}
 
     # 성별 기반 프리미엄 데이터 로드
-    gender_premiums_data = {}
-    try:
-        import json
-        gender_premiums_file = Path(__file__).parent / "shortfall_premiums_by_gender.json"
-        with open(gender_premiums_file, "r", encoding="utf-8") as f:
-            gender_premiums_data = json.load(f)
-        debug_log_lines.append(f"  Loaded gender premiums from {gender_premiums_file}")
-    except Exception as e:
-        debug_log_lines.append(f"  WARNING: Failed to load gender premiums: {e}")
+    gender_premiums_data = _load_gender_premiums()
+    if gender_premiums_data:
+        debug_log_lines.append(f"  Loaded gender premiums (cached)")
 
     # 유효한 성별 확인 (기본값: M)
     if gender not in gender_premiums_data:
@@ -485,7 +485,7 @@ def _build_insights(
         }
         for item in FIXED_RECOMMENDATIONS
     ]
-    return insights
+
     maturing = sorted(
         (c for c in contracts if c["badge"] and "만기" in c["badge"]),
         key=lambda c: c["end_date_iso"],
