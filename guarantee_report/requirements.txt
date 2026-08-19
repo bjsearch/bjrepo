@@ -9,6 +9,8 @@ psycopg2-binary>=2.9.0
 PyPDF2>=3.0.1
 pdf2image>=1.16.0
 Pillow>=10.0.0
-easyocr>=1.7.0
-torch>=2.0.0
-torchvision>=0.15.0
+
+# OCR 기능 (선택사항, 필요 시 아래 주석 해제)
+# easyocr>=1.7.0
+# torch>=2.0.0
+# torchvision>=0.15.0
