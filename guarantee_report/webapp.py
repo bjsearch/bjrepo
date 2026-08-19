@@ -21,7 +21,7 @@ import tempfile
 import time
 import traceback
 from collections import Counter
-from datetime import datetime, date
+from datetime import datetime, date, timezone, timedelta
 from functools import wraps
 from pathlib import Path
 from urllib.parse import quote
@@ -641,9 +641,8 @@ def edit_report(draft_id: str):
         csrf_token = _get_csrf_token()
 
         # 생성일시 포맷 (한국 시간)
-        from datetime import timezone, timedelta as td
         created_at = draft.get("created_at", time.time())
-        kst = timezone(td(hours=9))
+        kst = timezone(timedelta(hours=9))
         created_datetime = datetime.fromtimestamp(created_at, tz=kst).strftime("%Y-%m-%d %H:%M")
 
         html = f"""<!DOCTYPE html>
