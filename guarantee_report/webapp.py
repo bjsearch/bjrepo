@@ -804,25 +804,25 @@ h1{{font-size:24px;margin-bottom:8px}}
         selected_ids = shortfall_coverage.get("selected_ids", [])
 
         if shortfall_items:
-            html += """    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            html += f"""    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" id="shortfall-items-container">
 """
             for item in shortfall_items:
                 item_id = item.get("id")
                 checked = "checked" if item_id in selected_ids else ""
-                html += f"""      <div style="padding:12px;background:#FAFBFC;border-radius:8px;border:1px solid #E3E7EE;cursor:pointer" onclick="this.querySelector('input').click()">
-        <div class="checkbox-group" style="margin:0">
+                html += f"""      <div class="shortfall-item" style="padding:12px;background:#FAFBFC;border-radius:8px;border:2px solid #E3E7EE;cursor:pointer;transition:all 0.2s" onclick="toggleShortfallItem(event, {item_id})">
+        <div class="checkbox-group" style="margin:0;pointer-events:none">
           <input type="checkbox" name="shortfall_item_{item_id}" value="1" {checked} id="shortfall_{item_id}">
-          <label for="shortfall_{item_id}" style="cursor:pointer;font-weight:600;font-size:13px">{item.get('display_name', '')}</label>
+          <label for="shortfall_{item_id}" style="cursor:pointer;font-weight:600;font-size:13px;margin:0">{item.get('display_name', '')}</label>
         </div>
       </div>
 """
-            html += """    </div>
+            html += f"""    </div>
 """
         else:
             html += """    <p style="color:#5B6B82">부족 보장 항목 데이터를 불러올 수 없습니다.</p>
 """
 
-        html += """  </div>
+        html += f"""  </div>
 
   <div class="action-bar">
     <button type="submit" class="btn btn-primary">완성된 리포트 저장</button>
@@ -837,6 +837,45 @@ h1{{font-size:24px;margin-bottom:8px}}
 </div>
 
 <script>
+function toggleShortfallItem(event, itemId) {{
+  const checkbox = document.getElementById(`shortfall_${{itemId}}`);
+  if (checkbox) {{
+    checkbox.checked = !checkbox.checked;
+    updateShortfallItemStyle(itemId);
+  }}
+}}
+
+function updateShortfallItemStyle(itemId) {{
+  const checkbox = document.getElementById(`shortfall_${{itemId}}`);
+  const items = document.querySelectorAll('.shortfall-item');
+  items.forEach(item => {{
+    const cb = item.querySelector('input[type="checkbox"]');
+    if (cb && cb.id === `shortfall_${{itemId}}`) {{
+      if (checkbox.checked) {{
+        item.style.background = '#E3F2FD';
+        item.style.borderColor = '#1D5BD8';
+        item.style.borderWidth = '2px';
+      }} else {{
+        item.style.background = '#FAFBFC';
+        item.style.borderColor = '#E3E7EE';
+        item.style.borderWidth = '2px';
+      }}
+    }}
+  }});
+}}
+
+// 초기 스타일 설정
+function initShortfallItemStyles() {{
+  const items = document.querySelectorAll('.shortfall-item');
+  items.forEach(item => {{
+    const cb = item.querySelector('input[type="checkbox"]');
+    if (cb && cb.checked) {{
+      item.style.background = '#E3F2FD';
+      item.style.borderColor = '#1D5BD8';
+    }}
+  }});
+}}
+
 let newInsightCount = 0;
 function addNewInsightPanel() {{
   const container = document.getElementById('new-insights-container');
@@ -875,6 +914,11 @@ function removeNewInsightPanel(idx) {{
     document.getElementById('new_insights_count').value = Math.max(0, parseInt(document.getElementById('new_insights_count').value) - 1);
   }}
 }}
+
+// 페이지 로드 시 스타일 초기화
+document.addEventListener('DOMContentLoaded', function() {{
+  initShortfallItemStyles();
+}});
 </script>
 
 </body>
