@@ -682,7 +682,7 @@ h1{{font-size:24px;margin-bottom:8px}}
 <h1>{header.get('name', '')}님 리포트 편집</h1>
 <p class="meta">생성일시: {created_datetime}</p>
 
-<form method="POST">
+<form method="POST" onsubmit="syncShortfallCheckboxes()">
   <input type="hidden" name="_csrf_token" value="{csrf_token}">
   <div class="section">
     <h2>1. 보완 추천 (최대 3개)</h2>
@@ -825,7 +825,7 @@ h1{{font-size:24px;margin-bottom:8px}}
         html += f"""  </div>
 
   <div class="action-bar">
-    <button type="submit" class="btn btn-primary" onclick="syncShortfallCheckboxes()">완성된 리포트 저장</button>
+    <button type="submit" class="btn btn-primary">완성된 리포트 저장</button>
     <button type="button" class="btn btn-secondary" onclick="window.history.back()">취소</button>
   </div>
 
