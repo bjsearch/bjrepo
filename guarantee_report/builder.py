@@ -11,6 +11,16 @@ from .parser import ParsedReport, DetailItem
 from .rules import EvaluatedRow, EvaluatedSection, evaluate, load_rules
 
 
+# 보장항목별 설명 텍스트 매핑
+COVERAGE_EXPLANATIONS = {
+    "암,뇌,심장 진단비": "진단비는 병마 앞에서 소득이 끊겨도 일상이 무너지지 않도록 지켜주는 삶의 긴급 생존자금입니다.",
+    "하이클래스암주요치료비": "평균 암치료비 6천만원~1억원 이상 소요됩니다. 준비하고 계신 치료비로는 부족합니다.",
+    "순환계 주요치료비": "뇌,심장 질환의 반복되는 수술과 고가의 첨단 치료를 통장 잔고 걱정 없이 계속 이어나가게 해주는 필수 치료 연속권입니다.",
+    "질병 / 상해 수술비": "병원에서 수술을 받을 때마다 차곡차곡 돌려받는 실질적인 만능 생활 방어막입니다.",
+    "간병입원일당": "가족에게 짐이 되지 않고 '간병 파산'을 막아주는 최후의 방파제 입니다.",
+}
+
+
 def _fmt_man(n: float) -> str:
     return f"{round(n):,.0f}"
 
@@ -278,14 +288,26 @@ def _build_recommendations(sections: list[EvaluatedSection], contracts: list[dic
             break
         if any(r.label in existing["title"] for existing in recos):
             continue
-        recos.append(
-            {
-                "why": f"{r.label} 미가입",
-                "title": f"{r.label} 보완 특약/보험",
-                "detail": f"{sec_title} 영역 · 권장 {r.recommend_display}만원 수준 신규 확보 검토",
-                "premium_note": "설계 필요",
-            }
-        )
+
+        # 설명 텍스트 매핑 확인
+        explanation = ""
+        for coverage_key in COVERAGE_EXPLANATIONS:
+            if coverage_key in r.label:
+                explanation = COVERAGE_EXPLANATIONS[coverage_key]
+                break
+
+        reco_item = {
+            "why": f"{r.label} 미가입",
+            "title": f"{r.label} 보완 특약/보험",
+            "detail": f"{sec_title} 영역 · 권장 {r.recommend_display}만원 수준 신규 확보 검토",
+            "premium_note": "설계 필요",
+        }
+
+        # 설명이 있으면 추가
+        if explanation:
+            reco_item["explanation"] = explanation
+
+        recos.append(reco_item)
 
     for i, r in enumerate(recos[:3]):
         r["rank"] = i + 1

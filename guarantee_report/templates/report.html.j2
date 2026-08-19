@@ -87,6 +87,7 @@ h2 .no{font-size:13px;color:var(--sub);font-family:Pretendard,sans-serif;font-we
 .contract.reco .prem{background:transparent;border-left:1px dashed #C9D1DC;color:#8A96A6;font-size:14px;padding:16px 20px}
 .contract.reco .prem small{color:#A6B0BE;font-size:11px}
 .reco-why{display:inline-block;font-size:11.5px;font-weight:700;color:#75808F;background:#E8EBF0;border-radius:6px;padding:3px 9px;margin-left:8px;vertical-align:1px}
+.reco-explanation{font-size:13.5px;color:#75808F;line-height:1.7;margin:10px 0 8px;padding:12px 14px;background:#F5F8FC;border-left:3px solid #6B8CC9;border-radius:4px;font-weight:500}
 
 table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:14px;line-height:1.6}
 thead th{background:#F0F3F8;font-size:12px;font-weight:600;color:var(--sub);text-align:left;padding:10px 14px;border-bottom:1.5px solid var(--line);white-space:normal;word-break:keep-all}
@@ -634,6 +635,9 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
       <div class="body">
         <span class="reco-tag">추천 {{ r.rank }}순위</span><span class="reco-why">{{ r.why }}</span>
         <div class="title">{{ r.title }}</div>
+        {% if r.explanation %}
+        <div class="reco-explanation">{{ r.explanation }}</div>
+        {% endif %}
         <div class="detail">{{ r.detail }}</div>
       </div>
       <div class="prem num">{{ r.premium_note }}</div>
