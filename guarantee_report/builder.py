@@ -279,9 +279,16 @@ def _build_recommendations(sections: list[EvaluatedSection], contracts: list[dic
 def _build_insights(
     sections: list[EvaluatedSection], contracts: list[dict], parsed: ParsedReport
 ) -> list[dict]:
-    insights = []
-
-    # 1. 만기 도래 계약 분석
+    """5개 고정 핵심 진단 항목을 반환합니다 (FIXED_RECOMMENDATIONS와 동일)"""
+    insights = [
+        {
+            "urgent": False,
+            "title": item["title"],
+            "text": item["explanation"],
+        }
+        for item in FIXED_RECOMMENDATIONS
+    ]
+    return insights
     maturing = sorted(
         (c for c in contracts if c["badge"] and "만기" in c["badge"]),
         key=lambda c: c["end_date_iso"],
