@@ -280,7 +280,7 @@ def _build_recommendations(sections: list[EvaluatedSection], contracts: list[dic
         for r in sec.rows:
             if r.status == "gap" and r.recommend_display != "—":
                 # LTC 관련 항목과 80% 후유장해는 제외
-                if "치매" not in r.label and "간병" not in r.label and r.label not in excluded_labels_for_reco:
+                if "치매" not in r.label and r.label not in excluded_labels_for_reco:
                     gaps.append((sec.title, r))
     gaps.sort(key=lambda t: -_parse_leading_number(t[1].recommend_display))
     for sec_title, r in gaps:
