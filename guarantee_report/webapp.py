@@ -21,6 +21,7 @@ import tempfile
 import time
 import traceback
 from collections import Counter
+from datetime import datetime
 from functools import wraps
 from pathlib import Path
 from urllib.parse import quote
@@ -967,6 +968,7 @@ function syncShortfallCheckboxes() {{
     insights = data.get("insights", [])
     coverage_sections = data.get("coverage_sections", [])
     shortfall_coverage = data.get("shortfall_coverage", {})
+    header = data.get("header", {})
 
     # 추천 항목 처리
     modified_recommendations = []
@@ -1106,15 +1108,32 @@ function syncShortfallCheckboxes() {{
 
     modified_shortfall_coverage["selected_ids"] = selected_shortfall_ids
 
+    # 나이 업데이트 (현재 나이가 없으면 계산)
+    if not modified_shortfall_coverage.get("current_age"):
+        from .builder import _calculate_current_age
+        birth_date_str = header.get("customer_birth_date")
+        if birth_date_str:
+            try:
+                birth_date = datetime.strptime(birth_date_str, "%Y-%m-%d").date()
+                current_age = _calculate_current_age(birth_date)
+                modified_shortfall_coverage["current_age"] = current_age
+                with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
+                    f.write(f"[POST HANDLER] Updated current_age in shortfall_coverage: {current_age}세\n")
+            except Exception as e:
+                with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
+                    f.write(f"[POST HANDLER] Failed to update current_age: {e}\n")
+
     # 선택된 항목의 프리미엄 계산
     if selected_shortfall_ids:
         try:
             with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
                 f.write(f"[POST HANDLER] Calculating premium for items: {selected_shortfall_ids}\n")
             from .builder import _calculate_shortfall_premium
-            current_age = shortfall_coverage.get("current_age", 0)
+
+            # 수정된 shortfall_coverage에서 current_age 가져오기
+            current_age = modified_shortfall_coverage.get("current_age", 0)
             with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-                f.write(f"[POST HANDLER] Current age: {current_age}\n")
+                f.write(f"[POST HANDLER] Using current_age: {current_age}세\n")
             premium_data = _calculate_shortfall_premium(selected_shortfall_ids, current_age, payment_years=30)
             with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
                 f.write(f"[POST HANDLER] Calculated premium_data keys: {list(premium_data.keys())}\n")
