@@ -656,6 +656,7 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
       <div class="body">
         <div class="logo"><span>{{ c.logo_html|safe }}</span><span class="kr">{{ c.company }}</span></div>
         <div class="title">{{ c.title }}{% if c.renewal_label %} <span class="badge" style="{% if c.renewal_color == 'red' %}background:#FFEBEE;color:#C62828{% elif c.renewal_color == 'gold' %}background:#FFFDE7;color:#F57F17{% else %}background:#F5F5F5;color:#424242{% endif %};margin-left:6px">{{ c.renewal_label }}</span>{% endif %}{% if c.is_complete %} <span class="badge" style="background:#E8F5E9;color:#2E7D32;margin-left:6px">완납</span>{% endif %}{% if c.badge %} <span class="badge">{{ c.badge }}</span>{% endif %}</div>
+        {% if c.period_info %}<div class="period-info" style="font-size:13px;color:#5B6B82;margin-bottom:8px;padding:10px 12px;background:#F5F8FC;border-radius:4px">납입 및 보장기간: {{ c.period_info }}</div>{% endif %}
         <div class="detail">{{ c.detail }}</div>
       </div>
       <div class="prem num">{{ c.premium_display }}{% if c.premium_won %}<small>월납</small>{% endif %}</div>
