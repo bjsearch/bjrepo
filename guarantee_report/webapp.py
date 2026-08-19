@@ -21,7 +21,7 @@ import tempfile
 import time
 import traceback
 from collections import Counter
-from datetime import datetime
+from datetime import datetime, date
 from functools import wraps
 from pathlib import Path
 from urllib.parse import quote
@@ -800,15 +800,17 @@ h1{{font-size:24px;margin-bottom:8px}}
 
   <div class="section">
     <h2>4. 부족 보장 추가</h2>
-    <p style="font-size:12px;color:#5B6B82;margin-bottom:16px">추가로 필요한 보장을 선택하고 현재 나이를 입력하세요. (30년 납입 기준)</p>
+    <p style="font-size:12px;color:#5B6B82;margin-bottom:16px">생년월일을 입력하고 필요한 보장을 선택하세요. (30년 납입 기준, 보험 계산 나이 기준)</p>
 
     <div style="margin-bottom:20px;padding:16px;background:#FAFBFC;border-radius:8px;border:1px solid #E3E7EE">
-      <label style="display:block;font-weight:600;font-size:13px;margin-bottom:8px;color:#10233F">현재 나이</label>
+      <label style="display:block;font-weight:600;font-size:13px;margin-bottom:8px;color:#10233F">생년월일</label>
       <div style="display:flex;gap:8px;align-items:center">
-        <input type="number" name="shortfall_age" id="shortfall_age" min="20" max="70" value="{shortfall_coverage.get('current_age', '35')}"
-               style="width:100px;padding:8px;border:1px solid #D0D8E0;border-radius:6px;font-size:14px;text-align:center">
-        <span style="font-size:12px;color:#5B6B82">세</span>
-        <span style="font-size:12px;color:#5B6B82;margin-left:auto">주민등록상 나이 또는 만 나이로 입력하세요</span>
+        <input type="date" name="shortfall_birth_date" id="shortfall_birth_date" value="{header.get('customer_birth_date', '')}"
+               style="padding:8px;border:1px solid #D0D8E0;border-radius:6px;font-size:14px;flex:1;max-width:200px">
+        <span style="font-size:12px;color:#5B6B82;margin-left:auto">YYYY-MM-DD 형식</span>
+      </div>
+      <div style="font-size:11px;color:#999;margin-top:6px">
+        ※ 계산 나이: (만 나이) + (생일 이후 6개월 경과 시 +1)
       </div>
     </div>
 """
@@ -1118,44 +1120,53 @@ function syncShortfallCheckboxes() {{
 
     modified_shortfall_coverage["selected_ids"] = selected_shortfall_ids
 
-    # 나이 업데이트 (사용자 입력 나이 우선, 없으면 계산)
-    user_age_str = request.form.get("shortfall_age", "").strip()
+    # 계산 나이 계산 (사용자 입력 생년월일 우선)
+    from .builder import _calculate_calculation_age
     current_age = 0
 
-    # 사용자가 입력한 나이 확인
-    if user_age_str:
-        try:
-            current_age = int(user_age_str)
-            if 20 <= current_age <= 70:
-                modified_shortfall_coverage["current_age"] = current_age
-                with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-                    f.write(f"[POST HANDLER] Using user-inputted age: {current_age}세\n")
-            else:
-                with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-                    f.write(f"[POST HANDLER] User age out of range: {current_age}, using existing age\n")
-                current_age = modified_shortfall_coverage.get("current_age", 0)
-        except ValueError:
-            with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-                f.write(f"[POST HANDLER] Failed to parse user age: {user_age_str}\n")
-            current_age = modified_shortfall_coverage.get("current_age", 0)
+    # 폼에서 제출된 생년월일 확인
+    birth_date_str = request.form.get("shortfall_birth_date", "").strip()
+    base_date = date.today()  # 기준일: 리포트 생성일
 
-    # 사용자 입력 나이가 없으면 기존 나이 사용
-    if current_age <= 0:
-        if not modified_shortfall_coverage.get("current_age"):
-            from .builder import _calculate_current_age
+    if birth_date_str:
+        try:
+            birth_date = datetime.strptime(birth_date_str, "%Y-%m-%d").date()
+            current_age = _calculate_calculation_age(birth_date, base_date)
+            modified_shortfall_coverage["current_age"] = current_age
+            with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
+                f.write(f"[POST HANDLER] Calculated age from user birth_date: {birth_date_str}\n")
+                f.write(f"[POST HANDLER] Base date: {base_date}\n")
+                f.write(f"[POST HANDLER] Calculation age: {current_age}세\n")
+        except ValueError as e:
+            with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
+                f.write(f"[POST HANDLER] Failed to parse user birth_date: {birth_date_str} - {e}\n")
+            # 기본값 사용
             birth_date_str = header.get("customer_birth_date")
             if birth_date_str:
                 try:
                     birth_date = datetime.strptime(birth_date_str, "%Y-%m-%d").date()
-                    current_age = _calculate_current_age(birth_date)
+                    current_age = _calculate_calculation_age(birth_date, base_date)
                     modified_shortfall_coverage["current_age"] = current_age
                     with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-                        f.write(f"[POST HANDLER] Calculated age from birth_date: {current_age}세\n")
+                        f.write(f"[POST HANDLER] Using default birth_date from header: {birth_date_str}\n")
+                        f.write(f"[POST HANDLER] Calculation age: {current_age}세\n")
                 except Exception as e:
                     with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
                         f.write(f"[POST HANDLER] Failed to calculate age: {e}\n")
-        else:
-            current_age = modified_shortfall_coverage.get("current_age", 0)
+    else:
+        # 폼 데이터에 생년월일이 없으면 header에서 사용
+        birth_date_str = header.get("customer_birth_date")
+        if birth_date_str:
+            try:
+                birth_date = datetime.strptime(birth_date_str, "%Y-%m-%d").date()
+                current_age = _calculate_calculation_age(birth_date, base_date)
+                modified_shortfall_coverage["current_age"] = current_age
+                with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
+                    f.write(f"[POST HANDLER] Using default birth_date from header: {birth_date_str}\n")
+                    f.write(f"[POST HANDLER] Calculation age: {current_age}세\n")
+            except Exception as e:
+                with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
+                    f.write(f"[POST HANDLER] Failed to calculate age from header: {e}\n")
 
     # 선택된 항목의 프리미엄 계산
     if selected_shortfall_ids:

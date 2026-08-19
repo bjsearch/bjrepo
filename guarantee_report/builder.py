@@ -115,6 +115,39 @@ def _calculate_current_age(birth_date: date) -> int:
     return max(0, age)
 
 
+def _calculate_calculation_age(birth_date: date, base_date: date | None = None) -> int:
+    """
+    보험 계산 나이 계산
+    1. 기준일에서 만 나이 계산
+    2. 기준일과 직전 생일 사이의 기간 계산
+    3. 기간이 6개월 이상이면 만 나이 + 1
+    4. 기간이 6개월 미만이면 만 나이 그대로
+    """
+    if not birth_date:
+        return 0
+    if base_date is None:
+        base_date = date.today()
+
+    # 1. 만 나이 계산
+    age = base_date.year - birth_date.year
+    if (base_date.month, base_date.day) < (birth_date.month, birth_date.day):
+        age -= 1
+
+    # 2. 직전 생일 계산
+    birthday_this_year = birth_date.replace(year=base_date.year)
+    if birthday_this_year > base_date:
+        birthday_this_year = birthday_this_year.replace(year=base_date.year - 1)
+
+    # 3. 기준일과 직전 생일 사이의 기간 계산 (일 수)
+    days_since_birthday = (base_date - birthday_this_year).days
+
+    # 4. 6개월 이상이면 나이 + 1 (180일 기준)
+    if days_since_birthday >= 180:
+        age += 1
+
+    return max(0, age)
+
+
 def _calculate_shortfall_premium(
     selected_item_ids: list[int], current_age: int, payment_years: int = 30
 ) -> dict:
