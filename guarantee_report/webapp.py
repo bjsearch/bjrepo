@@ -831,19 +831,55 @@ h1{{font-size:24px;margin-bottom:8px}}
 """
         shortfall_items = shortfall_coverage.get("items", [])
         selected_ids = shortfall_coverage.get("selected_ids", [])
+        selected_amounts = shortfall_coverage.get("selected_amounts", {})
 
         if shortfall_items:
+            from .builder import _get_available_coverage_amounts
+
             html += f"""    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" id="shortfall-items-container">
 """
             for item in shortfall_items:
                 item_id = item.get("id")
+                item_name = item.get("name", "")
                 checked = "checked" if item_id in selected_ids else ""
-                html += f"""      <div class="shortfall-item" style="padding:12px;background:#FAFBFC;border-radius:8px;border:2px solid #E3E7EE;cursor:pointer;transition:all 0.2s" onclick="toggleShortfallItem(event, {item_id})">
-        <div class="checkbox-group" style="margin:0">
-          <input type="checkbox" name="shortfall_item_{item_id}" value="on" {checked} id="shortfall_{item_id}" style="cursor:pointer">
-          <label for="shortfall_{item_id}" style="cursor:pointer;font-weight:600;font-size:13px;margin:0;margin-left:8px">{item.get('display_name', '')}</label>
+
+                # 가능한 보장금액 조회
+                available_amounts = _get_available_coverage_amounts(item_name)
+                current_amount = selected_amounts.get(str(item_id), item.get("coverage_amount", 0))
+                current_amount_won = current_amount // 10000
+
+                # 드롭다운 옵션 생성
+                amount_options = ""
+                if available_amounts:
+                    for amount in available_amounts:
+                        selected_attr = "selected" if amount == current_amount_won else ""
+                        amount_options += f'<option value="{amount}" {selected_attr}>{amount}만원</option>'
+                else:
+                    # 드롭다운이 없으면 현재 금액만 표시
+                    amount_options = f'<option value="{current_amount_won}">{current_amount_won}만원</option>'
+
+                html += f"""      <div class="shortfall-item" style="padding:12px;background:#FAFBFC;border-radius:8px;border:2px solid #E3E7EE;cursor:pointer;transition:all 0.2s">
+        <div class="checkbox-group" style="margin:0;margin-bottom:8px">
+          <input type="checkbox" name="shortfall_item_{item_id}" value="on" {checked} id="shortfall_{item_id}" style="cursor:pointer" onchange="updateShortfallItemStyle({item_id})">
+          <label for="shortfall_{item_id}" style="cursor:pointer;font-weight:600;font-size:13px;margin:0;margin-left:8px">{item.get('name', '')}</label>
         </div>
-      </div>
+"""
+
+                if available_amounts and len(available_amounts) > 1:
+                    html += f"""        <div style="margin-left:24px;margin-top:8px">
+          <select name="shortfall_amount_{item_id}" id="shortfall_amount_{item_id}" style="padding:4px 8px;border:1px solid #D0D8E0;border-radius:4px;font-size:12px;width:100%">
+            {amount_options}
+          </select>
+        </div>
+"""
+                else:
+                    html += f"""        <input type="hidden" name="shortfall_amount_{item_id}" value="{current_amount_won}">
+        <div style="margin-left:24px;margin-top:8px;font-size:12px;color:#5B6B82">
+          {current_amount_won}만원
+        </div>
+"""
+
+                html += f"""      </div>
 """
             html += f"""    </div>
 """
@@ -1135,6 +1171,22 @@ function syncShortfallCheckboxes() {{
 
     modified_shortfall_coverage["selected_ids"] = selected_shortfall_ids
 
+    # 선택된 항목별 보장금액 파싱
+    coverage_amounts = {}
+    for item_id in selected_shortfall_ids:
+        amount_str = request.form.get(f"shortfall_amount_{item_id}", "").strip()
+        if amount_str:
+            try:
+                coverage_amounts[item_id] = int(amount_str)
+                with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
+                    f.write(f"[POST HANDLER] Item {item_id} coverage amount: {coverage_amounts[item_id]}만원\n")
+            except ValueError:
+                with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
+                    f.write(f"[POST HANDLER] Failed to parse coverage amount for item {item_id}: {amount_str}\n")
+
+    if coverage_amounts:
+        modified_shortfall_coverage["selected_amounts"] = coverage_amounts
+
     # 성별 정보 수신
     gender = request.form.get("shortfall_gender", "").strip()
     if not gender:
@@ -1206,7 +1258,8 @@ function syncShortfallCheckboxes() {{
             with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
                 f.write(f"[POST HANDLER] Using current_age for calculation: {current_age}세\n")
                 f.write(f"[POST HANDLER] Using gender for calculation: {gender}\n")
-            premium_data = _calculate_shortfall_premium(selected_shortfall_ids, current_age, payment_years=30, gender=gender)
+                f.write(f"[POST HANDLER] Using coverage_amounts for calculation: {coverage_amounts}\n")
+            premium_data = _calculate_shortfall_premium(selected_shortfall_ids, current_age, payment_years=30, gender=gender, coverage_amounts=coverage_amounts if coverage_amounts else None)
             with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
                 f.write(f"[POST HANDLER] Calculated premium_data keys: {list(premium_data.keys())}\n")
                 f.write(f"[POST HANDLER] premium_data['items'] count: {len(premium_data.get('items', []))}\n")

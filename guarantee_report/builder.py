@@ -148,8 +148,44 @@ def _calculate_calculation_age(birth_date: date, base_date: date | None = None) 
     return max(0, age)
 
 
+def _get_available_coverage_amounts(item_name: str) -> list[int]:
+    """각 상품별 가능한 보장금액 리스트 반환"""
+    try:
+        import json
+        gender_premiums_file = Path(__file__).parent / "shortfall_premiums_by_gender.json"
+        with open(gender_premiums_file, "r", encoding="utf-8") as f:
+            gender_premiums_data = json.load(f)
+
+        # 남성 데이터에서 상품명으로 시작하는 모든 항목 찾기
+        male_products = gender_premiums_data.get("M", {})
+        matching_products = [
+            product_name for product_name in male_products.keys()
+            if product_name.startswith(item_name + "_")
+        ]
+
+        # 보장금액 추출 및 정렬
+        coverage_amounts = []
+        for product_name in matching_products:
+            # "상품명_100만원" 형식에서 "100만원" 부분 추출
+            parts = product_name.rsplit("_", 1)
+            if len(parts) == 2:
+                amount_str = parts[1]  # "100만원"
+                # "100만원"에서 숫자만 추출
+                amount_text = amount_str.replace("만원", "")
+                try:
+                    amount = int(amount_text)
+                    coverage_amounts.append(amount)
+                except ValueError:
+                    pass
+
+        return sorted(set(coverage_amounts))
+    except Exception as e:
+        return []
+
+
 def _calculate_shortfall_premium(
-    selected_item_ids: list[int], current_age: int, payment_years: int = 30, gender: str = "M"
+    selected_item_ids: list[int], current_age: int, payment_years: int = 30, gender: str = "M",
+    coverage_amounts: dict[int, int] | None = None
 ) -> dict:
     """부족 보장 추가 항목별 월 납입료 계산 (성별 기반)"""
     debug_log_lines = []
@@ -180,6 +216,8 @@ def _calculate_shortfall_premium(
 
     debug_log_lines.append(f"  Loaded {len(items_by_id)} items from shortfall_coverage.json")
     debug_log_lines.append(f"  Using gender: {gender}")
+    if coverage_amounts:
+        debug_log_lines.append(f"  Coverage amounts override: {coverage_amounts}")
 
     result = {
         "items": [],
@@ -196,7 +234,11 @@ def _calculate_shortfall_premium(
         item = items_by_id[item_id]
 
         # 성별 프리미엄 데이터에서 상품명으로 검색
-        coverage_amount_won = item["coverage_amount"] // 10000
+        # coverage_amounts에서 지정한 금액이 있으면 사용, 없으면 기본값 사용
+        if coverage_amounts and item_id in coverage_amounts:
+            coverage_amount_won = coverage_amounts[item_id]
+        else:
+            coverage_amount_won = item["coverage_amount"] // 10000
         product_name = f"{item['name']}_{coverage_amount_won}만원"
 
         debug_log_lines.append(f"  Item {item_id}: Looking for product '{product_name}' at age {age_key}")
