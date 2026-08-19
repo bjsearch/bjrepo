@@ -11,7 +11,7 @@ from .parser import ParsedReport, DetailItem
 from .rules import EvaluatedRow, EvaluatedSection, evaluate, load_rules
 
 
-# 보장항목별 설명 텍스트 매핑
+# 보장항목별 설명 텍스트 매핑 (v2.1 - 설명 텍스트 포함)
 COVERAGE_EXPLANATIONS = {
     "암,뇌,심장 진단비": "진단비는 병마 앞에서 소득이 끊겨도 일상이 무너지지 않도록 지켜주는 삶의 긴급 생존자금입니다.",
     "하이클래스암주요치료비": "평균 암치료비 6천만원~1억원 이상 소요됩니다. 준비하고 계신 치료비로는 부족합니다.",
