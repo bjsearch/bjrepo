@@ -149,21 +149,37 @@ def _calculate_calculation_age(birth_date: date, base_date: date | None = None) 
 
 
 def _calculate_shortfall_premium(
-    selected_item_ids: list[int], current_age: int, payment_years: int = 30
+    selected_item_ids: list[int], current_age: int, payment_years: int = 30, gender: str = "M"
 ) -> dict:
-    """부족 보장 추가 항목별 월 납입료 계산"""
+    """부족 보장 추가 항목별 월 납입료 계산 (성별 기반)"""
     debug_log_lines = []
     debug_log_lines.append(f"\n[_calculate_shortfall_premium] Called with:")
     debug_log_lines.append(f"  selected_item_ids: {selected_item_ids}")
     debug_log_lines.append(f"  current_age: {current_age}")
     debug_log_lines.append(f"  payment_years: {payment_years}")
+    debug_log_lines.append(f"  gender: {gender}")
 
     shortfall_data = _load_shortfall_coverage()
     items_by_id = {item["id"]: item for item in shortfall_data.get("items", [])}
-    premiums_by_age = shortfall_data.get("premiums_by_age", {})
+
+    # 성별 기반 프리미엄 데이터 로드
+    gender_premiums_data = {}
+    try:
+        import json
+        gender_premiums_file = Path(__file__).parent / "shortfall_premiums_by_gender.json"
+        with open(gender_premiums_file, "r", encoding="utf-8") as f:
+            gender_premiums_data = json.load(f)
+        debug_log_lines.append(f"  Loaded gender premiums from {gender_premiums_file}")
+    except Exception as e:
+        debug_log_lines.append(f"  WARNING: Failed to load gender premiums: {e}")
+
+    # 유효한 성별 확인 (기본값: M)
+    if gender not in gender_premiums_data:
+        debug_log_lines.append(f"  WARNING: Gender {gender} not found in premiums, using M")
+        gender = "M"
 
     debug_log_lines.append(f"  Loaded {len(items_by_id)} items from shortfall_coverage.json")
-    debug_log_lines.append(f"  Available ages in premiums_by_age: {list(premiums_by_age.keys())}")
+    debug_log_lines.append(f"  Using gender: {gender}")
 
     result = {
         "items": [],
@@ -172,23 +188,37 @@ def _calculate_shortfall_premium(
     }
 
     age_key = str(current_age)
-    if age_key not in premiums_by_age:
-        debug_log_lines.append(f"  ERROR: Age {current_age} not found in premiums_by_age")
-        with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-            f.write("\n".join(debug_log_lines) + "\n")
-        return result
-
-    age_premiums = premiums_by_age[age_key]
-    debug_log_lines.append(f"  Age {current_age} premiums: {age_premiums}")
 
     for item_id in selected_item_ids:
         if item_id not in items_by_id:
             debug_log_lines.append(f"  WARNING: Item ID {item_id} not found in items_by_id")
             continue
         item = items_by_id[item_id]
-        item_idx = item_id - 1
-        if item_idx < len(age_premiums):
-            monthly_premium = age_premiums[item_idx]
+
+        # 성별 프리미엄 데이터에서 상품명으로 검색
+        coverage_amount_won = item["coverage_amount"] // 100000
+        product_name = f"{item['name']}_{coverage_amount_won}만원"
+
+        debug_log_lines.append(f"  Item {item_id}: Looking for product '{product_name}' at age {age_key}")
+
+        monthly_premium = None
+        if product_name in gender_premiums_data.get(gender, {}):
+            age_data = gender_premiums_data[gender][product_name]
+            if age_key in age_data:
+                monthly_premium = age_data[age_key]
+                debug_log_lines.append(f"  Item {item_id}: Found premium {monthly_premium} from gender data")
+
+        # 성별 데이터가 없으면 기본 premiums_by_age 사용 (하위호환성)
+        if monthly_premium is None:
+            premiums_by_age = shortfall_data.get("premiums_by_age", {})
+            if age_key in premiums_by_age:
+                age_premiums = premiums_by_age[age_key]
+                item_idx = item_id - 1
+                if item_idx < len(age_premiums):
+                    monthly_premium = age_premiums[item_idx]
+                    debug_log_lines.append(f"  Item {item_id}: Using fallback from premiums_by_age: {monthly_premium}")
+
+        if monthly_premium is not None:
             total_premium = monthly_premium * payment_years * 12
             debug_log_lines.append(f"  Item {item_id}: monthly={monthly_premium}, total={total_premium}")
             result["items"].append({
@@ -203,7 +233,7 @@ def _calculate_shortfall_premium(
             result["monthly_total"] += monthly_premium
             result["total_premium"] += total_premium
         else:
-            debug_log_lines.append(f"  ERROR: Item ID {item_id} index {item_idx} out of range (premiums length: {len(age_premiums)})")
+            debug_log_lines.append(f"  ERROR: Could not find premium for item {item_id} at age {age_key}")
 
     result["monthly_total_display"] = f"{result['monthly_total']:,}"
     result["total_premium_display"] = f"{result['total_premium']:,}"

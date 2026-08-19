@@ -1205,7 +1205,8 @@ function syncShortfallCheckboxes() {{
 
             with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
                 f.write(f"[POST HANDLER] Using current_age for calculation: {current_age}세\n")
-            premium_data = _calculate_shortfall_premium(selected_shortfall_ids, current_age, payment_years=30)
+                f.write(f"[POST HANDLER] Using gender for calculation: {gender}\n")
+            premium_data = _calculate_shortfall_premium(selected_shortfall_ids, current_age, payment_years=30, gender=gender)
             with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
                 f.write(f"[POST HANDLER] Calculated premium_data keys: {list(premium_data.keys())}\n")
                 f.write(f"[POST HANDLER] premium_data['items'] count: {len(premium_data.get('items', []))}\n")
