@@ -642,9 +642,9 @@ def edit_report(draft_id: str):
         csrf_token = _get_csrf_token()
 
         # 생성일시 포맷 (한국 시간)
-        from datetime import timezone, timedelta
+        from datetime import timezone, timedelta as td
         created_at = draft.get("created_at", time.time())
-        kst = timezone(timedelta(hours=9))
+        kst = timezone(td(hours=9))
         created_datetime = datetime.fromtimestamp(created_at, tz=kst).strftime("%Y-%m-%d %H:%M")
 
         html = f"""<!DOCTYPE html>
