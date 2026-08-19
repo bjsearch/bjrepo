@@ -1056,13 +1056,27 @@ function syncShortfallCheckboxes() {{
 
     # hidden input에서 선택된 항목 ID 읽기
     selected_ids_str = request.form.get("selected_shortfall_ids", "")
+    # 디버그 로그
+    with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
+        f.write(f"\n[POST] selected_ids_str from form: '{selected_ids_str}'\n")
+        f.write(f"[POST] shortfall_coverage keys: {list(shortfall_coverage.keys())}\n")
+        f.write(f"[POST] shortfall_coverage current_age: {shortfall_coverage.get('current_age')}\n")
+
     if selected_ids_str:
-        selected_shortfall_ids = [int(x) for x in selected_ids_str.split(",") if x]
+        try:
+            selected_shortfall_ids = [int(x) for x in selected_ids_str.split(",") if x]
+            with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
+                f.write(f"[POST] Parsed selected_ids: {selected_shortfall_ids}\n")
+        except Exception as e:
+            with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
+                f.write(f"[POST] Error parsing selected_ids: {e}\n")
 
     modified_shortfall_coverage["selected_ids"] = selected_shortfall_ids
 
     # 선택된 항목의 프리미엄 계산
     if selected_shortfall_ids:
+        with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
+            f.write(f"[POST] Calculating premium for {selected_shortfall_ids}...\n")
         from .builder import _calculate_shortfall_premium
         current_age = shortfall_coverage.get("current_age", 0)
         premium_data = _calculate_shortfall_premium(selected_shortfall_ids, current_age, payment_years=30)
