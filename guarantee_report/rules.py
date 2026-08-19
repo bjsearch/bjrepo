@@ -37,7 +37,30 @@ def load_rules(path: str | None = None) -> dict:
 
         path = str(res.files(__package__) / "rules_default.json")
     with open(path, encoding="utf-8") as f:
-        return json.load(f)
+        rules = json.load(f)
+
+    # 모든 recommend 값이 숫자 또는 null인지 검증
+    _validate_recommend_values(rules)
+    return rules
+
+
+def _validate_recommend_values(rules: dict) -> None:
+    """모든 recommend 값이 숫자(정수/실수) 또는 null인지 검증합니다."""
+    for sec_idx, section in enumerate(rules.get("sections", [])):
+        section_title = section.get("title", f"Section {sec_idx}")
+        for row_idx, row in enumerate(section.get("rows", [])):
+            row_label = row.get("label", f"Row {row_idx}")
+            recommend = row.get("recommend")
+
+            # recommend이 있으면 반드시 숫자여야 함
+            if recommend is not None and not isinstance(recommend, (int, float)):
+                raise ValueError(
+                    f"[{section_title}] '{row_label}': "
+                    f"recommend 값이 숫자가 아닙니다. "
+                    f"현재값: {recommend!r} (타입: {type(recommend).__name__})\n"
+                    f"✓ 올바른 형식: 정수 또는 실수 (예: 1000, 3000.5)\n"
+                    f"✓ null 허용 (예: \"recommend\": null 또는 생략)"
+                )
 
 
 def _load_guideline_notes() -> dict[str, str]:
