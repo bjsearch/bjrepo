@@ -760,9 +760,15 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
         </div>
       </div>
     </div>
-    <div class="kpi" style="border:1px solid var(--line);border-radius:10px;padding:18px 20px">
-      <div class="label">상품 설명</div>
-      <div class="detail" style="font-size:13px;margin-top:4px;white-space:pre-wrap">{{ c.detail }}</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="kpi" style="border:1px solid var(--line);border-radius:10px;padding:18px 20px">
+        <div class="label">납입 및 보장기간</div>
+        <div class="detail" style="font-size:13px;margin-top:4px;white-space:pre-wrap">{{ c.period_info or '-' }}</div>
+      </div>
+      <div class="kpi" style="border:1px solid var(--line);border-radius:10px;padding:18px 20px">
+        <div class="label">주요담보</div>
+        <div class="detail" style="font-size:13px;margin-top:4px;white-space:pre-wrap">{{ c.detail }}</div>
+      </div>
     </div>
   </div>
 
