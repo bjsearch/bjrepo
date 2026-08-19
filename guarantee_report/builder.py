@@ -141,7 +141,7 @@ def _calculate_shortfall_premium(
         item = items_by_id[item_id]
         item_idx = item_id - 1
         if item_idx < len(age_premiums):
-            monthly_premium = age_premiums[item_idx] * 100  # 데이터는 십만원 단위, 원 단위로 변환
+            monthly_premium = age_premiums[item_idx]
             total_premium = monthly_premium * payment_years * 12
             result["items"].append({
                 "id": item_id,
