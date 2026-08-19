@@ -1,10 +1,12 @@
 """파싱된 PDF 데이터 + 평가된 체크리스트 → 템플릿에 주입할 리포트 JSON 스키마로 조립."""
 from __future__ import annotations
 
+import json
 import re
 from collections import defaultdict
 from dataclasses import asdict
 from datetime import date
+from pathlib import Path
 
 from .brands import BrandRegistry
 from .parser import ParsedReport, DetailItem
@@ -90,6 +92,73 @@ def _parse_ymd(s: str) -> date | None:
 
 def _months_between(a: date, b: date) -> int:
     return max(0, (b.year - a.year) * 12 + (b.month - a.month) - (1 if b.day < a.day else 0))
+
+
+def _load_shortfall_coverage() -> dict:
+    """부족 보장 추가 데이터 로드"""
+    try:
+        path = Path(__file__).parent / "shortfall_coverage.json"
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {"items": [], "premiums_by_age": {}}
+
+
+def _calculate_current_age(birth_date: date) -> int:
+    """생년월일로부터 현재 나이 계산 (만 나이)"""
+    if not birth_date:
+        return 0
+    today = date.today()
+    age = today.year - birth_date.year
+    if (today.month, today.day) < (birth_date.month, birth_date.day):
+        age -= 1
+    return max(0, age)
+
+
+def _calculate_shortfall_premium(
+    selected_item_ids: list[int], current_age: int, payment_years: int = 30
+) -> dict:
+    """부족 보장 추가 항목별 월 납입료 계산"""
+    shortfall_data = _load_shortfall_coverage()
+    items_by_id = {item["id"]: item for item in shortfall_data.get("items", [])}
+    premiums_by_age = shortfall_data.get("premiums_by_age", {})
+
+    result = {
+        "items": [],
+        "monthly_total": 0,
+        "total_premium": 0,
+    }
+
+    age_key = str(current_age)
+    if age_key not in premiums_by_age:
+        return result
+
+    age_premiums = premiums_by_age[age_key]
+
+    for item_id in selected_item_ids:
+        if item_id not in items_by_id:
+            continue
+        item = items_by_id[item_id]
+        item_idx = item_id - 1
+        if item_idx < len(age_premiums):
+            monthly_premium = age_premiums[item_idx] * 100  # 데이터는 십만원 단위, 원 단위로 변환
+            total_premium = monthly_premium * payment_years * 12
+            result["items"].append({
+                "id": item_id,
+                "name": item["name"],
+                "display_name": item["display_name"],
+                "monthly_premium": monthly_premium,
+                "total_premium": total_premium,
+                "monthly_premium_display": f"{monthly_premium:,}",
+                "total_premium_display": f"{total_premium:,}",
+            })
+            result["monthly_total"] += monthly_premium
+            result["total_premium"] += total_premium
+
+    result["monthly_total_display"] = f"{result['monthly_total']:,}"
+    result["total_premium_display"] = f"{result['total_premium']:,}"
+
+    return result
 
 
 def _build_contracts(parsed: ParsedReport, brand_registry: BrandRegistry) -> list[dict]:
@@ -543,6 +612,19 @@ def build_report_data(parsed: ParsedReport, rules_path: str | None = None) -> di
             return True
         return False
 
+    # 부족 보장 추가 데이터 준비
+    shortfall_data = _load_shortfall_coverage()
+    current_age = _calculate_current_age(parsed.customer.birth_date)
+    shortfall_items = []
+    for item in shortfall_data.get("items", []):
+        shortfall_items.append({
+            "id": item["id"],
+            "name": item["name"],
+            "display_name": item["display_name"],
+            "coverage_amount": item["coverage_amount"],
+            "coverage_amount_display": f"{item['coverage_amount']:,}",
+        })
+
     return {
         "header": header,
         "brands_legend": brands_legend,
@@ -560,7 +642,13 @@ def build_report_data(parsed: ParsedReport, rules_path: str | None = None) -> di
             for sec in sections
         ],
         "matrix": matrix,
-    "insights": insights,
+        "insights": insights,
+        "shortfall_coverage": {
+            "items": shortfall_items,
+            "current_age": current_age,
+            "selected_ids": [],
+            "premium_data": None,
+        },
     }
 
 

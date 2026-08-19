@@ -789,6 +789,33 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 {% endif %}
 {% endfor %}
 
+{% if shortfall_coverage.premium_data and shortfall_coverage.premium_data.items %}
+<section class="section-page" style="background:#FEF3E2;border-left:4px solid #FF9500;padding:32px 28px;page-break-after:always">
+  <h2><span class="no">07</span>부족 보장 추가 (선택 항목)</h2>
+  <div style="margin-bottom:24px">
+    <p style="font-size:13px;color:#5B6B82;margin-bottom:12px">다음 보장을 추가할 경우 예상 보험료입니다 (현재 나이: {{ shortfall_coverage.current_age }}세, 30년 납입 기준)</p>
+    <div style="background:white;border:1px solid var(--line);border-radius:10px;padding:24px">
+      {% for item in shortfall_coverage.premium_data.items %}
+      <div style="{% if not loop.last %}margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--line){% else %}margin-bottom:0{% endif %}display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div>
+          <div style="font-weight:600;font-size:14px;color:var(--ink);margin-bottom:4px">{{ item.display_name }}</div>
+          <div style="font-size:12px;color:var(--sub)">월 {{ item.monthly_premium_display }}원 · 총 {{ item.total_premium_display }}원</div>
+        </div>
+      </div>
+      {% endfor %}
+      <div style="margin-top:20px;padding-top:20px;border-top:2px solid var(--line);display:flex;align-items:center;justify-content:space-between">
+        <div style="font-weight:600;font-size:15px;color:#FF9500">예상 월 추가 보험료</div>
+        <div style="font-size:20px;font-weight:700;color:#FF9500">{{ shortfall_coverage.premium_data.monthly_total_display }}<span style="font-size:14px;font-weight:500;margin-left:4px">원</span></div>
+      </div>
+      <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between">
+        <div style="font-weight:600;font-size:14px;color:var(--ink)">30년 총 예상 보험료</div>
+        <div style="font-size:16px;font-weight:600;color:var(--ink)">{{ shortfall_coverage.premium_data.total_premium_display }}<span style="font-size:12px;font-weight:400;margin-left:4px">원</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endif %}
+
 <footer>
   본 리포트는 {{ header.basis_date_display }} 발행 Team DIN 보장분석기 자료(신용정보원 제공 정보 기반)를 근거로 자동 생성된 참고용 요약이며, 보험금 지급 근거 자료가 될 수 없습니다.
   정확한 보장 내용은 해당 약관 및 보험증권을 기준으로 하며, 권장금액은 분석 도구의 일반 가정에 따른 수치입니다. 상품 권유 · 승환 유도 목적으로 사용할 수 없습니다.

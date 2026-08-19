@@ -636,6 +636,7 @@ def edit_report(draft_id: str):
         insights = data.get("insights", [])
         coverage_sections = data.get("coverage_sections", [])
         header = data.get("header", {})
+        shortfall_coverage = data.get("shortfall_coverage", {})
         csrf_token = _get_csrf_token()
 
         # 생성일시 포맷 (한국 시간)
@@ -795,6 +796,34 @@ h1{{font-size:24px;margin-bottom:8px}}
 
         html += f"""  </div>
 
+  <div class="section">
+    <h2>4. 부족 보장 추가</h2>
+    <p style="font-size:12px;color:#5B6B82;margin-bottom:16px">추가로 필요한 보장을 선택하세요. 현재 나이: {shortfall_coverage.get('current_age', '-')}세 (30년 납입 기준)</p>
+"""
+        shortfall_items = shortfall_coverage.get("items", [])
+        selected_ids = shortfall_coverage.get("selected_ids", [])
+
+        if shortfall_items:
+            html += """    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+"""
+            for item in shortfall_items:
+                item_id = item.get("id")
+                checked = "checked" if item_id in selected_ids else ""
+                html += f"""      <div style="padding:12px;background:#FAFBFC;border-radius:8px;border:1px solid #E3E7EE;cursor:pointer" onclick="this.querySelector('input').click()">
+        <div class="checkbox-group" style="margin:0">
+          <input type="checkbox" name="shortfall_item_{item_id}" value="1" {checked} id="shortfall_{item_id}">
+          <label for="shortfall_{item_id}" style="cursor:pointer;font-weight:600;font-size:13px">{item.get('display_name', '')}</label>
+        </div>
+      </div>
+"""
+            html += """    </div>
+"""
+        else:
+            html += """    <p style="color:#5B6B82">부족 보장 항목 데이터를 불러올 수 없습니다.</p>
+"""
+
+        html += """  </div>
+
   <div class="action-bar">
     <button type="submit" class="btn btn-primary">완성된 리포트 저장</button>
     <button type="button" class="btn btn-secondary" onclick="window.history.back()">취소</button>
@@ -860,6 +889,7 @@ function removeNewInsightPanel(idx) {{
     recommendations = data.get("recommendations", [])
     insights = data.get("insights", [])
     coverage_sections = data.get("coverage_sections", [])
+    shortfall_coverage = data.get("shortfall_coverage", {})
 
     # 추천 항목 처리
     modified_recommendations = []
@@ -959,10 +989,30 @@ function removeNewInsightPanel(idx) {{
                 modified_section["rows"].append(modified_row)
             modified_coverage_sections.append(modified_section)
 
+    # 부족 보장 추가 처리
+    modified_shortfall_coverage = dict(shortfall_coverage)
+    selected_shortfall_ids = []
+    shortfall_items = shortfall_coverage.get("items", [])
+    for item in shortfall_items:
+        item_id = item.get("id")
+        if request.form.get(f"shortfall_item_{item_id}"):
+            selected_shortfall_ids.append(item_id)
+    modified_shortfall_coverage["selected_ids"] = selected_shortfall_ids
+
+    # 선택된 항목의 프리미엄 계산
+    if selected_shortfall_ids:
+        from .builder import _calculate_shortfall_premium
+        current_age = shortfall_coverage.get("current_age", 0)
+        premium_data = _calculate_shortfall_premium(selected_shortfall_ids, current_age, payment_years=30)
+        modified_shortfall_coverage["premium_data"] = premium_data
+    else:
+        modified_shortfall_coverage["premium_data"] = None
+
     # 데이터 업데이트
     data["recommendations"] = modified_recommendations
     data["insights"] = modified_insights
     data["coverage_sections"] = modified_coverage_sections if modified_coverage_sections else coverage_sections
+    data["shortfall_coverage"] = modified_shortfall_coverage
 
     # 생성일시 추가 (한국 시간)
     from datetime import datetime, timezone, timedelta
