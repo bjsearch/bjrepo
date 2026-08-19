@@ -11,26 +11,32 @@ from .parser import ParsedReport, DetailItem
 from .rules import EvaluatedRow, EvaluatedSection, evaluate, load_rules
 
 
-# 5개 핵심 진단 항목 - 명시적 정의 (고정 순서)
+# 5개 핵심 진단 항목 - 고정된 제목과 설명 (수정 가능)
+# 이 5개 항목은 항상 추천에 포함되며, 각 항목의 제목과 설명을 직접 수정할 수 있습니다.
 FIXED_RECOMMENDATIONS = [
     {
-        "label": "일반암 진단",
+        "rank": 1,
+        "title": "암,뇌,심장 진단비",
         "explanation": "진단비는 병마 앞에서 소득이 끊겨도 일상이 무너지지 않도록 지켜주는 삶의 긴급 생존자금입니다.",
     },
     {
-        "label": "하이클래스 암주요치료비",
+        "rank": 2,
+        "title": "하이클래스암주요치료비",
         "explanation": "평균 암치료비 6천만원~1억원 이상 소요됩니다. 준비하고 계신 치료비로는 부족합니다.",
     },
     {
-        "label": "뇌졸중 진단",
+        "rank": 3,
+        "title": "순환계 주요치료비",
         "explanation": "뇌,심장 질환의 반복되는 수술과 고가의 첨단 치료를 통장 잔고 걱정 없이 계속 이어나가게 해주는 필수 치료 연속권입니다.",
     },
     {
-        "label": "질병 / 상해 종수술",
+        "rank": 4,
+        "title": "질병 / 상해 수술비",
         "explanation": "병원에서 수술을 받을 때마다 차곡차곡 돌려받는 실질적인 만능 생활 방어막입니다.",
     },
     {
-        "label": "간병인사용/지원 입원일당",
+        "rank": 5,
+        "title": "간병인 입원일당",
         "explanation": "가족에게 짐이 되지 않고 '간병 파산'을 막아주는 최후의 방파제 입니다.",
     },
 ]
@@ -255,101 +261,19 @@ def _build_contracts(parsed: ParsedReport, brand_registry: BrandRegistry) -> lis
 
 
 def _build_recommendations(sections: list[EvaluatedSection], contracts: list[dict]) -> list[dict]:
-    recos = []
-
-    maturing = sorted(
-        (
-            c
-            for c in contracts
-            if c["badge"] and "만기" in c["badge"] and any(k in c["title"] for k in ("암",))
-        ),
-        key=lambda c: c["end_date_iso"],
-    )
-    if maturing:
-        c = maturing[0]
-        recos.append(
-            {
-                "why": f"{c['badge']} 대비",
-                "title": "유병자(간편심사) 암보험",
-                "detail": (
-                    f"{c['title']} 만기({c['badge']}) 전 대체 라인 확보 목적 · "
-                    f"만기 후 해당 보험료({c['premium_display']})를 재원으로 전환 가능"
-                ),
-                "premium_note": "설계 필요 · 간편심사 기준",
-            }
-        )
-
-    # LTC(치매/간병) 제외 - 사용자 요청에 따라 제거
-    # dementia_gap = False
-    # for sec in sections:
-    #     if "치매" in sec.title or any("치매" in r.label for r in sec.rows):
-    #         for r in sec.rows:
-    #             if "치매" in r.label and r.status == "gap":
-    #                 dementia_gap = True
-    # if dementia_gap:
-    #     recos.append(...)
-
-    # 5개 고정 항목 우선 검색
-    for fixed_item in FIXED_RECOMMENDATIONS:
-        target_label = fixed_item["label"]
-        found_gap = None
-        found_sec_title = None
-
-        # 모든 섹션에서 해당 label 찾기
-        for sec in sections:
-            for r in sec.rows:
-                if r.label == target_label and r.status == "gap" and r.recommend_display != "—":
-                    found_gap = r
-                    found_sec_title = sec.title
-                    break
-            if found_gap:
-                break
-
-        # 해당 항목이 gap에 있으면 추천 생성
-        if found_gap:
-            reco_item = {
-                "why": f"{found_gap.label} 미가입",
-                "title": f"{found_gap.label} 보완 특약/보험",
-                "detail": f"{found_sec_title} 영역 · 권장 {found_gap.recommend_display}만원 수준 신규 확보 검토",
-                "premium_note": "설계 필요",
-                "explanation": fixed_item["explanation"],
-            }
-            recos.append(reco_item)
-
-    # 만기 도래 계약이 있으면 먼저 추가된 항목들 유지, 부족하면 다른 gap 추가
-    if len(recos) < 5:
-        gaps = []
-        excluded_labels_for_reco = {
-            "상해 80% 이상 후유장해",
-            "질병 80% 이상 후유장해",
-            "치매(LTC) · 경증치매 진단",
+    """5개 고정된 핵심 진단 항목을 반환합니다. (수정 가능)"""
+    # FIXED_RECOMMENDATIONS에서 정의된 5개 항목을 그대로 사용
+    return [
+        {
+            "rank": item["rank"],
+            "title": item["title"],
+            "explanation": item["explanation"],
+            "detail": item["title"],  # 제목을 detail로도 사용
+            "why": f"{item['title']} 보완",
+            "premium_note": "설계 필요",
         }
-        # 이미 추가된 항목들 제외
-        added_labels = {r["title"].replace(" 보완 특약/보험", "") for r in recos}
-
-        for sec in sections:
-            for r in sec.rows:
-                if (r.status == "gap" and r.recommend_display != "—" and
-                    r.label not in added_labels and
-                    "치매" not in r.label and
-                    r.label not in excluded_labels_for_reco):
-                    gaps.append((sec.title, r))
-
-        gaps.sort(key=lambda t: -_parse_leading_number(t[1].recommend_display))
-        for sec_title, r in gaps:
-            if len(recos) >= 5:
-                break
-            reco_item = {
-                "why": f"{r.label} 미가입",
-                "title": f"{r.label} 보완 특약/보험",
-                "detail": f"{sec_title} 영역 · 권장 {r.recommend_display}만원 수준 신규 확보 검토",
-                "premium_note": "설계 필요",
-            }
-            recos.append(reco_item)
-
-    for i, r in enumerate(recos[:5]):
-        r["rank"] = i + 1
-    return recos[:5]
+        for item in FIXED_RECOMMENDATIONS
+    ]
 
 
 def _build_insights(
