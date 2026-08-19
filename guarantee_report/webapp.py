@@ -1201,30 +1201,36 @@ function syncShortfallCheckboxes() {{
 
     # KPI 업데이트: 추가 항목이 있으면 기존 비용에 합산
     if modified_shortfall_coverage.get("premium_data"):
-        kpis = data.get("kpis", {})
-        premium_data = modified_shortfall_coverage["premium_data"]
+        try:
+            kpis = data.get("kpis", {})
+            premium_data = modified_shortfall_coverage["premium_data"]
 
-        # 월 납입료 합산
-        if "monthly_premium" in kpis and "monthly_total" in premium_data:
-            try:
-                existing_monthly = int(kpis["monthly_premium"].replace(",", ""))
+            # 월 납입료 합산
+            if "monthly_premium" in kpis and "monthly_total" in premium_data:
+                existing_val = kpis["monthly_premium"]
+                if isinstance(existing_val, str):
+                    existing_monthly = int(existing_val.replace(",", ""))
+                else:
+                    existing_monthly = int(existing_val)
                 additional_monthly = premium_data["monthly_total"]
                 total_monthly = existing_monthly + additional_monthly
                 kpis["monthly_premium"] = f"{total_monthly:,}"
-            except (ValueError, TypeError):
-                pass
 
-        # 총 보험료 합산
-        if "grand_total" in kpis and "total_premium" in premium_data:
-            try:
-                existing_total = int(kpis["grand_total"].replace(",", ""))
+            # 총 보험료 합산
+            if "grand_total" in kpis and "total_premium" in premium_data:
+                existing_val = kpis["grand_total"]
+                if isinstance(existing_val, str):
+                    existing_total = int(existing_val.replace(",", ""))
+                else:
+                    existing_total = int(existing_val)
                 additional_total = premium_data["total_premium"]
                 combined_total = existing_total + additional_total
                 kpis["grand_total"] = f"{combined_total:,}"
-            except (ValueError, TypeError):
-                pass
 
-        data["kpis"] = kpis
+            data["kpis"] = kpis
+        except Exception as e:
+            with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
+                f.write(f"[KPI UPDATE ERROR] {e}\n{traceback.format_exc()}\n")
 
     # 생성일시 추가 (한국 시간)
     created_at = draft.get("created_at", time.time())
@@ -1233,13 +1239,20 @@ function syncShortfallCheckboxes() {{
     data["created_datetime"] = datetime.fromtimestamp(created_at, tz=kst).strftime("%Y-%m-%d %H:%M")
 
     # DB에 저장
-    report_id = storage.save_report(
-        data,
-        created_by_user_id=user["id"],
-        created_by_name=user["name"],
-        source_file_name=draft.get("source_file_name"),
-        source_file_path=draft.get("source_file_path"),
-    )
+    try:
+        report_id = storage.save_report(
+            data,
+            created_by_user_id=user["id"],
+            created_by_name=user["name"],
+            source_file_name=draft.get("source_file_name"),
+            source_file_path=draft.get("source_file_path"),
+        )
+        with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
+            f.write(f"[SAVE REPORT SUCCESS] report_id: {report_id}\n")
+    except Exception as e:
+        with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
+            f.write(f"[SAVE REPORT ERROR] {e}\n{traceback.format_exc()}\n")
+        raise
 
     # 임시 데이터 정리
     del _draft_reports[draft_id]
