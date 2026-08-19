@@ -119,9 +119,18 @@ def _calculate_shortfall_premium(
     selected_item_ids: list[int], current_age: int, payment_years: int = 30
 ) -> dict:
     """부족 보장 추가 항목별 월 납입료 계산"""
+    debug_log_lines = []
+    debug_log_lines.append(f"\n[_calculate_shortfall_premium] Called with:")
+    debug_log_lines.append(f"  selected_item_ids: {selected_item_ids}")
+    debug_log_lines.append(f"  current_age: {current_age}")
+    debug_log_lines.append(f"  payment_years: {payment_years}")
+
     shortfall_data = _load_shortfall_coverage()
     items_by_id = {item["id"]: item for item in shortfall_data.get("items", [])}
     premiums_by_age = shortfall_data.get("premiums_by_age", {})
+
+    debug_log_lines.append(f"  Loaded {len(items_by_id)} items from shortfall_coverage.json")
+    debug_log_lines.append(f"  Available ages in premiums_by_age: {list(premiums_by_age.keys())}")
 
     result = {
         "items": [],
@@ -131,18 +140,24 @@ def _calculate_shortfall_premium(
 
     age_key = str(current_age)
     if age_key not in premiums_by_age:
+        debug_log_lines.append(f"  ERROR: Age {current_age} not found in premiums_by_age")
+        with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
+            f.write("\n".join(debug_log_lines) + "\n")
         return result
 
     age_premiums = premiums_by_age[age_key]
+    debug_log_lines.append(f"  Age {current_age} premiums: {age_premiums}")
 
     for item_id in selected_item_ids:
         if item_id not in items_by_id:
+            debug_log_lines.append(f"  WARNING: Item ID {item_id} not found in items_by_id")
             continue
         item = items_by_id[item_id]
         item_idx = item_id - 1
         if item_idx < len(age_premiums):
             monthly_premium = age_premiums[item_idx]
             total_premium = monthly_premium * payment_years * 12
+            debug_log_lines.append(f"  Item {item_id}: monthly={monthly_premium}, total={total_premium}")
             result["items"].append({
                 "id": item_id,
                 "name": item["name"],
@@ -154,9 +169,16 @@ def _calculate_shortfall_premium(
             })
             result["monthly_total"] += monthly_premium
             result["total_premium"] += total_premium
+        else:
+            debug_log_lines.append(f"  ERROR: Item ID {item_id} index {item_idx} out of range (premiums length: {len(age_premiums)})")
 
     result["monthly_total_display"] = f"{result['monthly_total']:,}"
     result["total_premium_display"] = f"{result['total_premium']:,}"
+
+    debug_log_lines.append(f"  Final result: {len(result['items'])} items, total monthly={result['monthly_total']}, total premium={result['total_premium']}")
+
+    with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
+        f.write("\n".join(debug_log_lines) + "\n")
 
     return result
 

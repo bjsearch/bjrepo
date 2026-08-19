@@ -19,6 +19,7 @@ import secrets
 import subprocess
 import tempfile
 import time
+import traceback
 from collections import Counter
 from functools import wraps
 from pathlib import Path
@@ -924,16 +925,31 @@ document.addEventListener('DOMContentLoaded', function() {{
 // 폼 제출 전 선택된 부족 보장 항목 동기화
 function syncShortfallCheckboxes() {{
   const checkboxes = document.querySelectorAll('input[type="checkbox"][name^="shortfall_item_"]');
+  console.log('[DEBUG] Found checkboxes:', checkboxes.length);
+
   const selectedIds = [];
-  checkboxes.forEach(cb => {{
+  checkboxes.forEach((cb, idx) => {{
+    console.log(`[DEBUG] Checkbox ${idx}: name="${{cb.name}}", checked=${{cb.checked}}, id="${{cb.id}}"`);
     if (cb.checked) {{
       const match = cb.name.match(/shortfall_item_(\d+)/);
       if (match) {{
         selectedIds.push(match[1]);
+        console.log(`[DEBUG] Added item ID: ${{match[1]}}`);
       }}
     }}
   }});
-  document.getElementById('selected_shortfall_ids').value = selectedIds.join(',');
+
+  const hiddenInput = document.getElementById('selected_shortfall_ids');
+  if (!hiddenInput) {{
+    console.error('[ERROR] Hidden input #selected_shortfall_ids not found!');
+    return false;
+  }}
+
+  const valueStr = selectedIds.join(',');
+  hiddenInput.value = valueStr;
+  console.log(`[DEBUG] Set hidden input value to: "${{valueStr}}"`);
+  console.log(`[DEBUG] Hidden input value is now: "${{hiddenInput.value}}"`);
+
   return true;
 }}
 </script>
@@ -1056,32 +1072,63 @@ function syncShortfallCheckboxes() {{
 
     # hidden input에서 선택된 항목 ID 읽기
     selected_ids_str = request.form.get("selected_shortfall_ids", "")
-    # 디버그 로그
-    with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-        f.write(f"\n[POST] selected_ids_str from form: '{selected_ids_str}'\n")
-        f.write(f"[POST] shortfall_coverage keys: {list(shortfall_coverage.keys())}\n")
-        f.write(f"[POST] shortfall_coverage current_age: {shortfall_coverage.get('current_age')}\n")
 
-    if selected_ids_str:
+    # 상세한 디버그 로그
+    debug_log_lines = [
+        "\n" + "="*60,
+        f"[POST HANDLER] Form keys: {list(request.form.keys())}",
+        f"[POST HANDLER] selected_ids_str from form: '{selected_ids_str}'",
+        f"[POST HANDLER] selected_ids_str type: {type(selected_ids_str)}",
+        f"[POST HANDLER] selected_ids_str length: {len(selected_ids_str)}",
+        f"[POST HANDLER] shortfall_coverage keys: {list(shortfall_coverage.keys())}",
+        f"[POST HANDLER] shortfall_coverage.get('current_age'): {shortfall_coverage.get('current_age')}",
+        f"[POST HANDLER] shortfall_coverage.get('items') count: {len(shortfall_coverage.get('items', []))}",
+    ]
+
+    with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
+        f.write("\n".join(debug_log_lines) + "\n")
+
+    if selected_ids_str.strip():
         try:
-            selected_shortfall_ids = [int(x) for x in selected_ids_str.split(",") if x]
+            # Parse the selected IDs
+            parts = [x.strip() for x in selected_ids_str.split(",") if x.strip()]
+            selected_shortfall_ids = [int(x) for x in parts]
             with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-                f.write(f"[POST] Parsed selected_ids: {selected_shortfall_ids}\n")
+                f.write(f"[POST HANDLER] Parsed parts: {parts}\n")
+                f.write(f"[POST HANDLER] Parsed selected_ids: {selected_shortfall_ids}\n")
         except Exception as e:
             with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-                f.write(f"[POST] Error parsing selected_ids: {e}\n")
+                f.write(f"[POST HANDLER] ERROR parsing selected_ids: {e}\n")
+                f.write(f"[POST HANDLER] Traceback: {traceback.format_exc()}\n")
+    else:
+        with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
+            f.write("[POST HANDLER] selected_ids_str is empty or whitespace only\n")
 
     modified_shortfall_coverage["selected_ids"] = selected_shortfall_ids
 
     # 선택된 항목의 프리미엄 계산
     if selected_shortfall_ids:
-        with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-            f.write(f"[POST] Calculating premium for {selected_shortfall_ids}...\n")
-        from .builder import _calculate_shortfall_premium
-        current_age = shortfall_coverage.get("current_age", 0)
-        premium_data = _calculate_shortfall_premium(selected_shortfall_ids, current_age, payment_years=30)
-        modified_shortfall_coverage["premium_data"] = premium_data
+        try:
+            with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
+                f.write(f"[POST HANDLER] Calculating premium for items: {selected_shortfall_ids}\n")
+            from .builder import _calculate_shortfall_premium
+            current_age = shortfall_coverage.get("current_age", 0)
+            with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
+                f.write(f"[POST HANDLER] Current age: {current_age}\n")
+            premium_data = _calculate_shortfall_premium(selected_shortfall_ids, current_age, payment_years=30)
+            with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
+                f.write(f"[POST HANDLER] Calculated premium_data keys: {list(premium_data.keys())}\n")
+                f.write(f"[POST HANDLER] premium_data['items'] count: {len(premium_data.get('items', []))}\n")
+                f.write(f"[POST HANDLER] premium_data['monthly_total']: {premium_data.get('monthly_total')}\n")
+                f.write(f"[POST HANDLER] premium_data['total_premium']: {premium_data.get('total_premium')}\n")
+            modified_shortfall_coverage["premium_data"] = premium_data
+        except Exception as e:
+            with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
+                f.write(f"[POST HANDLER] ERROR calculating premium: {e}\n")
+                f.write(f"[POST HANDLER] Traceback: {traceback.format_exc()}\n")
     else:
+        with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
+            f.write("[POST HANDLER] No selected_shortfall_ids, setting premium_data to None\n")
         modified_shortfall_coverage["premium_data"] = None
 
     # 데이터 업데이트
