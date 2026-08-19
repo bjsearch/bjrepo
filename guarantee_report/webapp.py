@@ -633,7 +633,6 @@ def edit_report(draft_id: str):
     if request.method == "GET":
         # 편집 UI 표시
         import json
-        from datetime import datetime
         recommendations = data.get("recommendations", [])
         insights = data.get("insights", [])
         coverage_sections = data.get("coverage_sections", [])
@@ -1126,7 +1125,9 @@ function syncShortfallCheckboxes() {{
 
     # 폼에서 제출된 생년월일 확인
     birth_date_str = request.form.get("shortfall_birth_date", "").strip()
-    base_date = date.today()  # 기준일: 리포트 생성일
+    # 기준일: 리포트 생성일 (현재 날짜가 아님)
+    created_at = draft.get("created_at", time.time())
+    base_date = datetime.fromtimestamp(created_at).date()
 
     if birth_date_str:
         try:
