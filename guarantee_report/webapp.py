@@ -1199,13 +1199,13 @@ function syncShortfallCheckboxes() {{
     data["coverage_sections"] = modified_coverage_sections if modified_coverage_sections else coverage_sections
     data["shortfall_coverage"] = modified_shortfall_coverage
 
-    # KPI 업데이트: 추가 항목이 있으면 기존 비용에 합산
+    # 부족 보장 항목의 합산 비용을 데이터에 추가
     if modified_shortfall_coverage.get("premium_data"):
         try:
             kpis = data.get("kpis", {})
             premium_data = modified_shortfall_coverage["premium_data"]
 
-            # 월 납입료 합산
+            # 기존 비용을 숫자로 추출
             if "monthly_premium" in kpis and "monthly_total" in premium_data:
                 existing_val = kpis["monthly_premium"]
                 if isinstance(existing_val, str):
@@ -1213,10 +1213,11 @@ function syncShortfallCheckboxes() {{
                 else:
                     existing_monthly = int(existing_val)
                 additional_monthly = premium_data["monthly_total"]
-                total_monthly = existing_monthly + additional_monthly
-                kpis["monthly_premium"] = f"{total_monthly:,}"
+                combined_monthly = existing_monthly + additional_monthly
+                # 합산된 값을 shortfall_coverage에 추가
+                modified_shortfall_coverage["combined_monthly"] = combined_monthly
+                modified_shortfall_coverage["combined_monthly_display"] = f"{combined_monthly:,}"
 
-            # 총 보험료 합산
             if "grand_total" in kpis and "total_premium" in premium_data:
                 existing_val = kpis["grand_total"]
                 if isinstance(existing_val, str):
@@ -1225,12 +1226,12 @@ function syncShortfallCheckboxes() {{
                     existing_total = int(existing_val)
                 additional_total = premium_data["total_premium"]
                 combined_total = existing_total + additional_total
-                kpis["grand_total"] = f"{combined_total:,}"
-
-            data["kpis"] = kpis
+                # 합산된 값을 shortfall_coverage에 추가
+                modified_shortfall_coverage["combined_total"] = combined_total
+                modified_shortfall_coverage["combined_total_display"] = f"{combined_total:,}"
         except Exception as e:
             with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-                f.write(f"[KPI UPDATE ERROR] {e}\n{traceback.format_exc()}\n")
+                f.write(f"[SHORTFALL COMBINED CALC ERROR] {e}\n{traceback.format_exc()}\n")
 
     # 생성일시 추가 (한국 시간)
     created_at = draft.get("created_at", time.time())
