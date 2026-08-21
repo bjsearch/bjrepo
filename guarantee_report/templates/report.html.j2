@@ -20,6 +20,8 @@
   --meritz:#E4002B;   --meritz-bg:#FCECEF;
   --hyundai:#F26F21;  --hyundai-bg:#FEF1E8;
   --mg:#0067AC;       --mg-bg:#E9F2F9;
+  --shadow-sm:0 1px 2px rgba(16,35,63,.05),0 1px 3px rgba(16,35,63,.06);
+  --shadow-md:0 2px 6px rgba(16,35,63,.05),0 6px 20px rgba(16,35,63,.07);
 }
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;background:var(--paper);color:var(--ink);line-height:1.6;font-size:15px;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}
@@ -35,31 +37,31 @@ h1 .name{border-bottom:6px solid var(--ok-bg)}
 .meta b{color:var(--ink);font-weight:600}
 
 .brands{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px}
-.brand{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;padding:6px 13px;border-radius:99px;border:1px solid var(--line);background:var(--card)}
+.brand{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:99px;border:1px solid var(--line);background:var(--card);box-shadow:var(--shadow-sm)}
 .dot{width:9px;height:9px;border-radius:50%;flex:none}
 .dot.samsung{background:var(--samsung)} .dot.meritz{background:var(--meritz)}
 .dot.hyundai{background:var(--hyundai)} .dot.mg{background:var(--mg)}
 
-.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:44px}
-.kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 20px}
-.kpi .label{font-size:12.5px;color:var(--sub);margin-bottom:6px}
-.kpi .value{font-size:24px;font-weight:700}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:44px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px;box-shadow:var(--shadow-sm)}
+.kpi .label{font-size:12.5px;color:var(--sub);margin-bottom:7px;font-weight:600}
+.kpi .value{font-size:25px;font-weight:800;letter-spacing:-.01em}
 .kpi .unit{font-size:13px;font-weight:500;color:var(--sub);margin-left:2px}
-.kpi.hl{background:var(--ink);border-color:var(--ink);color:#fff}
-.kpi.hl .label,.kpi.hl .unit{color:#B9C6DB}
+.kpi.hl{background:linear-gradient(155deg,#16305A,var(--ink) 65%);border-color:var(--ink);color:#fff;box-shadow:0 6px 20px rgba(16,35,63,.22)}
+.kpi.hl .label,.kpi.hl .unit{color:#AEC0DC}
 
 section{margin-bottom:52px}
-h2{font-family:"Noto Serif KR",serif;font-size:21px;font-weight:700;padding-bottom:10px;border-bottom:1.5px solid var(--ink);margin-bottom:6px;display:flex;align-items:baseline;gap:10px}
+h2{font-family:"Noto Serif KR",serif;font-size:21px;font-weight:700;padding-bottom:11px;border-bottom:2px solid var(--ink);margin-bottom:6px;display:flex;align-items:baseline;gap:10px}
 h2 .no{font-size:13px;color:var(--sub);font-family:Pretendard,sans-serif;font-weight:600}
 .sec-note{font-size:13px;color:var(--sub);margin-bottom:18px}
 
-.chip{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:99px;vertical-align:1px;white-space:nowrap}
+.chip{display:inline-block;font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:99px;vertical-align:1px;white-space:nowrap}
 .chip.ok{color:var(--ok);background:var(--ok-bg)}
 .chip.warn{color:var(--warn);background:var(--warn-bg)}
 .chip.gap{color:var(--gap);background:var(--gap-bg)}
 
-.contracts{display:grid;gap:12px}
-.contract{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:grid;grid-template-columns:1fr auto;align-items:stretch}
+.contracts{display:grid;gap:14px}
+.contract{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:grid;grid-template-columns:1fr auto;align-items:stretch;box-shadow:var(--shadow-sm)}
 .contract .body{padding:16px 20px 16px 22px;position:relative}
 .contract .body::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--brand-color,#8A96A6)}
 .co-tag{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:800;letter-spacing:.02em;padding:3px 10px;border-radius:6px;margin-bottom:7px}
@@ -77,7 +79,7 @@ h2 .no{font-size:13px;color:var(--sub);font-family:Pretendard,sans-serif;font-we
 .badge{display:inline-block;font-size:11px;font-weight:700;color:var(--warn);background:var(--warn-bg);border-radius:5px;padding:2px 8px;margin-left:6px;vertical-align:1px}
 .reco-divider{display:flex;align-items:center;gap:12px;margin:22px 0 12px;font-size:12.5px;font-weight:700;color:#8A96A6;letter-spacing:.04em}
 .reco-divider::before,.reco-divider::after{content:"";flex:1;border-top:1.5px dashed #C9D1DC}
-.contract.reco{border:2px dashed #B7C0CC;box-shadow:none;background:repeating-linear-gradient(135deg,#F7F8FA 0px,#F7F8FA 9px,#EFF1F5 9px,#EFF1F5 10px);border-radius:12px}
+.contract.reco{border:2px dashed #B7C0CC;box-shadow:none;background:repeating-linear-gradient(135deg,#F7F8FA 0px,#F7F8FA 9px,#EFF1F5 9px,#EFF1F5 10px);border-radius:16px}
 .contract.reco .body::before{display:none}
 .contract.reco .body{padding:16px 20px}
 .contract.reco .title{color:#5B6B82;font-size:15px;font-weight:700}
@@ -89,31 +91,32 @@ h2 .no{font-size:13px;color:var(--sub);font-family:Pretendard,sans-serif;font-we
 .reco-why{display:inline-block;font-size:11.5px;font-weight:700;color:#75808F;background:#E8EBF0;border-radius:6px;padding:3px 9px;margin-left:8px;vertical-align:1px}
 .reco-explanation{font-size:13.5px;color:#75808F;line-height:1.7;margin:10px 0 8px;padding:12px 14px;background:#F5F8FC;border-left:3px solid #6B8CC9;border-radius:4px;font-weight:500}
 
-table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:14px;line-height:1.6}
-thead th{background:#F0F3F8;font-size:12px;font-weight:600;color:var(--sub);text-align:left;padding:10px 14px;border-bottom:1.5px solid var(--line);white-space:normal;word-break:keep-all}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;font-size:14px;line-height:1.6;box-shadow:var(--shadow-sm)}
+thead th{background:#F3F5F9;font-size:12px;font-weight:700;color:var(--sub);text-align:left;padding:11px 14px;border-bottom:1.5px solid var(--line);white-space:normal;word-break:keep-all}
 tbody td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:middle;line-height:1.6}
 tbody tr:last-child td{border-bottom:none}
-tbody tr:hover{background:#F9FAFB}
+tbody tr:nth-child(even){background:#FBFCFD}
+tbody tr:hover{background:#F1F5FC}
 td.r,th.r{text-align:right}
 .src{display:inline-flex;gap:4px;margin-left:7px;vertical-align:1px}
 .src .dot{width:8px;height:8px}
 .info-note{cursor:help;color:var(--sub);font-size:11.5px;margin-left:5px;vertical-align:1px}
-.gauge{position:relative;height:8px;background:#EDF0F5;border-radius:99px;min-width:110px;overflow:hidden}
-.gauge .fill{position:absolute;inset:0 auto 0 0;border-radius:99px;background:var(--ok)}
-.gauge .fill.warn{background:var(--warn)}
-.gauge .fill.gap{background:var(--gap)}
+.gauge{position:relative;height:9px;background:#EAEDF3;border-radius:99px;min-width:110px;overflow:hidden;box-shadow:inset 0 1px 2px rgba(16,35,63,.06)}
+.gauge .fill{position:absolute;inset:0 auto 0 0;border-radius:99px;background:linear-gradient(90deg,#3D74E6,var(--ok))}
+.gauge .fill.warn{background:linear-gradient(90deg,#E0A030,var(--warn))}
+.gauge .fill.gap{background:linear-gradient(90deg,#E05858,var(--gap))}
 .gauge-cell{width:140px}
 
-.insights{display:grid;gap:12px;counter-reset:ins}
-.insight{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 22px 18px 58px;position:relative;line-height:1.7}
-.insight::before{counter-increment:ins;content:counter(ins,decimal-leading-zero);position:absolute;left:20px;top:19px;font-size:13px;font-weight:700;color:var(--ok);font-variant-numeric:tabular-nums;display:flex;align-items:center;justify-content:center;width:20px;height:20px}
+.insights{display:grid;gap:14px;counter-reset:ins}
+.insight{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 22px 18px 58px;position:relative;line-height:1.7;box-shadow:var(--shadow-sm)}
+.insight::before{counter-increment:ins;content:counter(ins,decimal-leading-zero);position:absolute;left:18px;top:18px;font-size:12px;font-weight:800;color:var(--ok);background:var(--ok-bg);font-variant-numeric:tabular-nums;display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:9px}
 .insight b{display:block;margin-bottom:6px;font-size:15px;color:#10233F;font-weight:700}
 .insight p{font-size:13.5px;color:var(--sub);line-height:1.7}
 .insight.urgent{border-color:#F2C9C9;background:#FFFCFC;border-width:1.5px}
-.insight.urgent::before{color:var(--gap);font-weight:900}
+.insight.urgent::before{color:var(--gap);background:var(--gap-bg);font-weight:900}
 
 footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-size:11.5px;color:var(--sub);line-height:1.8}
-.matrix-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--card);-webkit-overflow-scrolling:touch}
+.matrix-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--card);-webkit-overflow-scrolling:touch;box-shadow:var(--shadow-sm)}
 .matrix{width:100%;border-collapse:collapse;font-size:12.5px;min-width:760px;border:none;line-height:1.6}
 .matrix thead th{padding:10px 8px;font-size:11px;line-height:1.4;text-align:center;color:#fff;border-bottom:none;border-left:1px solid rgba(255,255,255,.25);background:var(--th-color,var(--ink));font-weight:600;word-break:keep-all}
 .matrix thead th:first-child{background:var(--ink);text-align:left;border-left:none;font-size:12px;font-weight:700;position:sticky;left:0;z-index:10}
@@ -540,12 +543,12 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
   <div class="kpi hl"><div class="label">월 납입 보험료</div><div class="value num">{{ kpis.monthly_premium }}<span class="unit">원</span></div></div>
   <div class="kpi"><div class="label">총 보험료</div><div class="value num">{{ kpis.grand_total }}<span class="unit">원</span></div></div>
   <div class="kpi"><div class="label">납입한 보험료</div><div class="value num">{{ kpis.paid_total }}<span class="unit">원</span></div></div>
-  <div class="kpi" style="background:white"><div class="label">잔여보험료</div><div class="value num" style="color:red">{{ kpis.scheduled_total }}<span class="unit">원</span></div></div>
+  <div class="kpi"><div class="label">잔여보험료</div><div class="value num" style="color:var(--gap)">{{ kpis.scheduled_total }}<span class="unit">원</span></div></div>
   {% if shortfall_coverage.premium_data and shortfall_coverage.premium_data.get('items') %}
-  <div class="kpi" style="background:#FFF3E2;border-left:4px solid #FF9500">
+  <div class="kpi" style="background:#FFF6E9;border:1px solid #FBDFAE">
     <div>
-      <div class="label">보완시 예상 월 보험료</div>
-      <div class="value num" style="color:#FF9500">{{ shortfall_coverage.premium_data['monthly_total_display'] }}<span class="unit">원</span></div>
+      <div class="label" style="color:#B8720A">보완시 예상 월 보험료</div>
+      <div class="value num" style="color:#D97D06">{{ shortfall_coverage.premium_data['monthly_total_display'] }}<span class="unit">원</span></div>
     </div>
   </div>
   {% endif %}
@@ -554,11 +557,11 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 
 <!-- 부족 보장 추가 항목 -->
 {% if shortfall_coverage.premium_data and shortfall_coverage.premium_data.get('items') %}
-<div style="background:#FFF3E2;border-left:4px solid #FF9500;padding:16px;margin-top:12px;border-radius:8px">
-  <div style="font-size:13px;font-weight:600;color:#FF9500;margin-bottom:10px">추가 보장 항목</div>
+<div style="background:#FFF6E9;border:1px solid #FBDFAE;padding:18px 20px;margin-top:14px;border-radius:16px;box-shadow:var(--shadow-sm)">
+  <div style="font-size:13px;font-weight:700;color:#B8720A;margin-bottom:12px">추가 보장 항목</div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:8px">
     {% for item in shortfall_coverage.premium_data.get('items', []) %}
-    <div style="font-size:12px;color:#333;padding:6px 10px;background:#fff;border-radius:4px;border-left:2px solid #FF9500">
+    <div style="font-size:12.5px;font-weight:600;color:#3D2E12;padding:8px 12px;background:#fff;border-radius:10px;border:1px solid #F3E2C1">
       {{ item.name }}
     </div>
     {% endfor %}
@@ -812,11 +815,11 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 {% endfor %}
 
 {% if shortfall_coverage.premium_data and shortfall_coverage.premium_data.get('items') %}
-<section class="section-page" style="background:#FEF3E2;border-left:4px solid #FF9500;padding:32px 28px;page-break-after:always">
+<section class="section-page" style="background:#FEF8EF;border-left:4px solid #F0A93A;padding:32px 28px;page-break-after:always">
   <h2><span class="no">07</span>부족 보장 추가 (선택 항목)</h2>
   <div style="margin-bottom:24px">
     <p style="font-size:13px;color:#5B6B82;margin-bottom:12px">다음 보장을 추가할 경우 예상 보험료입니다 (현재 나이: {{ shortfall_coverage.current_age }}세, 30년 납입 기준)</p>
-    <div style="background:white;border:1px solid var(--line);border-radius:10px;padding:24px">
+    <div style="background:white;border:1px solid var(--line);border-radius:16px;padding:26px;box-shadow:var(--shadow-sm)">
       {% for item in shortfall_coverage.premium_data['items'] %}
       <div style="{% if not loop.last %}margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--line){% else %}margin-bottom:0{% endif %}display:flex;align-items:center;justify-content:space-between;gap:12px">
         <div>
@@ -826,8 +829,8 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
       </div>
       {% endfor %}
       <div style="margin-top:20px;padding-top:20px;border-top:2px solid var(--line);display:flex;align-items:center;justify-content:space-between">
-        <div style="font-weight:600;font-size:15px;color:#FF9500">예상 월 추가 보험료</div>
-        <div style="font-size:20px;font-weight:700;color:#FF9500">{{ shortfall_coverage.premium_data.monthly_total_display }}<span style="font-size:14px;font-weight:500;margin-left:4px">원</span></div>
+        <div style="font-weight:600;font-size:15px;color:#D97D06">예상 월 추가 보험료</div>
+        <div style="font-size:20px;font-weight:800;color:#D97D06">{{ shortfall_coverage.premium_data.monthly_total_display }}<span style="font-size:14px;font-weight:500;margin-left:4px">원</span></div>
       </div>
       <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between">
         <div style="font-weight:600;font-size:14px;color:var(--ink)">30년 총 예상 보험료</div>
