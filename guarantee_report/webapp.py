@@ -95,6 +95,17 @@ app.config.update(
 _draft_reports = {}
 
 
+def _log_shortfall(msg: str) -> None:
+    """부족 보장 추가 디버그 로그 — stdout(Render Logs 탭에서 조회 가능)과
+    /tmp 파일에 동시에 기록한다."""
+    print(f"[SHORTFALL] {msg}", flush=True)
+    try:
+        with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
+            f.write(msg + "\n")
+    except OSError:
+        pass
+
+
 def _generate_draft_id() -> str:
     """임시 리포트 ID 생성"""
     return secrets.token_urlsafe(16)
@@ -1142,35 +1153,22 @@ function syncShortfallCheckboxes() {{
     selected_ids_str = request.form.get("selected_shortfall_ids", "")
 
     # 상세한 디버그 로그
-    debug_log_lines = [
-        "\n" + "="*60,
-        f"[POST HANDLER] Form keys: {list(request.form.keys())}",
-        f"[POST HANDLER] selected_ids_str from form: '{selected_ids_str}'",
-        f"[POST HANDLER] selected_ids_str type: {type(selected_ids_str)}",
-        f"[POST HANDLER] selected_ids_str length: {len(selected_ids_str)}",
-        f"[POST HANDLER] shortfall_coverage keys: {list(shortfall_coverage.keys())}",
-        f"[POST HANDLER] shortfall_coverage.get('current_age'): {shortfall_coverage.get('current_age')}",
-        f"[POST HANDLER] shortfall_coverage.get('items') count: {len(shortfall_coverage.get('items', []))}",
-    ]
-
-    with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-        f.write("\n".join(debug_log_lines) + "\n")
+    _log_shortfall("=" * 60)
+    _log_shortfall(f"[POST HANDLER] Form keys: {list(request.form.keys())}")
+    _log_shortfall(f"[POST HANDLER] selected_ids_str from form: '{selected_ids_str}'")
+    _log_shortfall(f"[POST HANDLER] shortfall_coverage.get('current_age'): {shortfall_coverage.get('current_age')}")
+    _log_shortfall(f"[POST HANDLER] shortfall_coverage.get('items') count: {len(shortfall_coverage.get('items', []))}")
 
     if selected_ids_str.strip():
         try:
             # Parse the selected IDs
             parts = [x.strip() for x in selected_ids_str.split(",") if x.strip()]
             selected_shortfall_ids = [int(x) for x in parts]
-            with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-                f.write(f"[POST HANDLER] Parsed parts: {parts}\n")
-                f.write(f"[POST HANDLER] Parsed selected_ids: {selected_shortfall_ids}\n")
+            _log_shortfall(f"[POST HANDLER] Parsed selected_ids: {selected_shortfall_ids}")
         except Exception as e:
-            with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-                f.write(f"[POST HANDLER] ERROR parsing selected_ids: {e}\n")
-                f.write(f"[POST HANDLER] Traceback: {traceback.format_exc()}\n")
+            _log_shortfall(f"[POST HANDLER] ERROR parsing selected_ids: {e}\n{traceback.format_exc()}")
     else:
-        with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-            f.write("[POST HANDLER] selected_ids_str is empty or whitespace only\n")
+        _log_shortfall("[POST HANDLER] selected_ids_str is empty or whitespace only")
 
     modified_shortfall_coverage["selected_ids"] = selected_shortfall_ids
 
@@ -1181,11 +1179,9 @@ function syncShortfallCheckboxes() {{
         if amount_str:
             try:
                 coverage_amounts[item_id] = int(amount_str)
-                with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-                    f.write(f"[POST HANDLER] Item {item_id} coverage amount: {coverage_amounts[item_id]}만원\n")
+                _log_shortfall(f"[POST HANDLER] Item {item_id} coverage amount: {coverage_amounts[item_id]}만원")
             except ValueError:
-                with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-                    f.write(f"[POST HANDLER] Failed to parse coverage amount for item {item_id}: {amount_str}\n")
+                _log_shortfall(f"[POST HANDLER] Failed to parse coverage amount for item {item_id}: {amount_str}")
 
     if coverage_amounts:
         modified_shortfall_coverage["selected_amounts"] = coverage_amounts
@@ -1199,8 +1195,7 @@ function syncShortfallCheckboxes() {{
     if gender:
         modified_shortfall_coverage["gender"] = gender
 
-    with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-        f.write(f"[POST HANDLER] Gender: {gender}\n")
+    _log_shortfall(f"[POST HANDLER] Gender: {gender}")
 
     # 계산 나이 계산 (사용자 입력 생년월일 우선)
     current_age = 0
@@ -1210,19 +1205,16 @@ function syncShortfallCheckboxes() {{
     # 기준일: 리포트 생성일 (현재 날짜가 아님)
     created_at = draft.get("created_at", time.time())
     base_date = datetime.fromtimestamp(created_at).date()
+    _log_shortfall(f"[POST HANDLER] birth_date_str from form: '{birth_date_str}', header.customer_birth_date: '{header.get('customer_birth_date')}'")
 
     if birth_date_str:
         try:
             birth_date = datetime.strptime(birth_date_str, "%Y-%m-%d").date()
             current_age = _calculate_calculation_age(birth_date, base_date)
             modified_shortfall_coverage["current_age"] = current_age
-            with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-                f.write(f"[POST HANDLER] Calculated age from user birth_date: {birth_date_str}\n")
-                f.write(f"[POST HANDLER] Base date: {base_date}\n")
-                f.write(f"[POST HANDLER] Calculation age: {current_age}세\n")
+            _log_shortfall(f"[POST HANDLER] Calculated age from user birth_date: {birth_date_str} → {current_age}세 (base_date={base_date})")
         except ValueError as e:
-            with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-                f.write(f"[POST HANDLER] Failed to parse user birth_date: {birth_date_str} - {e}\n")
+            _log_shortfall(f"[POST HANDLER] Failed to parse user birth_date: {birth_date_str} - {e}")
             # 기본값 사용
             birth_date_str = header.get("customer_birth_date")
             if birth_date_str:
@@ -1230,12 +1222,9 @@ function syncShortfallCheckboxes() {{
                     birth_date = datetime.strptime(birth_date_str, "%Y-%m-%d").date()
                     current_age = _calculate_calculation_age(birth_date, base_date)
                     modified_shortfall_coverage["current_age"] = current_age
-                    with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-                        f.write(f"[POST HANDLER] Using default birth_date from header: {birth_date_str}\n")
-                        f.write(f"[POST HANDLER] Calculation age: {current_age}세\n")
+                    _log_shortfall(f"[POST HANDLER] Using default birth_date from header: {birth_date_str} → {current_age}세")
                 except Exception as e:
-                    with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-                        f.write(f"[POST HANDLER] Failed to calculate age: {e}\n")
+                    _log_shortfall(f"[POST HANDLER] Failed to calculate age: {e}")
     else:
         # 폼 데이터에 생년월일이 없으면 header에서 사용
         birth_date_str = header.get("customer_birth_date")
@@ -1244,37 +1233,21 @@ function syncShortfallCheckboxes() {{
                 birth_date = datetime.strptime(birth_date_str, "%Y-%m-%d").date()
                 current_age = _calculate_calculation_age(birth_date, base_date)
                 modified_shortfall_coverage["current_age"] = current_age
-                with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-                    f.write(f"[POST HANDLER] Using default birth_date from header: {birth_date_str}\n")
-                    f.write(f"[POST HANDLER] Calculation age: {current_age}세\n")
+                _log_shortfall(f"[POST HANDLER] Using default birth_date from header: {birth_date_str} → {current_age}세")
             except Exception as e:
-                with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-                    f.write(f"[POST HANDLER] Failed to calculate age from header: {e}\n")
+                _log_shortfall(f"[POST HANDLER] Failed to calculate age from header: {e}")
 
     # 선택된 항목의 프리미엄 계산
     if selected_shortfall_ids:
         try:
-            with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-                f.write(f"[POST HANDLER] Calculating premium for items: {selected_shortfall_ids}\n")
-
-            with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-                f.write(f"[POST HANDLER] Using current_age for calculation: {current_age}세\n")
-                f.write(f"[POST HANDLER] Using gender for calculation: {gender}\n")
-                f.write(f"[POST HANDLER] Using coverage_amounts for calculation: {coverage_amounts}\n")
+            _log_shortfall(f"[POST HANDLER] Calculating premium for items={selected_shortfall_ids}, age={current_age}세, gender={gender}, coverage_amounts={coverage_amounts}")
             premium_data = _calculate_shortfall_premium(selected_shortfall_ids, current_age, payment_years=30, gender=gender, coverage_amounts=coverage_amounts if coverage_amounts else None)
-            with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-                f.write(f"[POST HANDLER] Calculated premium_data keys: {list(premium_data.keys())}\n")
-                f.write(f"[POST HANDLER] premium_data['items'] count: {len(premium_data.get('items', []))}\n")
-                f.write(f"[POST HANDLER] premium_data['monthly_total']: {premium_data.get('monthly_total')}\n")
-                f.write(f"[POST HANDLER] premium_data['total_premium']: {premium_data.get('total_premium')}\n")
+            _log_shortfall(f"[POST HANDLER] premium_data['items'] count: {len(premium_data.get('items', []))}, monthly_total: {premium_data.get('monthly_total')}, total_premium: {premium_data.get('total_premium')}")
             modified_shortfall_coverage["premium_data"] = premium_data
         except Exception as e:
-            with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-                f.write(f"[POST HANDLER] ERROR calculating premium: {e}\n")
-                f.write(f"[POST HANDLER] Traceback: {traceback.format_exc()}\n")
+            _log_shortfall(f"[POST HANDLER] ERROR calculating premium: {e}\n{traceback.format_exc()}")
     else:
-        with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-            f.write("[POST HANDLER] No selected_shortfall_ids, setting premium_data to None\n")
+        _log_shortfall("[POST HANDLER] No selected_shortfall_ids, setting premium_data to None")
         modified_shortfall_coverage["premium_data"] = None
 
     # 데이터 업데이트
@@ -1298,11 +1271,9 @@ function syncShortfallCheckboxes() {{
             source_file_name=draft.get("source_file_name"),
             source_file_path=draft.get("source_file_path"),
         )
-        with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-            f.write(f"[SAVE REPORT SUCCESS] report_id: {report_id}\n")
+        _log_shortfall(f"[SAVE REPORT SUCCESS] report_id: {report_id}, shortfall items: {len(modified_shortfall_coverage.get('premium_data', {}).get('items', []) if modified_shortfall_coverage.get('premium_data') else [])}")
     except Exception as e:
-        with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-            f.write(f"[SAVE REPORT ERROR] {e}\n{traceback.format_exc()}\n")
+        _log_shortfall(f"[SAVE REPORT ERROR] {e}\n{traceback.format_exc()}")
         raise
 
     # 임시 데이터 정리
