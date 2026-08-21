@@ -819,7 +819,7 @@ h1{{font-size:24px;margin-bottom:8px}}
     <div style="margin-bottom:20px;padding:16px;background:#FAFBFC;border-radius:8px;border:1px solid #E3E7EE">
       <label style="display:block;font-weight:600;font-size:13px;margin-bottom:8px;color:#10233F">생년월일</label>
       <div style="display:flex;gap:8px;align-items:center">
-        <input type="date" name="shortfall_birth_date" id="shortfall_birth_date" value="{header.get('customer_birth_date', '')}"
+        <input type="date" name="shortfall_birth_date" id="shortfall_birth_date" value="{header.get('customer_birth_date') or date.today().isoformat()}"
                style="padding:8px;border:1px solid #D0D8E0;border-radius:6px;font-size:14px;flex:1;max-width:200px">
         <span style="font-size:12px;color:#5B6B82;margin-left:auto">YYYY-MM-DD 형식</span>
       </div>
@@ -831,7 +831,7 @@ h1{{font-size:24px;margin-bottom:8px}}
         <label style="display:block;font-weight:600;font-size:13px;margin-bottom:8px;color:#10233F">성별</label>
         <div style="display:flex;gap:12px">
           <div style="display:flex;align-items:center">
-            <input type="radio" name="shortfall_gender" id="shortfall_male" value="M" {f'checked' if header.get('gender') in ('M', '남') else ''} style="cursor:pointer;width:16px;height:16px">
+            <input type="radio" name="shortfall_gender" id="shortfall_male" value="M" {f'checked' if header.get('gender') not in ('F', '여') else ''} style="cursor:pointer;width:16px;height:16px">
             <label for="shortfall_male" style="cursor:pointer;margin:0;margin-left:6px;font-size:13px">남성</label>
           </div>
           <div style="display:flex;align-items:center">
@@ -1236,6 +1236,13 @@ function syncShortfallCheckboxes() {{
                 _log_shortfall(f"[POST HANDLER] Using default birth_date from header: {birth_date_str} → {current_age}세")
             except Exception as e:
                 _log_shortfall(f"[POST HANDLER] Failed to calculate age from header: {e}")
+
+    # 요율표는 20세부터 시작하므로, 20세 미만(생년월일 미입력 등으로 0세가
+    # 되는 경우 포함)이면 20세로 강제 고정한다.
+    if current_age < 20:
+        _log_shortfall(f"[POST HANDLER] current_age {current_age}세 < 20세, clamping to 20세")
+        current_age = 20
+        modified_shortfall_coverage["current_age"] = current_age
 
     # 선택된 항목의 프리미엄 계산
     if selected_shortfall_ids:
