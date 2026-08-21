@@ -129,9 +129,17 @@ def _calculate_shortfall_premium(
         "total_premium": 0,
     }
 
+    if not premiums_by_age:
+        return result
+
     age_key = str(current_age)
     if age_key not in premiums_by_age:
-        return result
+        # 나이가 요율표 범위(예: 20~70세) 밖이거나 생년월일 파싱 실패로 0세가
+        # 들어온 경우에도 보장 항목 자체가 통째로 누락되지 않도록, 가장 가까운
+        # 나이의 요율로 대체한다 (완전히 비어있는 결과를 반환하지 않음).
+        available_ages = sorted(int(a) for a in premiums_by_age.keys())
+        nearest_age = min(available_ages, key=lambda a: abs(a - current_age))
+        age_key = str(nearest_age)
 
     age_premiums = premiums_by_age[age_key]
 
