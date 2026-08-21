@@ -820,11 +820,11 @@ h1{{font-size:24px;margin-bottom:8px}}
         <label style="display:block;font-weight:600;font-size:13px;margin-bottom:8px;color:#10233F">성별</label>
         <div style="display:flex;gap:12px">
           <div style="display:flex;align-items:center">
-            <input type="radio" name="shortfall_gender" id="shortfall_male" value="M" {f'checked' if header.get('gender') == 'M' else ''} style="cursor:pointer;width:16px;height:16px">
+            <input type="radio" name="shortfall_gender" id="shortfall_male" value="M" {f'checked' if header.get('gender') in ('M', '남') else ''} style="cursor:pointer;width:16px;height:16px">
             <label for="shortfall_male" style="cursor:pointer;margin:0;margin-left:6px;font-size:13px">남성</label>
           </div>
           <div style="display:flex;align-items:center">
-            <input type="radio" name="shortfall_gender" id="shortfall_female" value="F" {f'checked' if header.get('gender') == 'F' else ''} style="cursor:pointer;width:16px;height:16px">
+            <input type="radio" name="shortfall_gender" id="shortfall_female" value="F" {f'checked' if header.get('gender') in ('F', '여') else ''} style="cursor:pointer;width:16px;height:16px">
             <label for="shortfall_female" style="cursor:pointer;margin:0;margin-left:6px;font-size:13px">여성</label>
           </div>
         </div>
@@ -1193,8 +1193,9 @@ function syncShortfallCheckboxes() {{
     # 성별 정보 수신
     gender = request.form.get("shortfall_gender", "").strip()
     if not gender:
-        # 폼에서 성별을 받지 못했으면 header의 성별 사용
-        gender = header.get("gender", "")
+        # 폼에서 성별을 받지 못했으면 header의 성별 사용 ("남"/"여" → "M"/"F" 변환)
+        header_gender = header.get("gender", "")
+        gender = {"남": "M", "여": "F"}.get(header_gender, header_gender)
     if gender:
         modified_shortfall_coverage["gender"] = gender
 

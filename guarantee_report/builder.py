@@ -699,6 +699,7 @@ def build_report_data(parsed: ParsedReport, rules_path: str | None = None) -> di
         "name": parsed.customer.name,
         "gender": parsed.customer.gender or "-",
         "birth_display": parsed.customer.birth_date.strftime("%Y.%m.%d") if parsed.customer.birth_date else "-",
+        "customer_birth_date": parsed.customer.birth_date.strftime("%Y-%m-%d") if parsed.customer.birth_date else "",
         "age": parsed.customer.age_insurance,
         "basis_date_display": basis.strftime("%Y.%m.%d") if basis else "-",
         "total_contracts": len(contracts),
