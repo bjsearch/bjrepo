@@ -1283,40 +1283,6 @@ function syncShortfallCheckboxes() {{
     data["coverage_sections"] = modified_coverage_sections if modified_coverage_sections else coverage_sections
     data["shortfall_coverage"] = modified_shortfall_coverage
 
-    # 부족 보장 항목의 합산 비용을 데이터에 추가
-    if modified_shortfall_coverage.get("premium_data"):
-        try:
-            kpis = data.get("kpis", {})
-            premium_data = modified_shortfall_coverage["premium_data"]
-
-            # 기존 비용을 숫자로 추출
-            if "monthly_premium" in kpis and "monthly_total" in premium_data:
-                existing_val = kpis["monthly_premium"]
-                if isinstance(existing_val, str):
-                    existing_monthly = int(existing_val.replace(",", ""))
-                else:
-                    existing_monthly = int(existing_val)
-                additional_monthly = premium_data["monthly_total"]
-                combined_monthly = existing_monthly + additional_monthly
-                # 합산된 값을 shortfall_coverage에 추가
-                modified_shortfall_coverage["combined_monthly"] = combined_monthly
-                modified_shortfall_coverage["combined_monthly_display"] = f"{combined_monthly:,}"
-
-            if "grand_total" in kpis and "total_premium" in premium_data:
-                existing_val = kpis["grand_total"]
-                if isinstance(existing_val, str):
-                    existing_total = int(existing_val.replace(",", ""))
-                else:
-                    existing_total = int(existing_val)
-                additional_total = premium_data["total_premium"]
-                combined_total = existing_total + additional_total
-                # 합산된 값을 shortfall_coverage에 추가
-                modified_shortfall_coverage["combined_total"] = combined_total
-                modified_shortfall_coverage["combined_total_display"] = f"{combined_total:,}"
-        except Exception as e:
-            with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
-                f.write(f"[SHORTFALL COMBINED CALC ERROR] {e}\n{traceback.format_exc()}\n")
-
     # 생성일시 추가 (한국 시간)
     created_at = draft.get("created_at", time.time())
     kst = timezone(timedelta(hours=9))

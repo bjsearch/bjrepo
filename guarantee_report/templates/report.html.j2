@@ -544,22 +544,8 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
   {% if shortfall_coverage.premium_data and shortfall_coverage.premium_data.get('items') %}
   <div class="kpi" style="background:#FFF3E2;border-left:4px solid #FF9500">
     <div>
-      <div class="label">추가 월 납입료</div>
-      <div style="font-size:12px;color:#666;margin-top:4px;line-height:1.4">
-        {{ kpis.monthly_premium }}<br>
-        <span style="color:#FF9500">+ {{ shortfall_coverage.premium_data['monthly_total_display'] }}</span><br>
-        <span style="font-weight:bold;color:#FF9500">= {{ shortfall_coverage.combined_monthly_display }}</span>
-      </div>
-    </div>
-  </div>
-  <div class="kpi" style="background:#FFF3E2;border-left:4px solid #FF9500">
-    <div>
-      <div class="label">추가 총 보험료</div>
-      <div style="font-size:12px;color:#666;margin-top:4px;line-height:1.4">
-        {{ kpis.grand_total }}<br>
-        <span style="color:#FF9500">+ {{ shortfall_coverage.premium_data['total_premium_display'] }}</span><br>
-        <span style="font-weight:bold;color:#FF9500">= {{ shortfall_coverage.combined_total_display }}</span>
-      </div>
+      <div class="label">보완시 예상 월 보험료</div>
+      <div class="value num" style="color:#FF9500">{{ shortfall_coverage.premium_data['monthly_total_display'] }}<span class="unit">원</span></div>
     </div>
   </div>
   {% endif %}
