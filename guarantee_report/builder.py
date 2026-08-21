@@ -246,9 +246,18 @@ def _calculate_shortfall_premium(
         monthly_premium = None
         if product_name in gender_premiums_data.get(gender, {}):
             age_data = gender_premiums_data[gender][product_name]
-            if age_key in age_data:
+            lookup_age_key = age_key
+            if lookup_age_key not in age_data and age_data:
+                # 나이가 요율표 범위(20~70세) 밖이거나 생년월일 파싱/입력 오류로
+                # 범위 밖 나이가 들어온 경우에도 보장 항목이 통째로 누락되지
+                # 않도록, 가장 가까운 나이의 요율로 대체한다.
+                available_ages = sorted(int(a) for a in age_data.keys())
+                nearest_age = min(available_ages, key=lambda a: abs(a - current_age))
+                lookup_age_key = str(nearest_age)
+                debug_log_lines.append(f"  Item {item_id}: age {age_key} not in table, using nearest age {lookup_age_key}")
+            if lookup_age_key in age_data:
                 # 성별 프리미엄 데이터는 Excel에서 직접 추출한 원화 단위
-                monthly_premium = age_data[age_key]
+                monthly_premium = age_data[lookup_age_key]
                 debug_log_lines.append(f"  Item {item_id}: Found premium {monthly_premium}원 from gender data")
 
         # 성별 데이터가 없으면 기본 premiums_by_age 사용 (하위호환성)
