@@ -79,6 +79,17 @@ CREATE TABLE IF NOT EXISTS report_feedback (
     FOREIGN KEY (user_id) REFERENCES guarantee_users(id) ON DELETE SET NULL,
     FOREIGN KEY (resolved_by_user_id) REFERENCES guarantee_users(id) ON DELETE SET NULL
 );
+CREATE TABLE IF NOT EXISTS report_views (
+    id SERIAL PRIMARY KEY,
+    report_id INTEGER NOT NULL,
+    viewed_at TEXT NOT NULL,
+    ip_address TEXT,
+    country TEXT,
+    region TEXT,
+    city TEXT,
+    user_agent TEXT,
+    FOREIGN KEY (report_id) REFERENCES guarantee_reports(id) ON DELETE CASCADE
+);
 """
 
 _SCHEMA_SQLITE = """
@@ -121,6 +132,17 @@ CREATE TABLE IF NOT EXISTS report_feedback (
     FOREIGN KEY (report_id) REFERENCES guarantee_reports(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES guarantee_users(id) ON DELETE SET NULL,
     FOREIGN KEY (resolved_by_user_id) REFERENCES guarantee_users(id) ON DELETE SET NULL
+);
+CREATE TABLE IF NOT EXISTS report_views (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    report_id INTEGER NOT NULL,
+    viewed_at TEXT NOT NULL,
+    ip_address TEXT,
+    country TEXT,
+    region TEXT,
+    city TEXT,
+    user_agent TEXT,
+    FOREIGN KEY (report_id) REFERENCES guarantee_reports(id) ON DELETE CASCADE
 );
 """
 
@@ -479,6 +501,52 @@ def get_owner_phone_for_token(token: str) -> str | None:
         )
         row = cur.fetchone()
         return row["phone"] if row else None
+
+
+def get_report_id_by_share_token(token: str) -> int | None:
+    _ensure_init()
+    with _connect() as conn:
+        cur = conn.cursor()
+        cur.execute(_q("SELECT id FROM guarantee_reports WHERE share_token = ?"), (token,))
+        row = cur.fetchone()
+        return row["id"] if row else None
+
+
+def log_report_view(
+    report_id: int,
+    ip_address: str | None = None,
+    country: str | None = None,
+    region: str | None = None,
+    city: str | None = None,
+    user_agent: str | None = None,
+) -> None:
+    """공유 링크로 리포트를 열람한 기록을 남긴다 (담당자가 열람 여부·지역을 확인하기 위함)."""
+    _ensure_init()
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    with _connect() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            _q(
+                """INSERT INTO report_views (report_id, viewed_at, ip_address, country, region, city, user_agent)
+                   VALUES (?,?,?,?,?,?,?)"""
+            ),
+            (report_id, now, ip_address, country, region, city, user_agent),
+        )
+
+
+def get_report_views(report_id: int) -> list[dict]:
+    """리포트의 열람 기록을 최신순으로 반환한다."""
+    _ensure_init()
+    with _connect() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            _q(
+                """SELECT viewed_at, ip_address, country, region, city, user_agent
+                   FROM report_views WHERE report_id = ? ORDER BY viewed_at DESC"""
+            ),
+            (report_id,),
+        )
+        return [dict(r) for r in cur.fetchall()]
 
 
 def get_source_file(report_id: int, user_id: int | None = None) -> tuple[str, str] | None:

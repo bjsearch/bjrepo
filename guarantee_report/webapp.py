@@ -13,6 +13,8 @@ APP_PASSWORD를 설정하면 로그인 화면에 팀 공용 비밀번호 입력�
 from __future__ import annotations
 
 import hmac
+import ipaddress
+import json
 import os
 import re
 import secrets
@@ -20,6 +22,7 @@ import subprocess
 import tempfile
 import time
 import traceback
+import urllib.request
 from collections import Counter
 from datetime import datetime, date, timezone, timedelta
 from functools import wraps
@@ -176,6 +179,33 @@ def _chat_rate_limited(key: str) -> bool:
     hits.append(now)
     _CHAT_RATE_LIMIT[key] = hits
     return len(hits) > _CHAT_RATE_MAX
+
+
+def _geolocate_ip(ip: str | None) -> dict:
+    """IP 주소로부터 대략적인 지역(국가·시/도·도시)을 조회한다.
+    사설/루프백 IP나 조회 실패 시에는 빈 값을 반환한다 (열람 기록 자체는 계속 남김)."""
+    empty = {"country": None, "region": None, "city": None}
+    if not ip:
+        return empty
+    try:
+        addr = ipaddress.ip_address(ip)
+        if addr.is_private or addr.is_loopback or addr.is_reserved:
+            return empty
+    except ValueError:
+        return empty
+    try:
+        url = f"http://ip-api.com/json/{ip}?fields=status,country,regionName,city"
+        with urllib.request.urlopen(url, timeout=2.5) as resp:
+            result = json.loads(resp.read().decode("utf-8"))
+        if result.get("status") != "success":
+            return empty
+        return {
+            "country": result.get("country"),
+            "region": result.get("regionName"),
+            "city": result.get("city"),
+        }
+    except Exception:
+        return empty
 
 
 def admin_required(view):
@@ -1306,6 +1336,21 @@ def _share_url(token: str | None) -> str | None:
     return url_for("shared_report", token=token, _external=True)
 
 
+def _format_view_logs(logs: list[dict]) -> list[dict]:
+    """열람 기록의 viewed_at(UTC ISO)을 한국 시간 표시용 문자열로 변환한다."""
+    kst = timezone(timedelta(hours=9))
+    formatted = []
+    for log in logs:
+        entry = dict(log)
+        try:
+            dt = datetime.fromisoformat(entry["viewed_at"])
+            entry["viewed_at"] = dt.astimezone(kst).strftime("%Y-%m-%d %H:%M")
+        except (ValueError, TypeError, KeyError):
+            pass
+        formatted.append(entry)
+    return formatted
+
+
 @app.get("/reports/<int:report_id>")
 def view_report(report_id: int):
     user = current_user()
@@ -1325,6 +1370,7 @@ def view_report(report_id: int):
             "kakao_js_key": KAKAO_JS_KEY,
             "chat_endpoint": url_for("report_chat", report_id=report_id),
             "chat_enabled": bool(chatbot.ANTHROPIC_API_KEY),
+            "view_logs": _format_view_logs(storage.get_report_views(report_id)),
         }
     )
     filename = f"{data['header']['name']}_성우아빠의보장분석리포트.html"
@@ -1634,6 +1680,25 @@ def shared_report(token: str):
             return render_template(
                 "share_gate.html.j2", error=error, customer_name=data["header"]["name"], logo_mark=LOGO_MARK
             )
+
+    # 열람 기록 (담당자가 카카오톡 등으로 보낸 리포트를 상대방이 열어봤는지, 대략 어느
+    # 지역에서 열었는지 확인할 수 있도록 남긴다). 조회 실패로 리포트 표시 자체가
+    # 막히면 안 되므로 예외는 삼킨다.
+    try:
+        report_id = storage.get_report_id_by_share_token(token)
+        if report_id:
+            client_ip = request.remote_addr
+            geo = _geolocate_ip(client_ip)
+            storage.log_report_view(
+                report_id,
+                ip_address=client_ip,
+                country=geo["country"],
+                region=geo["region"],
+                city=geo["city"],
+                user_agent=request.headers.get("User-Agent", "")[:300],
+            )
+    except Exception:
+        pass
 
     html = render_html(
         {
