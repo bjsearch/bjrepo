@@ -1336,19 +1336,15 @@ def _share_url(token: str | None) -> str | None:
     return url_for("shared_report", token=token, _external=True)
 
 
-def _format_view_logs(logs: list[dict]) -> list[dict]:
-    """열람 기록의 viewed_at(UTC ISO)을 한국 시간 표시용 문자열로 변환한다."""
-    kst = timezone(timedelta(hours=9))
-    formatted = []
-    for log in logs:
-        entry = dict(log)
-        try:
-            dt = datetime.fromisoformat(entry["viewed_at"])
-            entry["viewed_at"] = dt.astimezone(kst).strftime("%Y-%m-%d %H:%M")
-        except (ValueError, TypeError, KeyError):
-            pass
-        formatted.append(entry)
-    return formatted
+def _to_kst_display(iso_str: str | None) -> str | None:
+    """UTC ISO 타임스탬프 문자열을 'YYYY-MM-DD HH:MM' 한국 시간 표시용 문자열로 변환한다."""
+    if not iso_str:
+        return None
+    try:
+        kst = timezone(timedelta(hours=9))
+        return datetime.fromisoformat(iso_str).astimezone(kst).strftime("%Y-%m-%d %H:%M")
+    except (ValueError, TypeError):
+        return iso_str
 
 
 @app.get("/reports/<int:report_id>")
@@ -1370,7 +1366,6 @@ def view_report(report_id: int):
             "kakao_js_key": KAKAO_JS_KEY,
             "chat_endpoint": url_for("report_chat", report_id=report_id),
             "chat_enabled": bool(chatbot.ANTHROPIC_API_KEY),
-            "view_logs": _format_view_logs(storage.get_report_views(report_id)),
         }
     )
     filename = f"{data['header']['name']}_성우아빠의보장분석리포트.html"
@@ -1813,6 +1808,21 @@ def admin_dashboard():
         users=users,
         active_users=active_users_display,
     )
+
+
+@app.get("/admin/view-logs")
+@admin_required
+def admin_view_logs():
+    """카카오톡 등으로 공유된 리포트가 열람됐는지 · 언제 · 어디서 열람됐는지 확인하는
+    관리자 전용 게시판."""
+    rows = storage.list_shared_reports_with_view_stats()
+    for r in rows:
+        r["created_at"] = _to_kst_display(r["created_at"])
+        r["last_viewed_at"] = _to_kst_display(r["last_viewed_at"])
+        r["last_location"] = ", ".join(
+            v for v in (r["last_city"], r["last_region"], r["last_country"]) if v
+        ) or None
+    return render_template("admin_view_logs.html.j2", user=current_user(), rows=rows)
 
 
 @app.route("/admin/approve-users", methods=["GET"])

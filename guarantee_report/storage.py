@@ -549,6 +549,29 @@ def get_report_views(report_id: int) -> list[dict]:
         return [dict(r) for r in cur.fetchall()]
 
 
+def list_shared_reports_with_view_stats() -> list[dict]:
+    """카카오톡 등으로 공유된(share_token이 있는) 리포트를 대상으로, 각각 몇 번
+    열람됐는지 · 가장 최근 언제 · 어느 지역에서 열람됐는지 요약해 최신순으로 반환한다.
+    (관리자 전용 '열람 현황' 게시판에 사용)"""
+    _ensure_init()
+    with _connect() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            _q(
+                """SELECT r.id, r.customer_name, r.created_by_name, r.created_at,
+                          COALESCE((SELECT COUNT(*) FROM report_views v WHERE v.report_id = r.id), 0) AS view_count,
+                          (SELECT viewed_at FROM report_views v WHERE v.report_id = r.id ORDER BY viewed_at DESC LIMIT 1) AS last_viewed_at,
+                          (SELECT city FROM report_views v WHERE v.report_id = r.id ORDER BY viewed_at DESC LIMIT 1) AS last_city,
+                          (SELECT region FROM report_views v WHERE v.report_id = r.id ORDER BY viewed_at DESC LIMIT 1) AS last_region,
+                          (SELECT country FROM report_views v WHERE v.report_id = r.id ORDER BY viewed_at DESC LIMIT 1) AS last_country
+                   FROM guarantee_reports r
+                   WHERE r.share_token IS NOT NULL
+                   ORDER BY r.created_at DESC"""
+            )
+        )
+        return [dict(r) for r in cur.fetchall()]
+
+
 def get_source_file(report_id: int, user_id: int | None = None) -> tuple[str, str] | None:
     """원본 파일명과 파일 경로를 반환한다. (user_id 검증 포함)"""
     _ensure_init()
