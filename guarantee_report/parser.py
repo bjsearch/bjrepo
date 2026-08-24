@@ -62,6 +62,11 @@ class DetailItem:
     amount_man: int
     status: str
     renewal_type: str = "black"  # 'red' | 'yellow' | 'black'
+    # Excel 소스가 월납×납입연수 근사 없이 실제 납입 이력으로 계산해 제공하는
+    # 총보험료/잔여보험료 (있으면 근사 대신 이 값을 그대로 신뢰한다). PDF 소스는
+    # 이 값을 제공하지 않으므로 항상 None — 기존 근사 로직 그대로 사용된다.
+    total_premium_won: int | None = None
+    remaining_premium_won: int | None = None
 
 
 @dataclass

@@ -72,12 +72,19 @@ class ExcelParseResult:
 
             monthly_premium = product.get("monthly_premium", 0)
             total_premium_val = product.get("total_premium", 0)
+            remaining_premium_val = product.get("remaining_premium", 0)
 
             pay_years = None
             if monthly_premium > 0 and total_premium_val > 0:
                 pay_years = total_premium_val // (monthly_premium * 12)
                 if pay_years < 1:
                     pay_years = 1
+
+            # Excel이 제공한 실제 총보험료가 있으면 월납×납입연수 근사 대신 그대로
+            # 신뢰한다 — 납입종료(월 보험료 0원)된 계약처럼 근사가 아예 불가능한
+            # 경우에도 총보험료·잔여보험료가 리포트에서 누락되지 않는다.
+            excel_total_premium_won = total_premium_val if total_premium_val > 0 else None
+            excel_remaining_premium_won = remaining_premium_val if total_premium_val > 0 else None
 
             product_name = product.get("product_name", "")
             company = product.get("company", "")
@@ -133,7 +140,9 @@ class ExcelParseResult:
                                 category=cov_name,
                                 amount_man=int(cov_amount) if cov_amount > 0 else 0,
                                 status="",
-                                renewal_type=product.get("renewal_type", "black")
+                                renewal_type=product.get("renewal_type", "black"),
+                                total_premium_won=excel_total_premium_won,
+                                remaining_premium_won=excel_remaining_premium_won,
                             )
                             detail_items.append(detail_item)
 
@@ -157,7 +166,9 @@ class ExcelParseResult:
                         category=product_name[:20],
                         amount_man=0,
                         status="",
-                        renewal_type=product.get("renewal_type", "black")
+                        renewal_type=product.get("renewal_type", "black"),
+                        total_premium_won=excel_total_premium_won,
+                        remaining_premium_won=excel_remaining_premium_won,
                     )
                     detail_items.append(detail_item)
 

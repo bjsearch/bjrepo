@@ -356,10 +356,19 @@ def _build_contracts(parsed: ParsedReport, brand_registry: BrandRegistry) -> lis
         detail_line = f"주요 담보:\n· {top_str_formatted}{more}"
 
         # 총 보험료, 납입한 보험료, 잔여 보험료 계산
-        total_premium_won = (total_months * premium) if total_months else None
-        paid_premium_won = (elapsed_months * premium) if elapsed_months else None
-        remaining_months = max(0, total_months - elapsed_months) if total_months else None
-        remaining_premium_won = (remaining_months * premium) if remaining_months is not None else None
+        # Excel 소스가 실제 총보험료를 제공했으면(예: 납입종료로 월 보험료가 0원이라
+        # 월납×납입연수 근사가 불가능한 계약) 근사 대신 그 값을 그대로 사용한다.
+        excel_total = items[0].total_premium_won
+        excel_remaining = items[0].remaining_premium_won
+        if excel_total is not None:
+            total_premium_won = excel_total
+            remaining_premium_won = excel_remaining if excel_remaining is not None else 0
+            paid_premium_won = total_premium_won - remaining_premium_won
+        else:
+            total_premium_won = (total_months * premium) if total_months else None
+            paid_premium_won = (elapsed_months * premium) if elapsed_months else None
+            remaining_months = max(0, total_months - elapsed_months) if total_months else None
+            remaining_premium_won = (remaining_months * premium) if remaining_months is not None else None
 
         # 이 계약과 (company, start, end)가 일치하는 실손 항목을 매칭
         for idx, ind in enumerate(parsed.indemnity_items):
@@ -681,6 +690,14 @@ def build_report_data(parsed: ParsedReport, rules_path: str | None = None) -> di
     for d in parsed.detail_items:
         groups[(d.company, d.product)].append(d)
     for (company, product), items in groups.items():
+        excel_total = items[0].total_premium_won
+        if excel_total is not None:
+            # Excel 소스가 실제 총보험료를 제공한 경우(예: 납입종료로 월 보험료가
+            # 0원이라 월납×납입연수 근사가 불가능한 계약) 근사 대신 그대로 합산한다.
+            excel_remaining = items[0].remaining_premium_won or 0
+            paid_total += excel_total - excel_remaining
+            scheduled_total += excel_remaining
+            continue
         start = _parse_ymd(items[0].start)
         pay_years = items[0].pay_years
         premium = items[0].premium_won
@@ -689,13 +706,20 @@ def build_report_data(parsed: ParsedReport, rules_path: str | None = None) -> di
         elapsed = min(_months_between(start, basis), pay_years * 12)
         total = pay_years * 12
         paid_total += elapsed * premium
-        scheduled_total += total * premium
+        scheduled_total += (total - elapsed) * premium
 
-    # 실손의료비 항목도 포함
+    # 실손의료비 항목도 포함 — 단, 이미 위 detail_items 루프에서 같은 계약(같은
+    # company+start+end)의 보험료가 집계된 경우는 제외한다. Excel "리포트" 소스는
+    # 한 상품(계약)의 담보를 정액/실손으로 나눠 DetailItem과 IndemnityItem에
+    # 동시에 싣는데, 두 루프가 같은 상품의 보험료를 각자 따로 합산하면 총보험료가
+    # 두 배로 부풀려진다.
+    detail_contract_keys = {(d.company, d.start, d.end) for d in parsed.detail_items}
     indemnity_groups = defaultdict(list)
     for ind in parsed.indemnity_items:
         indemnity_groups[(ind.company, ind.start, ind.end)].append(ind)
     for (company, start_s, end_s), items in indemnity_groups.items():
+        if (company, start_s, end_s) in detail_contract_keys:
+            continue
         start = _parse_ymd(start_s)
         premium = items[0].premium_won if items else 0
         if not premium or not start:
