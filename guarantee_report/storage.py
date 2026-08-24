@@ -88,6 +88,7 @@ CREATE TABLE IF NOT EXISTS report_views (
     region TEXT,
     city TEXT,
     user_agent TEXT,
+    duration_seconds INTEGER,
     FOREIGN KEY (report_id) REFERENCES guarantee_reports(id) ON DELETE CASCADE
 );
 """
@@ -142,6 +143,7 @@ CREATE TABLE IF NOT EXISTS report_views (
     region TEXT,
     city TEXT,
     user_agent TEXT,
+    duration_seconds INTEGER,
     FOREIGN KEY (report_id) REFERENCES guarantee_reports(id) ON DELETE CASCADE
 );
 """
@@ -213,6 +215,8 @@ def init_db() -> None:
         _add_column_if_missing(cur, "report_feedback", "resolved_by_user_id", "INTEGER")
         # 사용자 승인 상태 컬럼 추가
         _add_column_if_missing(cur, "guarantee_users", "approval_status", "TEXT", default="'approved'")
+        # 열람 체류 시간(초) 컬럼 추가
+        _add_column_if_missing(cur, "report_views", "duration_seconds", "INTEGER")
     global _initialized
     _initialized = True
 
@@ -519,18 +523,33 @@ def log_report_view(
     region: str | None = None,
     city: str | None = None,
     user_agent: str | None = None,
-) -> None:
-    """공유 링크로 리포트를 열람한 기록을 남긴다 (담당자가 열람 여부·지역을 확인하기 위함)."""
+) -> int:
+    """공유 링크로 리포트를 열람한 기록을 남기고, 새로 생성된 열람 기록의 id를 반환한다
+    (담당자가 열람 여부·지역·체류 시간을 확인하기 위함. id는 이후 체류 시간을
+    업데이트할 때 이 열람 건을 다시 찾기 위해 클라이언트에 내려준다)."""
     _ensure_init()
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    insert_sql = """INSERT INTO report_views (report_id, viewed_at, ip_address, country, region, city, user_agent)
+        VALUES (?,?,?,?,?,?,?)"""
+    with _connect() as conn:
+        cur = conn.cursor()
+        if BACKEND == "postgres":
+            cur.execute(_q(insert_sql) + " RETURNING id", (report_id, now, ip_address, country, region, city, user_agent))
+            return cur.fetchone()["id"]
+        cur.execute(insert_sql, (report_id, now, ip_address, country, region, city, user_agent))
+        return cur.lastrowid
+
+
+def update_report_view_duration(view_id: int, report_id: int, duration_seconds: int) -> None:
+    """열람 체류 시간(초)을 기록한다. report_id도 함께 검증해, 공유 링크 열람자가
+    다른 리포트의 열람 기록을 조작하는 것을 막는다."""
+    _ensure_init()
+    duration_seconds = max(0, min(int(duration_seconds), 24 * 3600))  # 하루치로 상한
     with _connect() as conn:
         cur = conn.cursor()
         cur.execute(
-            _q(
-                """INSERT INTO report_views (report_id, viewed_at, ip_address, country, region, city, user_agent)
-                   VALUES (?,?,?,?,?,?,?)"""
-            ),
-            (report_id, now, ip_address, country, region, city, user_agent),
+            _q("UPDATE report_views SET duration_seconds = ? WHERE id = ? AND report_id = ?"),
+            (duration_seconds, view_id, report_id),
         )
 
 
@@ -541,7 +560,7 @@ def get_report_views(report_id: int) -> list[dict]:
         cur = conn.cursor()
         cur.execute(
             _q(
-                """SELECT viewed_at, ip_address, country, region, city, user_agent
+                """SELECT viewed_at, ip_address, country, region, city, user_agent, duration_seconds
                    FROM report_views WHERE report_id = ? ORDER BY viewed_at DESC"""
             ),
             (report_id,),
@@ -563,7 +582,9 @@ def list_shared_reports_with_view_stats() -> list[dict]:
                           (SELECT viewed_at FROM report_views v WHERE v.report_id = r.id ORDER BY viewed_at DESC LIMIT 1) AS last_viewed_at,
                           (SELECT city FROM report_views v WHERE v.report_id = r.id ORDER BY viewed_at DESC LIMIT 1) AS last_city,
                           (SELECT region FROM report_views v WHERE v.report_id = r.id ORDER BY viewed_at DESC LIMIT 1) AS last_region,
-                          (SELECT country FROM report_views v WHERE v.report_id = r.id ORDER BY viewed_at DESC LIMIT 1) AS last_country
+                          (SELECT country FROM report_views v WHERE v.report_id = r.id ORDER BY viewed_at DESC LIMIT 1) AS last_country,
+                          (SELECT duration_seconds FROM report_views v WHERE v.report_id = r.id ORDER BY viewed_at DESC LIMIT 1) AS last_duration_seconds,
+                          COALESCE((SELECT SUM(duration_seconds) FROM report_views v WHERE v.report_id = r.id), 0) AS total_duration_seconds
                    FROM guarantee_reports r
                    WHERE r.share_token IS NOT NULL
                    ORDER BY r.created_at DESC"""

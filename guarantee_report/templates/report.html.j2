@@ -1235,6 +1235,42 @@ document.addEventListener('DOMContentLoaded', function(){
   });
 });
 </script>
+{% if view_duration_endpoint %}
+<script>
+(function(){
+  // 공유 리포트를 실제로 화면에 띄워놓고 본 시간(초)만 잰다 — 백그라운드 탭에
+  // 방치된 시간은 제외한다. 탭을 숨기거나 페이지를 떠날 때마다 그때까지 누적된
+  // 시간을 서버로 보내며, 매번 "누적 총합"을 덮어쓰므로 여러 번 보내도 안전하다.
+  var viewId = {{ view_id }};
+  var endpoint = {{ view_duration_endpoint | tojson }};
+  var activeSeconds = 0;
+  var segmentStart = document.visibilityState === 'visible' ? Date.now() : null;
+
+  function flush(){
+    if (segmentStart !== null) {
+      activeSeconds += (Date.now() - segmentStart) / 1000;
+      segmentStart = document.visibilityState === 'visible' ? Date.now() : null;
+    }
+  }
+
+  function send(){
+    flush();
+    var payload = JSON.stringify({ view_id: viewId, duration: Math.round(activeSeconds) });
+    try {
+      navigator.sendBeacon(endpoint, new Blob([payload], { type: 'application/json' }));
+    } catch (e) {}
+  }
+
+  document.addEventListener('visibilitychange', function(){
+    flush();
+    if (document.visibilityState === 'hidden') send();
+  });
+  window.addEventListener('pagehide', send);
+  // 창을 계속 켜둔 채 오래 보는 경우를 대비해 주기적으로도 보낸다.
+  setInterval(send, 30000);
+})();
+</script>
+{% endif %}
 {% if kakao_js_key %}
 <script src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
 <script>

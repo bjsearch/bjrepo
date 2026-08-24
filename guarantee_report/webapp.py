@@ -221,7 +221,7 @@ def admin_required(view):
 
 @app.before_request
 def _require_login():
-    if request.endpoint in ("login", "signup", "logout", "static", "shared_report", "shared_report_chat"):
+    if request.endpoint in ("login", "signup", "logout", "static", "shared_report", "shared_report_chat", "report_view_duration"):
         return None
     user = current_user()
     if not user:
@@ -1347,6 +1347,17 @@ def _to_kst_display(iso_str: str | None) -> str | None:
         return iso_str
 
 
+def _format_duration(seconds: int | None) -> str | None:
+    """초 단위 체류 시간을 '2분 15초' / '35초' 같은 표시용 문자열로 변환한다."""
+    if seconds is None:
+        return None
+    seconds = int(seconds)
+    minutes, secs = divmod(seconds, 60)
+    if minutes:
+        return f"{minutes}분 {secs}초"
+    return f"{secs}초"
+
+
 @app.get("/reports/<int:report_id>")
 def view_report(report_id: int):
     user = current_user()
@@ -1677,14 +1688,17 @@ def shared_report(token: str):
             )
 
     # 열람 기록 (담당자가 카카오톡 등으로 보낸 리포트를 상대방이 열어봤는지, 대략 어느
-    # 지역에서 열었는지 확인할 수 있도록 남긴다). 조회 실패로 리포트 표시 자체가
-    # 막히면 안 되므로 예외는 삼킨다.
+    # 지역에서 · 몇 초간 열람했는지 확인할 수 있도록 남긴다). 조회 실패로 리포트 표시
+    # 자체가 막히면 안 되므로 예외는 삼킨다. view_id는 클라이언트에 내려줘서, 페이지를
+    # 떠날 때 체류 시간을 이 열람 건에 이어서 기록할 수 있게 한다.
+    report_id = None
+    view_id = None
     try:
         report_id = storage.get_report_id_by_share_token(token)
         if report_id:
             client_ip = request.remote_addr
             geo = _geolocate_ip(client_ip)
-            storage.log_report_view(
+            view_id = storage.log_report_view(
                 report_id,
                 ip_address=client_ip,
                 country=geo["country"],
@@ -1703,11 +1717,35 @@ def shared_report(token: str):
             "kakao_js_key": None,
             "chat_endpoint": url_for("shared_report_chat", token=token),
             "chat_enabled": bool(chatbot.ANTHROPIC_API_KEY),
+            "view_id": view_id,
+            "view_report_id": report_id,
+            "view_duration_endpoint": url_for("report_view_duration", token=token) if view_id else None,
         }
     )
     resp = Response(html, mimetype="text/html")
     resp.headers["X-Robots-Tag"] = "noindex, nofollow"
     return resp
+
+
+@app.post("/s/<token>/view-duration")
+def report_view_duration(token: str):
+    """공유 리포트를 얼마나(초) 열람했는지 클라이언트가 페이지를 떠날 때
+    navigator.sendBeacon으로 보내는 값을 받아 해당 열람 기록에 반영한다.
+    sendBeacon은 응답을 신경 쓰지 않으므로 항상 204를 돌려준다."""
+    report_id = storage.get_report_id_by_share_token(token)
+    if not report_id:
+        return "", 204
+    body = request.get_json(silent=True) or {}
+    try:
+        view_id = int(body.get("view_id"))
+        duration = int(body.get("duration"))
+    except (TypeError, ValueError):
+        return "", 204
+    try:
+        storage.update_report_view_duration(view_id, report_id, duration)
+    except Exception:
+        pass
+    return "", 204
 
 
 @app.post("/reports/<int:report_id>/chat")
@@ -1822,6 +1860,8 @@ def admin_view_logs():
         r["last_location"] = ", ".join(
             v for v in (r["last_city"], r["last_region"], r["last_country"]) if v
         ) or None
+        r["last_duration_display"] = _format_duration(r.get("last_duration_seconds"))
+        r["total_duration_display"] = _format_duration(r.get("total_duration_seconds"))
     return render_template("admin_view_logs.html.j2", user=current_user(), rows=rows)
 
 

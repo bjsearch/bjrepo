@@ -73,7 +73,7 @@
   {% if rows %}
   <table>
     <thead>
-      <tr><th>고객</th><th>생성자</th><th>공유(생성)일</th><th>열람 여부</th><th class="r">열람 횟수</th><th>최근 열람 시각</th><th>최근 열람 지역</th></tr>
+      <tr><th>고객</th><th>생성자</th><th>공유(생성)일</th><th>열람 여부</th><th class="r">열람 횟수</th><th>최근 열람 시각</th><th>최근 열람 지역</th><th class="r">최근 열람 시간</th><th class="r">총 열람 시간</th></tr>
     </thead>
     <tbody>
       {% for r in rows %}
@@ -87,6 +87,8 @@
         <td class="r">{{ r.view_count }}회</td>
         <td class="muted">{{ r.last_viewed_at or '-' }}</td>
         <td class="muted">{{ r.last_location or ('위치 확인 불가' if r.view_count > 0 else '-') }}</td>
+        <td class="r muted">{{ r.last_duration_display or '-' }}</td>
+        <td class="r muted">{{ r.total_duration_display or '-' }}</td>
       </tr>
       {% endfor %}
     </tbody>
