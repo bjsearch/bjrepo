@@ -273,10 +273,18 @@ def _calculate_shortfall_premium(
         if monthly_premium is not None:
             total_premium = monthly_premium * payment_years * 12
             debug_log_lines.append(f"  Item {item_id}: monthly={monthly_premium}, total={total_premium}")
+            # 사용자가 콤보박스에서 기본값과 다른 보장금액을 선택했으면, 표시용
+            # display_name도 실제 계산에 쓰인 금액을 반영하도록 다시 만든다
+            # (shortfall_coverage.json의 고정 display_name을 그대로 쓰면 예전
+            # 기본 금액이 그대로 남아 실제 계산 금액과 다르게 보인다).
+            if coverage_amounts and item_id in coverage_amounts:
+                display_name = f"{item['name']} - {coverage_amount_won:,}만원"
+            else:
+                display_name = item["display_name"]
             result["items"].append({
                 "id": item_id,
                 "name": item["name"],
-                "display_name": item["display_name"],
+                "display_name": display_name,
                 "monthly_premium": monthly_premium,
                 "total_premium": total_premium,
                 "monthly_premium_display": f"{monthly_premium:,}",
