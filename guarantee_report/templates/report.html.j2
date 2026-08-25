@@ -263,29 +263,58 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
   .reco-why{font-size:10px;padding:1px 6px}
   .num{font-variant-numeric:tabular-nums}
 }
-.cover-left{flex:1;padding:60px 80px;display:flex;flex-direction:column;justify-content:space-between;position:relative;z-index:10}
-.cover-title{font-size:84px;font-weight:900;color:#000;margin:0 0 32px;letter-spacing:-.02em;line-height:1;font-family:"Noto Serif KR",serif}
-.cover-subtitle{font-size:18px;color:#1D5BD8;margin-bottom:20px;font-weight:700;letter-spacing:.02em}
-.cover-desc{font-size:15px;color:#000;margin:0;max-width:450px;line-height:1.8;font-weight:500}
+.cover{background:linear-gradient(160deg,#0B1E42 0%,#12305F 55%,#0B1E42 100%)}
+.cover-card{background:#fff;flex:0 0 66%;max-width:66%;margin:22px;border-radius:36px 36px 140px 36px;padding:56px 60px;display:flex;flex-direction:column;justify-content:space-between;position:relative;z-index:10;box-shadow:0 30px 70px rgba(5,14,32,.35)}
+.cover-eyebrow{font-size:12.5px;font-weight:800;letter-spacing:.22em;color:#1D5BD8}
+.cover-eyebrow-line{width:56px;height:3px;background:#1D5BD8;margin:16px 0 22px;border-radius:2px}
+.cover-customer{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:700;color:#10233F;background:#EEF2FB;padding:8px 16px;border-radius:99px;width:fit-content;margin-bottom:20px}
+.cover-title{font-size:50px;font-weight:900;line-height:1.2;letter-spacing:-.02em;color:#10233F;font-family:Pretendard,-apple-system,sans-serif;margin:0 0 26px}
+.cover-title .accent{color:#1D5BD8}
+.cover-divider{width:100%;height:1px;background:#E3E7EE;margin-bottom:22px}
+.cover-lead{font-size:14.5px;color:#4B5768;line-height:1.75;font-weight:500;margin-bottom:0}
+.cover-mid{flex:1;display:flex;flex-direction:column;justify-content:center;gap:32px}
+.cover-features{display:flex;align-items:stretch}
+.cover-feature{flex:1;display:flex;flex-direction:column;align-items:center;gap:9px;padding:0 8px;text-align:center}
+.cover-feature svg{width:28px;height:28px;flex:none}
+.cover-feature span{font-size:12px;font-weight:700;color:#10233F;line-height:1.35}
+.cover-feature-sep{width:1px;background:#E3E7EE;margin:2px 0}
+.cover-brand-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.cover-brand-row .team{font-size:16px;font-weight:900;color:#10233F;letter-spacing:.01em}
+.cover-brand-row .x{font-size:14px;color:#B7C0CC;font-weight:700}
+.toss-mark{display:inline-flex;align-items:center;gap:6px}
+.toss-mark .badge{width:20px;height:20px;border-radius:6px;background:#1D5BD8;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.toss-mark span{font-size:15px;font-weight:800;color:#10233F;letter-spacing:-.01em}
+.cover-tagline{font-size:12px;color:#8A96A6;font-weight:600;margin-bottom:16px}
+.cover-copyright{font-size:10.5px;color:#B0B8C2}
+.cover-right{flex:1;position:relative;overflow:hidden}
+.cover-right-label{position:absolute;top:96px;right:40px;display:flex;align-items:center;gap:14px}
+.cover-right-label .div{width:1px;height:30px;background:rgba(255,255,255,.35)}
+.cover-right-label small{display:block;font-size:10.5px;letter-spacing:.15em;color:#C7D3EE;font-weight:700;line-height:1.7;white-space:nowrap}
 @media(max-width:768px){
   .cover{flex-direction:column}
-  .cover-left{padding:40px 24px}
-  .cover-title{font-size:48px}
+  .cover-card{flex:1;max-width:none;margin:16px;border-radius:28px;padding:36px 28px}
+  .cover-title{font-size:36px}
   .cover-right{display:none!important}
 }
 @media(max-width:640px){
   .cover{min-height:auto!important}
-  .cover-left{padding:32px 16px}
-  .cover-title{font-size:40px;margin-bottom:20px}
-  .cover-subtitle{font-size:14px;margin-bottom:24px}
-  .cover-desc{font-size:14px}
+  .cover-card{margin:12px;padding:30px 22px;border-radius:24px}
+  .cover-title{font-size:30px;margin-bottom:20px}
+  .cover-customer{font-size:13px}
+  .cover-lead{font-size:13.5px}
+  .cover-feature span{font-size:11px}
+  .cover-mid{gap:24px}
 }
 @media(max-width:500px){
   .cover{min-height:auto!important}
-  .cover-left{padding:24px 14px}
-  .cover-title{font-size:32px;margin-bottom:16px;line-height:1.3}
-  .cover-subtitle{font-size:12px;margin-bottom:16px}
-  .cover-desc{font-size:13px}
+  .cover-card{margin:10px;padding:24px 18px;border-radius:20px}
+  .cover-title{font-size:25px;margin-bottom:16px;line-height:1.3}
+  .cover-eyebrow-line{margin:12px 0 16px}
+  .cover-customer{font-size:12px;padding:6px 12px}
+  .cover-lead{font-size:12.5px}
+  .cover-feature svg{width:24px;height:24px}
+  .cover-feature span{font-size:10px}
+  .cover-mid{gap:20px}
 }
 @media print{
   body{background:#fff}
@@ -448,82 +477,107 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 <div class="page">
 
 <!-- 첫번째 페이지: 표지 -->
-<div class="cover" style="position:relative;padding:0;min-height:100vh;display:flex;background:#fff;overflow:hidden;page-break-after:always">
-  <!-- 좌측 콘텐츠 영역 -->
-  <div class="cover-left">
-    <!-- 로고 -->
-    <div style="display:flex;align-items:center;gap:12px">
-      <svg viewBox="0 0 40 40" width="32" height="32">
-        <path d="M4 21 A16 15 0 0 1 36 21 Z" fill="#1D5BD8"/>
-        <rect x="9" y="21" width="4.4" height="6" rx="1.6" fill="#1D5BD8"/>
-        <rect x="17.8" y="21" width="4.4" height="10" rx="1.6" fill="#1D5BD8"/>
-        <rect x="26.6" y="21" width="4.4" height="14" rx="1.6" fill="#1D5BD8"/>
-      </svg>
-      <span style="font-size:18px;font-weight:900;letter-spacing:.05em;color:#000">TEAM DIN</span>
-    </div>
+<div class="cover" style="position:relative;padding:0;min-height:100vh;display:flex;overflow:hidden;page-break-after:always">
+  <!-- 좌측 화이트 카드 -->
+  <div class="cover-card">
+    <div>
+      <div class="cover-eyebrow">AI INSURANCE ANALYSIS</div>
+      <div class="cover-eyebrow-line"></div>
 
-    <!-- 메인 콘텐츠 -->
-    <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
-      <!-- 파란색 라인 -->
-      <div style="width:50px;height:3px;background:#1D5BD8;margin-bottom:32px"></div>
-
-      <!-- 고객명 서브타이틀 -->
-      <div class="cover-subtitle">
-        {{ header.name }} 고객님만을 위한
+      <!-- 고객 성함 · 나이 -->
+      <div class="cover-customer">
+        {{ header.name }}님{% if header.age %} · {{ header.age }}세{% endif %}
       </div>
 
       <!-- 메인 제목 -->
-      <h1 class="cover-title">
-        보장분석<br>리포트
-      </h1>
+      <h1 class="cover-title">AI 기반<br><span class="accent">맞춤 보장분석</span><br><span class="accent">리포트</span></h1>
 
-      <!-- 파란색 라인 -->
-      <div style="width:50px;height:3px;background:#1D5BD8;margin-bottom:32px"></div>
-
-      <!-- 설명 텍스트 -->
-      <p class="cover-desc">
-        <span style="color:#1D5BD8;font-weight:700">TEAM DIN</span>이 꼼꼼하게 분석하고,<br>꼭 필요한 보장을 제안해드립니다.
-      </p>
+      <div class="cover-divider"></div>
+      <p class="cover-lead">현재를 분석하고,<br>필요한 보장을 명확하게.</p>
     </div>
 
-    <!-- 좌측 하단 로고 -->
+    <!-- 3대 기능 아이콘 -->
+    <div class="cover-mid">
+      <div class="cover-features">
+        <div class="cover-feature">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#1D5BD8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 2h9l4 4v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/>
+            <path d="M15 2v4h4"/>
+            <circle cx="12" cy="15" r="3.2"/>
+            <path d="M12 13.3v3.4M10.8 14.3h2.4M10.8 15.7h2.4"/>
+          </svg>
+          <span>보험료 현황</span>
+        </div>
+        <div class="cover-feature-sep"></div>
+        <div class="cover-feature">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#1D5BD8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2.5 20 6v6c0 5-3.4 8.4-8 9.5-4.6-1.1-8-4.5-8-9.5V6Z"/>
+            <path d="M8.5 12.2l2.4 2.4 4.6-4.9"/>
+          </svg>
+          <span>주요 보장 분석</span>
+        </div>
+        <div class="cover-feature-sep"></div>
+        <div class="cover-feature">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#1D5BD8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="10.5" cy="10.5" r="6.5"/>
+            <path d="M15.3 15.3 21 21"/>
+            <path d="M7.5 12v-2M10.5 12V7.5M13.5 12V9"/>
+          </svg>
+          <span>중복·보완<br>항목 진단</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 하단 브랜드 영역 -->
     <div>
-      <div style="font-size:16px;font-weight:900;color:#000;letter-spacing:.02em;margin-bottom:4px">TEAM DIN</div>
-      <div style="font-size:11px;letter-spacing:.08em;color:#999;font-weight:600">INSURANCE SOLUTION</div>
+      <div class="cover-brand-row">
+        <span class="team">TEAM DIN</span>
+        <span class="x">×</span>
+        <span class="toss-mark">
+          <span class="badge"><svg viewBox="0 0 20 20" width="12" height="12"><path d="M3 10.8 9 5.2l8 4.3-8 4.3-2.2-2.6Z" fill="#fff"/></svg></span>
+          <span>toss insurance</span>
+        </span>
+      </div>
+      <div class="cover-tagline">데이터를 기반으로, 보험을 더 명확하게.</div>
+      <div class="cover-copyright">© {{ header.basis_date_display[:4] if header.basis_date_display and header.basis_date_display != '-' else '' }} TEAM DIN All rights reserved.</div>
     </div>
   </div>
 
-  <!-- 우측 기하학적 배경 -->
-  <div class="cover-right" style="flex:1;position:relative;background:linear-gradient(135deg,#f5f5f5 0%,#ffffff 100%);display:flex;align-items:center;justify-content:center;overflow:hidden">
-    <!-- 회색 줄무늬 배경 -->
-    <svg style="position:absolute;top:0;right:0;width:100%;height:100%;opacity:0.15" viewBox="0 0 400 600" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 우측 네이비 패널 -->
+  <div class="cover-right">
+    <svg style="position:absolute;inset:0;width:100%;height:100%" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <pattern id="lines" x="0" y="0" width="20" height="600" patternUnits="userSpaceOnUse">
-          <line x1="0" y1="0" x2="0" y2="600" stroke="#999" stroke-width="2"/>
+        <pattern id="coverDotGrid" width="26" height="26" patternUnits="userSpaceOnUse">
+          <circle cx="2" cy="2" r="1.3" fill="#ffffff" opacity="0.18"/>
         </pattern>
       </defs>
-      <rect width="400" height="600" fill="url(#lines)"/>
+      <rect width="100%" height="100%" fill="url(#coverDotGrid)"/>
     </svg>
 
-    <!-- 기하학적 도형 -->
-    <svg style="position:absolute;width:600px;height:600px;right:-100px;top:50%;transform:translateY(-50%)" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
-      <!-- 블루 원 -->
-      <circle cx="200" cy="200" r="180" fill="#1D5BD8" opacity="0.9"/>
-
-      <!-- 검은색 다각형 -->
-      <polygon points="200,200 400,400 200,400" fill="#0F1419" opacity="0.95"/>
-
-      <!-- 밝은 블루 원호 -->
-      <circle cx="200" cy="200" r="180" fill="none" stroke="#4A90FF" stroke-width="2" opacity="0.3"/>
-    </svg>
-
-    <!-- 우측 하단 텍스트 박스 -->
-    <div style="position:absolute;bottom:60px;right:60px;text-align:right;z-index:20">
-      <div style="font-size:13px;letter-spacing:.12em;color:#666;font-weight:600;text-transform:uppercase;line-height:2">
-        Insurance<br>Solution
-      </div>
-      <div style="width:40px;height:2px;background:#1D5BD8;margin-top:8px"></div>
+    <div class="cover-right-label">
+      <span class="div"></span>
+      <small>FOR YOUR<br>BETTER COVERAGE</small>
     </div>
+
+    <!-- 방패 (평면 벡터) -->
+    <svg viewBox="0 0 200 200" style="position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);width:54%;max-width:190px">
+      <defs>
+        <linearGradient id="coverShieldGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#5B8CFB"/>
+          <stop offset="1" stop-color="#1D5BD8"/>
+        </linearGradient>
+      </defs>
+      <path d="M100 10 175 40v55c0 55-38 92-75 105-37-13-75-50-75-105V40Z" fill="url(#coverShieldGrad)" opacity="0.95"/>
+      <path d="M65 102l25 25 45-50" stroke="#fff" stroke-width="10" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+
+    <!-- 도넛 차트 (평면 벡터) -->
+    <svg viewBox="0 0 100 100" style="position:absolute;left:16%;bottom:10%;width:36%;max-width:120px">
+      <circle cx="50" cy="50" r="40" fill="none" stroke="#ffffff" stroke-width="13" opacity="0.15"/>
+      <circle cx="50" cy="50" r="40" fill="none" stroke="#8FC1FF" stroke-width="13" stroke-dasharray="90 251" stroke-linecap="round" transform="rotate(-90 50 50)"/>
+      <circle cx="50" cy="50" r="40" fill="none" stroke="#4A90FF" stroke-width="13" stroke-dasharray="70 251" stroke-dashoffset="-96" stroke-linecap="round" transform="rotate(-90 50 50)"/>
+      <circle cx="50" cy="50" r="40" fill="none" stroke="#ffffff" stroke-width="13" stroke-dasharray="50 251" stroke-dashoffset="-172" stroke-linecap="round" transform="rotate(-90 50 50)"/>
+    </svg>
   </div>
 </div>
 
