@@ -16,6 +16,7 @@
   --sub:#5B6B82;
   --ok:#1D5BD8; --warn:#C77700; --gap:#C93030;
   --ok-bg:#EDF3FE; --warn-bg:#FDF3E3; --gap-bg:#FBEDED;
+  --money:#FF9500; --money-dark:#D97D00;
   --samsung:#1428A0;  --samsung-bg:#EEF0FA;
   --meritz:#E4002B;   --meritz-bg:#FCECEF;
   --hyundai:#F26F21;  --hyundai-bg:#FEF1E8;
@@ -51,14 +52,15 @@ h1 .name{border-bottom:6px solid var(--ok-bg)}
 .kpi.hl .label,.kpi.hl .unit{color:#AEC0DC}
 
 section{margin-bottom:52px}
-h2{font-family:"Noto Serif KR",serif;font-size:21px;font-weight:700;padding-bottom:11px;border-bottom:2px solid var(--ink);margin-bottom:6px;display:flex;align-items:baseline;gap:10px}
-h2 .no{font-size:13px;color:var(--sub);font-family:Pretendard,sans-serif;font-weight:600}
+h2{font-family:"Noto Serif KR",serif;font-size:21px;font-weight:700;padding-bottom:11px;border-bottom:2px solid var(--ink);margin-bottom:6px;display:flex;align-items:center;gap:10px}
+h2 .no{font-size:12.5px;color:#fff;background:var(--ink);font-family:Pretendard,sans-serif;font-weight:700;padding:4px 10px;border-radius:6px;letter-spacing:.02em;line-height:1.3}
 .sec-note{font-size:13px;color:var(--sub);margin-bottom:18px}
 
 .chip{display:inline-block;font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:99px;vertical-align:1px;white-space:nowrap}
 .chip.ok{color:var(--ok);background:var(--ok-bg)}
 .chip.warn{color:var(--warn);background:var(--warn-bg)}
 .chip.gap{color:var(--gap);background:var(--gap-bg)}
+.money{color:var(--money);font-weight:700}
 
 .contracts{display:grid;gap:14px}
 .contract{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:grid;grid-template-columns:1fr auto;align-items:stretch;box-shadow:var(--shadow-sm)}
@@ -92,7 +94,7 @@ h2 .no{font-size:13px;color:var(--sub);font-family:Pretendard,sans-serif;font-we
 .reco-explanation{font-size:13.5px;color:#75808F;line-height:1.7;margin:10px 0 8px;padding:12px 14px;background:#F5F8FC;border-left:3px solid #6B8CC9;border-radius:4px;font-weight:500}
 
 table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;font-size:14px;line-height:1.6;box-shadow:var(--shadow-sm)}
-thead th{background:#F3F5F9;font-size:12px;font-weight:700;color:var(--sub);text-align:left;padding:11px 14px;border-bottom:1.5px solid var(--line);white-space:normal;word-break:keep-all}
+thead th{background:var(--ink);font-size:12px;font-weight:700;color:#fff;text-align:left;padding:12px 14px;border-bottom:none;white-space:normal;word-break:keep-all}
 tbody td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:middle;line-height:1.6}
 tbody tr:last-child td{border-bottom:none}
 tbody tr:nth-child(even){background:#FBFCFD}
@@ -124,7 +126,7 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 .matrix tbody td{padding:8px 8px;text-align:right;border-left:1px solid var(--line);line-height:1.6}
 .matrix tbody td:first-child{text-align:left;font-weight:600;border-left:none;white-space:nowrap;font-size:12px;position:sticky;left:0;z-index:9;background:var(--card)}
 .matrix tbody td.empty{color:#C4CCD7;font-size:11px}
-.matrix tbody td.sum{font-weight:700;background:#F5F7FA;font-size:12px}
+.matrix tbody td.sum{font-weight:700;background:#F5F7FA;font-size:12px;color:var(--money-dark)}
 .matrix tbody tr.grp td:first-child{color:var(--sub);font-size:11px;font-weight:700;background:#F0F3F8;letter-spacing:.03em;padding:6px 8px;position:sticky;left:0;z-index:9}
 .matrix tbody tr.grp td{background:#F0F3F8;padding:6px 8px;font-size:11px}
 @media(max-width:768px){
@@ -701,7 +703,7 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
       {% for row in sec.rows %}
       <tr>
         <td>{{ row.label }}{% if row.source_brand_codes %}<span class="src">{% for brand in row.source_brand_codes %}<span class="company-badge" style="background:{{ brand.color or '#5B6B82' }};color:#fff;padding:4px 10px;border-radius:3px;font-size:12px;font-weight:600;margin-left:6px;display:inline-block;line-height:1.2;white-space:nowrap">{{ brand.name.replace('보험', '') }}</span>{% endfor %}</span>{% endif %}{% if row.note %}<span class="info-note" title="{{ row.note }}">ⓘ</span>{% endif %}</td>
-        <td class="r num">{{ row.held_display }}</td>
+        <td class="r num money">{{ row.held_display }}</td>
         <td><div class="gauge"><div class="fill {{ '' if row.status=='ok' else row.status }}" style="width:{{ (row.ratio*100)|round(0,'floor') }}%"></div></div></td>
         <td class="r"><span class="chip {{ row.status }}">{{ row.diagnosis }}</span></td>
       </tr>
@@ -792,14 +794,12 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
   </div>
 
   {% if c.coverages %}
-  <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;color:var(--ink)">주요 보장 내용</h3>
-  <div style="background:var(--card);border:1px solid var(--line);border-radius:10px;padding:24px" class="coverage-section">
+  <h3 style="font-size:15px;font-weight:700;margin-bottom:14px;color:#fff;background:var(--ink);padding:9px 16px;border-radius:8px">주요 보장 내용</h3>
+  <div style="background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 24px;box-shadow:var(--shadow-sm)" class="coverage-section">
     {% for cov in c.coverages %}
-    <div class="coverage-item" style="{% if not loop.last %}margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--line){% else %}margin-bottom:0{% endif %}display:flex;align-items:start;justify-content:space-between;gap:12px">
-      <div style="flex:1">
-        <div style="font-weight:600;font-size:14px;color:var(--ink);margin-bottom:6px">{{ cov.name }}</div>
-        <div style="font-size:13px;color:var(--sub);font-weight:500">{{ cov.amount }}</div>
-      </div>
+    <div class="coverage-item" style="{% if not loop.last %}border-bottom:1px solid var(--line){% endif %}padding:14px 0;display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <div style="font-weight:600;font-size:14px;color:var(--ink)">{{ cov.name }}</div>
+      <div class="money" style="font-size:15px;white-space:nowrap">{{ cov.amount }}</div>
     </div>
     {% endfor %}
   </div>
