@@ -267,22 +267,22 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
   .reco-why{font-size:10px;padding:1px 6px}
   .num{font-variant-numeric:tabular-nums}
 }
-.cover{background:linear-gradient(160deg,#0B1E42 0%,#12305F 55%,#0B1E42 100%);aspect-ratio:210/297;border-radius:6px;margin-bottom:24px;box-shadow:0 10px 30px rgba(16,35,63,.14)}
-.cover-card{background:#fff;flex:0 0 66%;max-width:66%;margin:22px;border-radius:36px 36px 140px 36px;padding:56px 60px;display:flex;flex-direction:column;position:relative;z-index:10;box-shadow:0 30px 70px rgba(5,14,32,.35)}
+.cover{background:linear-gradient(165deg,#0E244B 0%,#16336A 100%);aspect-ratio:210/297;border-radius:6px;margin-bottom:24px;box-shadow:0 10px 30px rgba(16,35,63,.14)}
+.cover-card{background:#fff;flex:0 0 66%;max-width:66%;margin:22px;border-radius:28px;padding:56px 60px;display:flex;flex-direction:column;position:relative;z-index:10;box-shadow:0 20px 50px rgba(5,14,32,.16)}
 .cover-eyebrow{font-size:12.5px;font-weight:800;letter-spacing:.22em;color:#1D5BD8}
 .cover-eyebrow-line{width:56px;height:3px;background:#1D5BD8;margin:16px 0 22px;border-radius:2px}
-.cover-customer{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:700;color:#10233F;background:#EEF2FB;padding:8px 16px;border-radius:99px;width:fit-content;margin-bottom:20px}
-.cover-title{font-size:50px;font-weight:900;line-height:1.2;letter-spacing:-.02em;color:#10233F;font-family:Pretendard,-apple-system,sans-serif;margin:0 0 26px}
+.cover-customer{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:700;color:#4B5768;background:transparent;border:1.5px solid #E3E7EE;padding:7px 15px;border-radius:99px;width:fit-content;margin-bottom:20px}
+.cover-title{font-size:50px;font-weight:900;line-height:1.25;letter-spacing:-.02em;color:#10233F;font-family:Pretendard,-apple-system,sans-serif;margin:0 0 26px}
 .cover-title .accent{color:#1D5BD8}
 .cover-divider{width:100%;height:1px;background:#E3E7EE;margin-bottom:22px}
 .cover-lead{font-size:14.5px;color:#4B5768;line-height:1.75;font-weight:500;margin-bottom:0}
-.cover-mid{margin:36px 0 0}
-.cover-features{display:flex;align-items:stretch;background:#F5F8FC;border-radius:20px;padding:34px 12px}
-.cover-feature{flex:1;display:flex;flex-direction:column;align-items:center;gap:11px;padding:0 8px;text-align:center}
-.cover-feature-icon{width:56px;height:56px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;flex:none;box-shadow:0 3px 8px rgba(16,35,63,.08)}
-.cover-feature svg{width:26px;height:26px;flex:none}
+.cover-mid{margin:40px 0 0}
+.cover-features{display:flex;align-items:stretch;padding:4px 0}
+.cover-feature{flex:1;display:flex;flex-direction:column;align-items:center;gap:12px;padding:0 8px;text-align:center}
+.cover-feature-icon{width:52px;height:52px;border-radius:50%;background:#EEF2FB;display:flex;align-items:center;justify-content:center;flex:none}
+.cover-feature svg{width:24px;height:24px;flex:none}
 .cover-feature span{font-size:12px;font-weight:700;color:#10233F;line-height:1.35}
-.cover-feature-sep{width:1px;background:#DEE5F0;margin:8px 0}
+.cover-feature-sep{width:1px;background:#E3E7EE;margin:8px 0}
 .cover-footer{margin-top:auto;padding-top:24px;border-top:1px solid #EDF0F5}
 .cover-brand-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
 .cover-brand-row .team{font-size:16px;font-weight:900;color:#10233F;letter-spacing:.01em}
@@ -319,7 +319,6 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
   .cover-customer{font-size:12px;padding:6px 12px}
   .cover-lead{font-size:12.5px}
   .cover-mid{margin-top:20px}
-  .cover-features{padding:16px 6px;border-radius:14px}
   .cover-feature-icon{width:34px;height:34px}
   .cover-feature svg{width:16px;height:16px}
   .cover-feature span{font-size:10px}
@@ -555,38 +554,29 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 
   <!-- 우측 네이비 패널 -->
   <div class="cover-right">
-    <svg style="position:absolute;inset:0;width:100%;height:100%" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <pattern id="coverDotGrid" width="26" height="26" patternUnits="userSpaceOnUse">
-          <circle cx="2" cy="2" r="1.3" fill="#ffffff" opacity="0.18"/>
-        </pattern>
-      </defs>
-      <rect width="100%" height="100%" fill="url(#coverDotGrid)"/>
-    </svg>
-
     <div class="cover-right-label">
       <span class="div"></span>
       <small>FOR YOUR<br>BETTER COVERAGE</small>
     </div>
 
-    <!-- 방패 (평면 벡터) -->
-    <svg viewBox="0 0 200 200" style="position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);width:54%;max-width:190px">
+    <!-- 은은한 글로우 + 방패 (평면 벡터, 단일 구성) -->
+    <svg viewBox="0 0 300 300" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:78%;max-width:280px">
       <defs>
+        <radialGradient id="coverGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#3D6EF0" stop-opacity="0.55"/>
+          <stop offset="100%" stop-color="#3D6EF0" stop-opacity="0"/>
+        </radialGradient>
         <linearGradient id="coverShieldGrad" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stop-color="#5B8CFB"/>
           <stop offset="1" stop-color="#1D5BD8"/>
         </linearGradient>
       </defs>
-      <path d="M100 10 175 40v55c0 55-38 92-75 105-37-13-75-50-75-105V40Z" fill="url(#coverShieldGrad)" opacity="0.95"/>
-      <path d="M65 102l25 25 45-50" stroke="#fff" stroke-width="10" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-
-    <!-- 도넛 차트 (평면 벡터) -->
-    <svg viewBox="0 0 100 100" style="position:absolute;left:16%;bottom:10%;width:36%;max-width:120px">
-      <circle cx="50" cy="50" r="40" fill="none" stroke="#ffffff" stroke-width="13" opacity="0.15"/>
-      <circle cx="50" cy="50" r="40" fill="none" stroke="#8FC1FF" stroke-width="13" stroke-dasharray="90 251" stroke-linecap="round" transform="rotate(-90 50 50)"/>
-      <circle cx="50" cy="50" r="40" fill="none" stroke="#4A90FF" stroke-width="13" stroke-dasharray="70 251" stroke-dashoffset="-96" stroke-linecap="round" transform="rotate(-90 50 50)"/>
-      <circle cx="50" cy="50" r="40" fill="none" stroke="#ffffff" stroke-width="13" stroke-dasharray="50 251" stroke-dashoffset="-172" stroke-linecap="round" transform="rotate(-90 50 50)"/>
+      <circle cx="150" cy="150" r="140" fill="url(#coverGlow)"/>
+      <circle cx="150" cy="150" r="95" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.18"/>
+      <g transform="translate(75,70)">
+        <path d="M75 6 131 30v41c0 41-28 69-56 79-28-10-56-38-56-79V30Z" fill="url(#coverShieldGrad)"/>
+        <path d="M49 76l19 19 34-37" stroke="#fff" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
     </svg>
   </div>
 </div>
