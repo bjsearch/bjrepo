@@ -268,7 +268,7 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
   .num{font-variant-numeric:tabular-nums}
 }
 .cover{background:linear-gradient(160deg,#0B1E42 0%,#12305F 55%,#0B1E42 100%);aspect-ratio:210/297;border-radius:6px;margin-bottom:24px;box-shadow:0 10px 30px rgba(16,35,63,.14)}
-.cover-card{background:#fff;flex:0 0 66%;max-width:66%;margin:22px;border-radius:36px 36px 140px 36px;padding:56px 60px;display:flex;flex-direction:column;justify-content:space-between;position:relative;z-index:10;box-shadow:0 30px 70px rgba(5,14,32,.35)}
+.cover-card{background:#fff;flex:0 0 66%;max-width:66%;margin:22px;border-radius:36px 36px 140px 36px;padding:56px 60px;display:flex;flex-direction:column;position:relative;z-index:10;box-shadow:0 30px 70px rgba(5,14,32,.35)}
 .cover-eyebrow{font-size:12.5px;font-weight:800;letter-spacing:.22em;color:#1D5BD8}
 .cover-eyebrow-line{width:56px;height:3px;background:#1D5BD8;margin:16px 0 22px;border-radius:2px}
 .cover-customer{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:700;color:#10233F;background:#EEF2FB;padding:8px 16px;border-radius:99px;width:fit-content;margin-bottom:20px}
@@ -276,12 +276,14 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 .cover-title .accent{color:#1D5BD8}
 .cover-divider{width:100%;height:1px;background:#E3E7EE;margin-bottom:22px}
 .cover-lead{font-size:14.5px;color:#4B5768;line-height:1.75;font-weight:500;margin-bottom:0}
-.cover-mid{flex:1;display:flex;flex-direction:column;justify-content:center;gap:32px}
-.cover-features{display:flex;align-items:stretch}
-.cover-feature{flex:1;display:flex;flex-direction:column;align-items:center;gap:9px;padding:0 8px;text-align:center}
-.cover-feature svg{width:28px;height:28px;flex:none}
+.cover-mid{margin:36px 0 0}
+.cover-features{display:flex;align-items:stretch;background:#F5F8FC;border-radius:20px;padding:34px 12px}
+.cover-feature{flex:1;display:flex;flex-direction:column;align-items:center;gap:11px;padding:0 8px;text-align:center}
+.cover-feature-icon{width:56px;height:56px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;flex:none;box-shadow:0 3px 8px rgba(16,35,63,.08)}
+.cover-feature svg{width:26px;height:26px;flex:none}
 .cover-feature span{font-size:12px;font-weight:700;color:#10233F;line-height:1.35}
-.cover-feature-sep{width:1px;background:#E3E7EE;margin:2px 0}
+.cover-feature-sep{width:1px;background:#DEE5F0;margin:8px 0}
+.cover-footer{margin-top:auto;padding-top:24px;border-top:1px solid #EDF0F5}
 .cover-brand-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
 .cover-brand-row .team{font-size:16px;font-weight:900;color:#10233F;letter-spacing:.01em}
 .cover-brand-row .x{font-size:14px;color:#B7C0CC;font-weight:700}
@@ -306,7 +308,9 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
   .cover-customer{font-size:13px}
   .cover-lead{font-size:13.5px}
   .cover-feature span{font-size:11px}
-  .cover-mid{gap:24px}
+  .cover-mid{margin-top:26px}
+  .cover-feature-icon{width:40px;height:40px}
+  .cover-feature svg{width:19px;height:19px}
 }
 @media(max-width:500px){
   .cover-card{margin:10px;padding:24px 18px;border-radius:20px}
@@ -314,9 +318,11 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
   .cover-eyebrow-line{margin:12px 0 16px}
   .cover-customer{font-size:12px;padding:6px 12px}
   .cover-lead{font-size:12.5px}
-  .cover-feature svg{width:24px;height:24px}
+  .cover-mid{margin-top:20px}
+  .cover-features{padding:16px 6px;border-radius:14px}
+  .cover-feature-icon{width:34px;height:34px}
+  .cover-feature svg{width:16px;height:16px}
   .cover-feature span{font-size:10px}
-  .cover-mid{gap:20px}
 }
 @page{size:A4;margin:0}
 @media print{
@@ -504,36 +510,36 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
     <div class="cover-mid">
       <div class="cover-features">
         <div class="cover-feature">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#1D5BD8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <span class="cover-feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#1D5BD8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
             <path d="M6 2h9l4 4v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"/>
             <path d="M15 2v4h4"/>
             <circle cx="12" cy="15" r="3.2"/>
             <path d="M12 13.3v3.4M10.8 14.3h2.4M10.8 15.7h2.4"/>
-          </svg>
+          </svg></span>
           <span>보험료 현황</span>
         </div>
         <div class="cover-feature-sep"></div>
         <div class="cover-feature">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#1D5BD8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <span class="cover-feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#1D5BD8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 2.5 20 6v6c0 5-3.4 8.4-8 9.5-4.6-1.1-8-4.5-8-9.5V6Z"/>
             <path d="M8.5 12.2l2.4 2.4 4.6-4.9"/>
-          </svg>
+          </svg></span>
           <span>주요 보장 분석</span>
         </div>
         <div class="cover-feature-sep"></div>
         <div class="cover-feature">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#1D5BD8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <span class="cover-feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#1D5BD8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="10.5" cy="10.5" r="6.5"/>
             <path d="M15.3 15.3 21 21"/>
             <path d="M7.5 12v-2M10.5 12V7.5M13.5 12V9"/>
-          </svg>
+          </svg></span>
           <span>중복·보완<br>항목 진단</span>
         </div>
       </div>
     </div>
 
     <!-- 하단 브랜드 영역 -->
-    <div>
+    <div class="cover-footer">
       <div class="cover-brand-row">
         <span class="team">TEAM DIN</span>
         <span class="x">×</span>
