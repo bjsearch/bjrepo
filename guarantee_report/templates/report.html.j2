@@ -121,6 +121,8 @@ td.r,th.r{text-align:right}
 
 footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-size:11.5px;color:var(--sub);line-height:1.8}
 .matrix-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--card);-webkit-overflow-scrolling:touch;box-shadow:var(--shadow-sm)}
+.cov-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:14px}
+.cov-table-wrap table{margin:0}
 .matrix{width:100%;border-collapse:collapse;font-size:12.5px;min-width:760px;border:none;line-height:1.6}
 .matrix thead th{padding:10px 8px;font-size:11px;line-height:1.4;text-align:center;color:#fff;border-bottom:none;border-left:1px solid rgba(255,255,255,.25);background:var(--th-color,var(--ink));font-weight:600;word-break:keep-all}
 .matrix thead th:first-child{background:var(--ink);text-align:left;border-left:none;font-size:12px;font-weight:700;position:sticky;left:0;z-index:10}
@@ -790,6 +792,7 @@ body.device-preview-active>.page{display:none}
   <div class="sec-note">단위: 만원 · 항목 옆 보험사명은 해당 담보를 보유한 보험사</div>
 
   {% for sec in coverage_sections %}
+  <div class="cov-table-wrap">
   <table>
     <thead><tr><th>{{ sec.title }}</th><th class="r">가입</th><th class="gauge-cell">충족도</th><th class="r">진단</th></tr></thead>
     <tbody>
@@ -803,6 +806,7 @@ body.device-preview-active>.page{display:none}
       {% endfor %}
     </tbody>
   </table>
+  </div>
   <div style="height:14px"></div>
   {% endfor %}
 </section>
