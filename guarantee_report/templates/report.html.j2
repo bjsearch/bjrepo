@@ -340,6 +340,9 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
   .cover-meta-row span{color:#5B6B82;text-align:right;flex:1}
   .section-page{page-break-after:always}
   section{page-break-inside:avoid}
+  .matrix-wrap{overflow-x:visible}
+  .matrix{min-width:0}
+  .cov-table-wrap{overflow-x:visible}
 }
 .hero{position:relative;border-radius:16px;overflow:hidden;margin-bottom:28px;border:1px solid #F3DECB}
 .hero svg{display:block;width:100%;height:auto}
@@ -461,6 +464,10 @@ body.device-preview-active>.page{display:none}
   <button class="download-btn" type="button" id="downloadBtn" onclick="downloadReportWithProgress()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
     <span>완성된 리포트 저장</span>
+  </button>
+  <button class="download-btn" type="button" id="pdfBtn" onclick="printReportAsPdf()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg>
+    <span>PDF로 저장</span>
   </button>
   <div class="save-progress" id="saveProgress">
     <div class="spinner"></div>
@@ -1017,6 +1024,17 @@ function downloadReportWithProgress(){
   }, 1200);
 }
 
+function printReportAsPdf(){
+  // 기기 미리보기 모드가 켜져 있으면 인쇄 시 실제 리포트(.page)가
+  // display:none 상태라 빈 페이지가 인쇄되므로, 먼저 "현재 화면"으로
+  // 되돌린 뒤 인쇄한다.
+  var autoBtn = document.querySelector('#deviceToggle button[data-device="auto"]');
+  if (autoBtn && !autoBtn.classList.contains('active')) {
+    autoBtn.click();
+  }
+  setTimeout(function(){ window.print(); }, 50);
+}
+
 function showShareToast(msg){
   var t = document.getElementById('shareToast');
   if (!t) return;
@@ -1338,7 +1356,7 @@ document.addEventListener('DOMContentLoaded', function(){
   // 공유 리포트를 실제로 화면에 띄워놓고 본 시간(초)만 잰다 — 백그라운드 탭에
   // 방치된 시간은 제외한다. 탭을 숨기거나 페이지를 떠날 때마다 그때까지 누적된
   // 시간을 서버로 보내며, 매번 "누적 총합"을 덮어쓰므로 여러 번 보내도 안전하다.
-  var viewId = {{ view_id }};
+  var viewId = {{ view_id | tojson }};
   var endpoint = {{ view_duration_endpoint | tojson }};
   var activeSeconds = 0;
   var segmentStart = document.visibilityState === 'visible' ? Date.now() : null;
