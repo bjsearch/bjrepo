@@ -326,18 +326,11 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 }
 @page{size:A4;margin:0}
 @media print{
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}
   body{background:#fff}
   .page{padding:0;max-width:none}
   .section-page{aspect-ratio:auto;box-shadow:none;border-radius:0;margin-bottom:0;min-height:297mm}
-  .cover{page-break-after:always;background:#fff;border-radius:0;aspect-ratio:auto;box-shadow:none;min-height:297mm}
-  .cover-logo{font-size:14px;font-weight:700;color:#1D5BD8;margin-bottom:40px;letter-spacing:.05em}
-  .cover-visual{width:100%;max-width:380px;height:320px;margin-bottom:50px;background:#fff;border-radius:20px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(16,35,63,.12)}
-  .cover-title{font-size:36px;font-weight:700;color:#10233F;margin-bottom:8px;text-align:center}
-  .cover-info{font-size:13px;color:#5B6B82;margin-bottom:40px;text-align:center}
-  .cover-meta{width:100%;max-width:360px;border-top:1px solid #E3E7EE;border-bottom:1px solid #E3E7EE;padding:20px 0}
-  .cover-meta-row{display:flex;justify-content:space-between;padding:8px 0;font-size:13px}
-  .cover-meta-row strong{color:#10233F;font-weight:600;min-width:80px}
-  .cover-meta-row span{color:#5B6B82;text-align:right;flex:1}
+  .cover{page-break-after:always;border-radius:0;aspect-ratio:auto;box-shadow:none;min-height:297mm}
   .section-page{page-break-after:always}
   section{page-break-inside:avoid}
   .matrix-wrap{overflow-x:visible}
