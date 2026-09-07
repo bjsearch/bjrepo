@@ -333,9 +333,22 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
   .cover{page-break-after:always;border-radius:0;aspect-ratio:auto;box-shadow:none;min-height:297mm}
   .section-page{page-break-after:always}
   section{page-break-inside:avoid}
-  .matrix-wrap{overflow-x:visible}
-  .matrix{min-width:0}
-  .cov-table-wrap{overflow-x:visible}
+  /* overflow-x:auto containers can't scroll on a printed page, so a row wider
+     than its box would normally get clipped there. Rather than switching to
+     overflow-x:visible (which lets the box's ink extend past its own layout
+     size — Chromium's print paginator then visibly miscalculates page
+     breaks for the *whole* document, not just this element), shrink these
+     tables enough that nothing needs to overflow in the first place. */
+  .matrix-wrap{overflow-x:hidden}
+  .matrix{min-width:0;font-size:9.5px;table-layout:fixed}
+  .matrix thead th{padding:5px 3px;font-size:7.5px}
+  .matrix thead th small{font-size:6.5px}
+  .matrix tbody td{padding:4px 3px}
+  .matrix tbody td:first-child{white-space:normal;word-break:keep-all}
+  .cov-table-wrap{overflow-x:hidden}
+  .cov-table-wrap table{font-size:12px;table-layout:fixed}
+  .cov-table-wrap .src{flex-wrap:wrap;row-gap:3px}
+  .cov-table-wrap .company-badge{padding:3px 7px!important;font-size:10px!important;margin-left:4px!important}
 }
 .hero{position:relative;border-radius:16px;overflow:hidden;margin-bottom:28px;border:1px solid #F3DECB}
 .hero svg{display:block;width:100%;height:auto}
