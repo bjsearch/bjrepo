@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: guarantee-report
+    runtime: python
+    plan: pro
+    buildCommand: pip install --no-cache-dir -r guarantee_report/requirements.txt
+    startCommand: gunicorn guarantee_report.webapp:app --bind 0.0.0.0:$PORT --timeout 600 --workers 1 --worker-class sync --keep-alive 300 --graceful-timeout 600
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: APP_PASSWORD
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_PHONES
+        sync: false
+      - key: KAKAO_JS_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: RENDER
+        value: "true"
+      - key: PYTHONUNBUFFERED
+        value: "1"

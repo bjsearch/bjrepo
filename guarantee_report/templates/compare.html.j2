@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http%3A//www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'><path%20d='M4%2021%20A16%2015%200%200%201%2036%2021%20Z'%20fill='%2310233F'/><rect%20x='9'%20y='21'%20width='4.4'%20height='6'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='17.8'%20y='21'%20width='4.4'%20height='10'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='26.6'%20y='21'%20width='4.4'%20height='14'%20rx='1.6'%20fill='%231D5BD8'/></svg>">
+<title>Team DIN 보장분석기 리포트 비교</title>
+<style>
+  :root{--ink:#10233F;--paper:#F6F7F9;--card:#FFFFFF;--line:#E3E7EE;--sub:#5B6B82;--ok:#1D5BD8;--warn:#C77700;--gap:#C93030;--ok-bg:#EDF3FE;--warn-bg:#FDF3E3;--gap-bg:#FBEDED}
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,"Pretendard",sans-serif;background:var(--paper);color:var(--ink);margin:0;padding:40px 20px 80px;line-height:1.6;font-size:14px}
+  .wrap{max-width:min(1100px,96vw);margin:0 auto}
+  .top{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:6px}
+  h1{font-size:24px;margin:0}
+  a.back{font-size:13.5px;font-weight:700;color:var(--ok);text-decoration:none}
+  p.sub{color:var(--sub);font-size:13.5px;margin:6px 0 26px}
+  h2{font-family:"Noto Serif KR",serif;font-size:18px;font-weight:700;padding-bottom:8px;border-bottom:1.5px solid var(--ink);margin:36px 0 14px}
+  .tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+  table{width:100%;border-collapse:collapse;font-size:13px;min-width:520px}
+  thead th{background:#F0F3F8;font-size:12px;font-weight:700;color:var(--sub);text-align:center;padding:9px 12px;border-bottom:1px solid var(--line);border-left:1px solid var(--line);white-space:nowrap}
+  thead th:first-child{text-align:left;border-left:none}
+  tbody td{padding:9px 12px;border-bottom:1px solid var(--line);border-left:1px solid var(--line);text-align:center;white-space:nowrap}
+  tbody td:first-child{text-align:left;font-weight:600;border-left:none;white-space:normal}
+  tbody tr:last-child td{border-bottom:none}
+  tbody td.empty{color:#C4CCD7}
+  .chip{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:99px;margin-left:5px;vertical-align:1px}
+  .chip.ok{color:var(--ok);background:var(--ok-bg)}
+  .chip.warn{color:var(--warn);background:var(--warn-bg)}
+  .chip.gap{color:var(--gap);background:var(--gap-bg)}
+  .cust-th{display:flex;flex-direction:column;gap:2px}
+  .cust-th small{font-weight:500;color:var(--sub)}
+  .kpi-row td{font-variant-numeric:tabular-nums}
+  .navbar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 14px;margin-bottom:14px;font-size:13px;color:var(--sub)}
+  .navbar .brand-group{display:flex;align-items:center;gap:9px}
+  .navbar .brand{display:flex;align-items:center;gap:7px;text-decoration:none;flex:none}
+  .navbar .brand .wordmark{font-family:"Noto Serif KR",serif;font-weight:700;font-size:15.5px;color:var(--ink);letter-spacing:-.01em}
+  .navbar .menu{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px}
+  .navbar a,.navbar .who{white-space:nowrap}
+  .navbar a{display:inline-flex;align-items:center;gap:5px;color:var(--sub);text-decoration:none;font-weight:600}
+  .navbar a:hover{color:var(--ink)}
+  .navbar a.admin{color:var(--ok)}
+  .navbar a.admin:hover{color:var(--ink)}
+  .navbar a svg{width:14px;height:14px;flex:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="navbar">
+    <div class="brand-group">
+      <a class="brand" href="/">
+        <svg viewBox="0 0 40 40" width="22" height="22" aria-hidden="true"><path d="M4 21 A16 15 0 0 1 36 21 Z" fill="#10233F"/><rect x="9" y="21" width="4.4" height="6" rx="1.6" fill="#1D5BD8"/><rect x="17.8" y="21" width="4.4" height="10" rx="1.6" fill="#1D5BD8"/><rect x="26.6" y="21" width="4.4" height="14" rx="1.6" fill="#1D5BD8"/></svg>
+        <span class="wordmark">Team DIN 보장분석기</span>
+      </a>
+    </div>
+    <div class="menu">
+      <span class="who">{{ user.name }}님{% if user.role == 'admin' %} · 관리자{% endif %}</span>
+      {% if user.role == 'admin' %}<a class="admin" href="/admin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>관리자 화면</a>{% endif %}
+      <a href="/change-password">🔑 비밀번호 변경</a>
+      <a href="/logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>로그아웃</a>
+    </div>
+  </div>
+  <div class="top">
+    <h1>Team DIN 보장분석기 리포트 비교</h1>
+    <a class="back" href="/reports">← 저장된 리포트 목록</a>
+  </div>
+  <p class="sub">{{ headers|map(attribute='name')|join(' · ') }} — 총 {{ headers|length }}건 비교 · 같은 권장 보장금액 체크리스트 기준</p>
+
+  <h2>기본 정보 · 보험료</h2>
+  <div class="tbl-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>항목</th>
+        {% for h in headers %}
+        <th><div class="cust-th">{{ h.name }}<small>{{ h.gender }}{% if h.age %}, {{ h.age }}세{% endif %}</small></div></th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="kpi-row"><td>분석 기준일</td>{% for h in headers %}<td>{{ h.basis_date_display }}</td>{% endfor %}</tr>
+      <tr class="kpi-row"><td>계약 건수</td>{% for h in headers %}<td>{{ h.total_contracts }}건</td>{% endfor %}</tr>
+      <tr class="kpi-row"><td>월 납입 보험료</td>{% for k in kpis %}<td>{{ k.monthly_premium }}원</td>{% endfor %}</tr>
+      <tr class="kpi-row"><td>총 보험료</td>{% for k in kpis %}<td>{{ k.grand_total_man }}만원</td>{% endfor %}</tr>
+      <tr class="kpi-row"><td>진단 결과</td>
+        {% for k in kpis %}
+        <td><span class="chip ok">적정 {{ k.ok_count }}</span><span class="chip warn">주의·부족 {{ k.warn_count }}</span><span class="chip gap">미가입 {{ k.gap_count }}</span></td>
+        {% endfor %}
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  {% for sec in sections %}
+  <h2>{{ sec.title }}</h2>
+  <div class="tbl-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>보장 항목</th>
+        {% for h in headers %}<th>{{ h.name }}</th>{% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in sec.rows %}
+      <tr>
+        <td>{{ row.label }}</td>
+        {% for cell in row.cells %}
+        {% if cell %}
+        <td>{{ cell.held_display }}<span class="chip {{ cell.status }}">{{ cell.diagnosis }}</span></td>
+        {% else %}
+        <td class="empty">—</td>
+        {% endif %}
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% endfor %}
+</div>
+</body>
+</html>
