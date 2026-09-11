@@ -328,9 +328,15 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
 @media print{
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}
   body{background:#fff}
-  .page{padding:0;max-width:none}
+  .page{padding:0;max-width:none;width:210mm}
   .section-page{aspect-ratio:auto;box-shadow:none;border-radius:0;margin-bottom:0;min-height:297mm}
-  .cover{page-break-after:always;border-radius:0;aspect-ratio:auto;box-shadow:none;min-height:297mm}
+  .cover{page-break-after:always;border-radius:0;aspect-ratio:auto;box-shadow:none;min-height:297mm;width:210mm}
+  /* Percentage flex-basis (flex:0 0 66%) depends on the row's own width
+     resolving correctly first; some print engines get this wrong and let
+     .cover-card grow to fill nearly the whole row, squeezing .cover-right
+     (and its navy backdrop) down to a sliver. Pin the card to an absolute
+     width instead so it can't be affected by that. */
+  .cover-card{flex:0 0 138.6mm!important;max-width:138.6mm!important}
   .section-page{page-break-after:always}
   section{page-break-inside:avoid}
   /* overflow-x:auto containers can't scroll on a printed page, so a row wider
