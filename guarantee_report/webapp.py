@@ -891,7 +891,11 @@ h1{{font-size:24px;margin-bottom:8px}}
         selected_amounts = shortfall_coverage.get("selected_amounts", {})
 
         if shortfall_items:
-            html += f"""    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" id="shortfall-items-container">
+            html += f"""    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button type="button" class="btn btn-secondary" onclick="setAllShortfallItems(true)">전체 선택</button>
+      <button type="button" class="btn btn-secondary" onclick="setAllShortfallItems(false)">전체 해제</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" id="shortfall-items-container">
 """
             for item in shortfall_items:
                 item_id = item.get("id")
@@ -982,6 +986,15 @@ function updateShortfallItemStyle(itemId) {{
         item.style.borderWidth = '2px';
       }}
     }}
+  }});
+}}
+
+function setAllShortfallItems(checked) {{
+  const checkboxes = document.querySelectorAll('input[type="checkbox"][name^="shortfall_item_"]');
+  checkboxes.forEach(cb => {{
+    cb.checked = checked;
+    const match = cb.name.match(/shortfall_item_(\d+)/);
+    if (match) updateShortfallItemStyle(match[1]);
   }});
 }}
 
