@@ -164,6 +164,14 @@ def _mask_phone(phone: str) -> str:
     return f"{digits[:3]}{'*' * (len(digits) - 7)}{digits[-4:]}"
 
 
+def _extract_phone_from_filename(filename: str) -> str:
+    """업로드한 엑셀 파일명 끝에 붙여둔 의뢰인 휴대폰번호를 추출한다.
+    예: '홍길동_010-1234-5678.xlsx' -> '01012345678'. 못 찾으면 빈 문자열."""
+    stem = re.sub(r"\.[^.]+$", "", filename or "")
+    m = re.search(r"(01[0-9])[-_ ]?(\d{3,4})[-_ ]?(\d{4})\s*$", stem)
+    return f"{m.group(1)}{m.group(2)}{m.group(3)}" if m else ""
+
+
 def current_user() -> dict | None:
     return session.get("user")
 
@@ -651,6 +659,9 @@ def generate():
             file_ext = f.filename.split(".")[-1] if "." in f.filename else "bin"
             upload_file_path = UPLOAD_DIR / f"{secrets.token_hex(16)}.{file_ext}"
             os.rename(tmp_path, upload_file_path)
+
+    # 공유 링크 열람 게이트용: 업로드 파일명 끝에 붙여둔 의뢰인 휴대폰번호를 추출해둔다.
+    data["header"]["customer_phone"] = _extract_phone_from_filename(f.filename)
 
     # 임시 리포트 저장 후 수정 페이지로 이동
     draft_id = _generate_draft_id()
@@ -1670,18 +1681,19 @@ def shared_report(token: str):
     if not data:
         abort(404)
 
-    # 카카오톡 등으로 공유된 링크는 의뢰인 본인 생년월일 8자리를 입력해야 열리도록
-    # 게이트를 둔다. (생년월일이 없는 옛 데이터 등 확인할 수 없는 경우는 게이트 없이 통과)
-    customer_birth_digits = re.sub(r"\D", "", (data.get("header") or {}).get("customer_birth_date") or "")
+    # 카카오톡 등으로 공유된 링크는 의뢰인 본인 휴대폰번호를 입력해야 열리도록 게이트를
+    # 둔다. 이 번호는 업로드한 엑셀 파일명 끝에 붙여둔 것에서 추출한 값이다. (파일명에
+    # 번호가 없는 옛 데이터 등 확인할 수 없는 경우는 게이트 없이 통과)
+    customer_phone = re.sub(r"\D", "", (data.get("header") or {}).get("customer_phone") or "")
     verified_key = _share_verified_key(token)
-    if customer_birth_digits and not session.get(verified_key):
+    if customer_phone and not session.get(verified_key):
         error = None
         if request.method == "POST":
-            entered = re.sub(r"\D", "", request.form.get("birth_date", ""))
-            if entered and hmac.compare_digest(entered, customer_birth_digits):
+            entered = _normalize_phone(request.form.get("phone", ""))
+            if entered and hmac.compare_digest(entered, customer_phone):
                 session[verified_key] = True
             else:
-                error = "생년월일이 일치하지 않습니다. 다시 확인해주세요."
+                error = "휴대폰번호가 일치하지 않습니다. 다시 확인해주세요."
         if not session.get(verified_key):
             return render_template(
                 "share_gate.html.j2", error=error, customer_name=data["header"]["name"], logo_mark=LOGO_MARK
@@ -1770,8 +1782,8 @@ def shared_report_chat(token: str):
     data = storage.get_report_by_share_token(token)
     if not data:
         abort(404)
-    customer_birth_digits = re.sub(r"\D", "", (data.get("header") or {}).get("customer_birth_date") or "")
-    if customer_birth_digits and not session.get(_share_verified_key(token)):
+    customer_phone = re.sub(r"\D", "", (data.get("header") or {}).get("customer_phone") or "")
+    if customer_phone and not session.get(_share_verified_key(token)):
         abort(403)
     if _chat_rate_limited(f"s{token}"):
         return {"error": "질문이 너무 잦습니다. 잠시 후 다시 시도해주세요."}, 429
