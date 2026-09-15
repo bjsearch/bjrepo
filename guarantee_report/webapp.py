@@ -1670,18 +1670,18 @@ def shared_report(token: str):
     if not data:
         abort(404)
 
-    # 카카오톡 등으로 공유된 링크는 담당자(분석자) 휴대폰번호를 입력해야 열리도록 게이트를 둔다.
-    # (담당자 계정이 없는 옛 데이터 등 번호를 확인할 수 없는 경우는 게이트 없이 통과)
-    owner_phone = storage.get_owner_phone_for_token(token)
+    # 카카오톡 등으로 공유된 링크는 의뢰인 본인 생년월일 8자리를 입력해야 열리도록
+    # 게이트를 둔다. (생년월일이 없는 옛 데이터 등 확인할 수 없는 경우는 게이트 없이 통과)
+    customer_birth_digits = re.sub(r"\D", "", (data.get("header") or {}).get("customer_birth_date") or "")
     verified_key = _share_verified_key(token)
-    if owner_phone and not session.get(verified_key):
+    if customer_birth_digits and not session.get(verified_key):
         error = None
         if request.method == "POST":
-            entered = _normalize_phone(request.form.get("phone", ""))
-            if entered and hmac.compare_digest(entered, owner_phone):
+            entered = re.sub(r"\D", "", request.form.get("birth_date", ""))
+            if entered and hmac.compare_digest(entered, customer_birth_digits):
                 session[verified_key] = True
             else:
-                error = "휴대폰번호가 일치하지 않습니다. 리포트를 보내주신 분에게 다시 확인해주세요."
+                error = "생년월일이 일치하지 않습니다. 다시 확인해주세요."
         if not session.get(verified_key):
             return render_template(
                 "share_gate.html.j2", error=error, customer_name=data["header"]["name"], logo_mark=LOGO_MARK
@@ -1770,8 +1770,8 @@ def shared_report_chat(token: str):
     data = storage.get_report_by_share_token(token)
     if not data:
         abort(404)
-    owner_phone = storage.get_owner_phone_for_token(token)
-    if owner_phone and not session.get(_share_verified_key(token)):
+    customer_birth_digits = re.sub(r"\D", "", (data.get("header") or {}).get("customer_birth_date") or "")
+    if customer_birth_digits and not session.get(_share_verified_key(token)):
         abort(403)
     if _chat_rate_limited(f"s{token}"):
         return {"error": "질문이 너무 잦습니다. 잠시 후 다시 시도해주세요."}, 429

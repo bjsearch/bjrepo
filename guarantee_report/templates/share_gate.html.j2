@@ -25,32 +25,18 @@
 <div class="wrap">
   <div class="brand-lockup">{{ logo_mark|safe }}<span class="wordmark">Team DIN 보장분석기</span></div>
   <h1>{{ customer_name }}님 Team DIN 보장분석기 리포트</h1>
-  <p class="sub">본인 확인을 위해 이 리포트를 보내주신 담당자의 휴대폰번호를 입력해주세요.</p>
+  <p class="sub">본인 확인을 위해 의뢰인의 생년월일 8자리를 입력해주세요.</p>
   {% if error %}<div class="err">{{ error }}</div>{% endif %}
   <form method="post">
-    <label for="phone">담당자 휴대폰번호</label>
-    <input type="tel" id="phone" name="phone" required placeholder="010-1234-5678" autofocus>
+    <label for="birth_date">생년월일 8자리</label>
+    <input type="tel" id="birth_date" name="birth_date" required placeholder="19850101" inputmode="numeric" autofocus>
     <button type="submit">확인하고 리포트 보기</button>
   </form>
 </div>
 <script>
-  function formatPhone(digits) {
-    digits = digits.slice(0, 11);
-    if (digits.startsWith('02')) {
-      if (digits.length <= 2) return digits;
-      if (digits.length <= 5) return digits.slice(0, 2) + '-' + digits.slice(2);
-      if (digits.length <= 9) return digits.slice(0, 2) + '-' + digits.slice(2, 5) + '-' + digits.slice(5);
-      return digits.slice(0, 2) + '-' + digits.slice(2, 6) + '-' + digits.slice(6, 10);
-    }
-    if (digits.length <= 3) return digits;
-    if (digits.length <= 6) return digits.slice(0, 3) + '-' + digits.slice(3);
-    if (digits.length <= 10) return digits.slice(0, 3) + '-' + digits.slice(3, 6) + '-' + digits.slice(6);
-    return digits.slice(0, 3) + '-' + digits.slice(3, 7) + '-' + digits.slice(7, 11);
-  }
-  const phoneInput = document.getElementById('phone');
-  phoneInput.addEventListener('input', () => {
-    const digits = phoneInput.value.replace(/\D/g, '');
-    phoneInput.value = formatPhone(digits);
+  const birthInput = document.getElementById('birth_date');
+  birthInput.addEventListener('input', () => {
+    birthInput.value = birthInput.value.replace(/\D/g, '').slice(0, 8);
   });
 </script>
 </body>
