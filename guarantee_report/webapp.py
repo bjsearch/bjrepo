@@ -744,6 +744,10 @@ h1{{font-size:24px;margin-bottom:8px}}
   <div class="section">
     <h2>1. 보완 추천 (최대 3개)</h2>
     <p style="font-size:12px;color:#5B6B82;margin-bottom:16px">완성된 리포트에 포함할 추천 항목을 선택하고 내용을 수정하세요.</p>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button type="button" class="btn btn-secondary" onclick="setAllCheckboxes('reco_include_', true)">전체 선택</button>
+      <button type="button" class="btn btn-secondary" onclick="setAllCheckboxes('reco_include_', false)">전체 해제</button>
+    </div>
 """
         for idx, reco in enumerate(recommendations):
             checked = "checked" if reco.get("_included", True) else ""
@@ -775,6 +779,10 @@ h1{{font-size:24px;margin-bottom:8px}}
   <div class="section">
     <h2>2. 핵심 진단 및 제언</h2>
     <p style="font-size:12px;color:#5B6B82;margin-bottom:16px">항목을 수정하거나 새로 추가할 수 있습니다.</p>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button type="button" class="btn btn-secondary" onclick="setAllCheckboxes('insight_include_', true)">전체 선택</button>
+      <button type="button" class="btn btn-secondary" onclick="setAllCheckboxes('insight_include_', false)">전체 해제</button>
+    </div>
 """
 
         for idx, insight in enumerate(insights):
@@ -987,6 +995,11 @@ function updateShortfallItemStyle(itemId) {{
       }}
     }}
   }});
+}}
+
+function setAllCheckboxes(namePrefix, checked) {{
+  const checkboxes = document.querySelectorAll(`input[type="checkbox"][name^="${{namePrefix}}"]`);
+  checkboxes.forEach(cb => {{ cb.checked = checked; }});
 }}
 
 function setAllShortfallItems(checked) {{
