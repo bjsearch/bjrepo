@@ -746,14 +746,14 @@ h1{{font-size:24px;margin-bottom:8px}}
     <p style="font-size:12px;color:#5B6B82;margin-bottom:16px">완성된 리포트에 포함할 추천 항목을 선택하고 내용을 수정하세요.</p>
 """
         for idx, reco in enumerate(recommendations):
-            checked = "checked" if reco.get("_included", True) else ""
+            checked = "checked" if reco.get("_included", False) else ""
             html += f"""
     <div class="item">
       <div class="checkbox-group">
         <input type="checkbox" name="reco_include_{idx}" value="1" {checked} id="reco_{idx}">
         <label for="reco_{idx}">추천 {reco.get('rank', idx+1)} - 포함하기</label>
       </div>
-      <div style="display:{'block' if reco.get('_included', True) else 'none'}">
+      <div style="display:{'block' if reco.get('_included', False) else 'none'}">
         <div class="form-group">
           <label for="reco_title_{idx}">제목</label>
           <input type="text" name="reco_title_{idx}" value="{reco.get('title', '')}">
@@ -778,7 +778,7 @@ h1{{font-size:24px;margin-bottom:8px}}
 """
 
         for idx, insight in enumerate(insights):
-            checked = "checked" if insight.get("_included", True) else ""
+            checked = "checked" if insight.get("_included", False) else ""
             urgent_checked = "checked" if insight.get("urgent") else ""
             html += f"""
     <div class="item">
@@ -792,7 +792,7 @@ h1{{font-size:24px;margin-bottom:8px}}
           <label for="insight_urgent_{idx}" style="margin:0;background:#FF9500;color:#fff;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:600">긴급</label>
         </div>
       </div>
-      <div style="display:{'block' if insight.get('_included', True) else 'none'}">
+      <div style="display:{'block' if insight.get('_included', False) else 'none'}">
         <div class="form-group">
           <label for="insight_title_{idx}">제목</label>
           <input type="text" name="insight_title_{idx}" value="{insight.get('title', '')}">
