@@ -742,42 +742,7 @@ h1{{font-size:24px;margin-bottom:8px}}
 <form method="POST" onsubmit="syncShortfallCheckboxes()">
   <input type="hidden" name="_csrf_token" value="{csrf_token}">
   <div class="section">
-    <h2>1. 보완 추천 (최대 3개)</h2>
-    <p style="font-size:12px;color:#5B6B82;margin-bottom:16px">완성된 리포트에 포함할 추천 항목을 선택하고 내용을 수정하세요.</p>
-    <div style="display:flex;gap:8px;margin-bottom:12px">
-      <button type="button" class="btn btn-secondary" onclick="setAllCheckboxes('reco_include_', true)">전체 선택</button>
-      <button type="button" class="btn btn-secondary" onclick="setAllCheckboxes('reco_include_', false)">전체 해제</button>
-    </div>
-"""
-        for idx, reco in enumerate(recommendations):
-            checked = "checked" if reco.get("_included", True) else ""
-            html += f"""
-    <div class="item">
-      <div class="checkbox-group">
-        <input type="checkbox" name="reco_include_{idx}" value="1" {checked} id="reco_{idx}">
-        <label for="reco_{idx}">추천 {reco.get('rank', idx+1)} - 포함하기</label>
-      </div>
-      <div style="display:{'block' if reco.get('_included', True) else 'none'}">
-        <div class="form-group">
-          <label for="reco_title_{idx}">제목</label>
-          <input type="text" name="reco_title_{idx}" value="{reco.get('title', '')}">
-        </div>
-        <div class="form-group">
-          <label for="reco_detail_{idx}">상품 설명</label>
-          <input type="text" name="reco_detail_{idx}" value="{reco.get('detail', '')}">
-        </div>
-        <div class="form-group">
-          <label for="reco_why_{idx}">추천 이유</label>
-          <textarea name="reco_why_{idx}">{reco.get('why', '')}</textarea>
-        </div>
-      </div>
-    </div>
-"""
-
-        html += """  </div>
-
-  <div class="section">
-    <h2>2. 핵심 진단 및 제언</h2>
+    <h2>1. 핵심 진단 및 제언</h2>
     <p style="font-size:12px;color:#5B6B82;margin-bottom:16px">항목을 수정하거나 새로 추가할 수 있습니다.</p>
     <div style="display:flex;gap:8px;margin-bottom:12px">
       <button type="button" class="btn btn-secondary" onclick="setAllCheckboxes('insight_include_', true)">전체 선택</button>
@@ -813,10 +778,45 @@ h1{{font-size:24px;margin-bottom:8px}}
     </div>
 """
 
-        html += f"""
+        html += """
     <div id="new-insights-container"></div>
     <button type="button" class="btn btn-secondary" style="margin-top:16px" onclick="addNewInsightPanel()">+ 새 항목 추가</button>
   </div>
+
+  <div class="section">
+    <h2>2. 보완 추천 (최대 3개)</h2>
+    <p style="font-size:12px;color:#5B6B82;margin-bottom:16px">완성된 리포트에 포함할 추천 항목을 선택하고 내용을 수정하세요.</p>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button type="button" class="btn btn-secondary" onclick="setAllCheckboxes('reco_include_', true)">전체 선택</button>
+      <button type="button" class="btn btn-secondary" onclick="setAllCheckboxes('reco_include_', false)">전체 해제</button>
+    </div>
+"""
+        for idx, reco in enumerate(recommendations):
+            checked = "checked" if reco.get("_included", True) else ""
+            html += f"""
+    <div class="item">
+      <div class="checkbox-group">
+        <input type="checkbox" name="reco_include_{idx}" value="1" {checked} id="reco_{idx}">
+        <label for="reco_{idx}">추천 {reco.get('rank', idx+1)} - 포함하기</label>
+      </div>
+      <div style="display:{'block' if reco.get('_included', True) else 'none'}">
+        <div class="form-group">
+          <label for="reco_title_{idx}">제목</label>
+          <input type="text" name="reco_title_{idx}" value="{reco.get('title', '')}">
+        </div>
+        <div class="form-group">
+          <label for="reco_detail_{idx}">상품 설명</label>
+          <input type="text" name="reco_detail_{idx}" value="{reco.get('detail', '')}">
+        </div>
+        <div class="form-group">
+          <label for="reco_why_{idx}">추천 이유</label>
+          <textarea name="reco_why_{idx}">{reco.get('why', '')}</textarea>
+        </div>
+      </div>
+    </div>
+"""
+
+        html += f"""  </div>
 
   <div class="section">
     <h2>3. 영역별 보장 진단</h2>
