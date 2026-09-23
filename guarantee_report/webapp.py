@@ -809,8 +809,8 @@ h1{{font-size:24px;margin-bottom:8px}}
           <input type="text" name="reco_detail_{idx}" value="{reco.get('detail', '')}">
         </div>
         <div class="form-group">
-          <label for="reco_why_{idx}">추천 이유</label>
-          <textarea name="reco_why_{idx}">{reco.get('why', '')}</textarea>
+          <label for="reco_explanation_{idx}">추천 이유</label>
+          <textarea name="reco_explanation_{idx}" id="reco_explanation_{idx}">{reco.get('explanation', '')}</textarea>
         </div>
       </div>
     </div>
@@ -1121,7 +1121,7 @@ function syncShortfallCheckboxes() {{
             modified_reco = dict(reco)
             modified_reco["title"] = request.form.get(f"reco_title_{idx}", reco.get("title"))
             modified_reco["detail"] = request.form.get(f"reco_detail_{idx}", reco.get("detail"))
-            modified_reco["why"] = request.form.get(f"reco_why_{idx}", reco.get("why"))
+            modified_reco["explanation"] = request.form.get(f"reco_explanation_{idx}", reco.get("explanation"))
             modified_recommendations.append(modified_reco)
 
     # 핵심 진단 처리
