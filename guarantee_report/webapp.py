@@ -1903,6 +1903,22 @@ def admin_view_logs():
     return render_template("admin_view_logs.html.j2", user=current_user(), rows=rows)
 
 
+@app.get("/admin/monthly-stats")
+@admin_required
+def admin_monthly_stats():
+    """월별 활성 유저 수 · 유저별 생성 리포트 · 접속 빈도 · 고객 열람 수를 확인하는
+    관리자 전용 리포트."""
+    default_from = f"{date.today().year}-08"
+    start_month = request.args.get("from", default_from).strip() or None
+    months = storage.get_monthly_activity_stats(start_month=start_month)
+    return render_template(
+        "admin_monthly_stats.html.j2",
+        user=current_user(),
+        months=months,
+        start_month=start_month,
+    )
+
+
 @app.route("/admin/approve-users", methods=["GET"])
 @admin_required
 def admin_approve_users():

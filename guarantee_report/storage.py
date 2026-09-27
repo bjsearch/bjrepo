@@ -91,6 +91,12 @@ CREATE TABLE IF NOT EXISTS report_views (
     duration_seconds INTEGER,
     FOREIGN KEY (report_id) REFERENCES guarantee_reports(id) ON DELETE CASCADE
 );
+CREATE TABLE IF NOT EXISTS user_activity_log (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    occurred_at TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES guarantee_users(id) ON DELETE CASCADE
+);
 """
 
 _SCHEMA_SQLITE = """
@@ -145,6 +151,12 @@ CREATE TABLE IF NOT EXISTS report_views (
     user_agent TEXT,
     duration_seconds INTEGER,
     FOREIGN KEY (report_id) REFERENCES guarantee_reports(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS user_activity_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    occurred_at TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES guarantee_users(id) ON DELETE CASCADE
 );
 """
 
@@ -617,12 +629,13 @@ def clear_all_data() -> None:
 
 
 def update_user_activity(user_id: int, action: str | None = None) -> None:
-    """사용자의 마지막 활동 시간을 업데이트한다."""
+    """사용자의 마지막 활동 시간을 업데이트하고, 월별 접속 빈도 집계를 위해 활동 로그를 남긴다."""
     _ensure_init()
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     with _connect() as conn:
         cur = conn.cursor()
         cur.execute(_q("UPDATE guarantee_users SET last_login_at = ? WHERE id = ?"), (now, user_id))
+        cur.execute(_q("INSERT INTO user_activity_log (user_id, occurred_at) VALUES (?, ?)"), (user_id, now))
 
 
 def list_active_users(minutes: int = 10) -> list[dict]:
@@ -637,6 +650,83 @@ def list_active_users(minutes: int = 10) -> list[dict]:
             (cutoff,),
         )
         return [dict(r) for r in cur.fetchall()]
+
+
+def get_monthly_activity_stats(start_month: str | None = None) -> list[dict]:
+    """월별(YYYY-MM) 활성 유저 수 · 유저별 생성 리포트 · 접속 빈도 · 고객 열람 수를 집계한다.
+
+    접속 빈도는 user_activity_log(인증된 요청마다 기록)를 도입한 시점부터만 쌓이므로,
+    그 이전 달은 0으로 표시된다. 리포트 생성 · 고객 열람(report_views)은 처음부터
+    전체 기간에 대해 조회 가능하다.
+    """
+    _ensure_init()
+    with _connect() as conn:
+        cur = conn.cursor()
+        cur.execute(_q("SELECT created_by_user_id, created_by_name, created_at FROM guarantee_reports"))
+        reports = [dict(r) for r in cur.fetchall()]
+        cur.execute(
+            _q("""SELECT a.user_id, u.name AS user_name, a.occurred_at
+                   FROM user_activity_log a
+                   LEFT JOIN guarantee_users u ON u.id = a.user_id""")
+        )
+        activity = [dict(r) for r in cur.fetchall()]
+        cur.execute(_q("SELECT viewed_at FROM report_views"))
+        views = [dict(r) for r in cur.fetchall()]
+
+    def month_of(iso_str: str | None) -> str | None:
+        return iso_str[:7] if iso_str and len(iso_str) >= 7 else None
+
+    months: dict[str, dict] = {}
+
+    def bucket(month: str) -> dict:
+        return months.setdefault(month, {
+            "month": month,
+            "reports_total": 0,
+            "reports_by_user": {},
+            "activity_total": 0,
+            "active_users": set(),
+            "views_total": 0,
+        })
+
+    for r in reports:
+        month = month_of(r["created_at"])
+        if not month:
+            continue
+        b = bucket(month)
+        b["reports_total"] += 1
+        uname = r["created_by_name"] or (f"user#{r['created_by_user_id']}" if r["created_by_user_id"] else "알수없음")
+        b["reports_by_user"][uname] = b["reports_by_user"].get(uname, 0) + 1
+
+    for a in activity:
+        month = month_of(a["occurred_at"])
+        if not month:
+            continue
+        b = bucket(month)
+        b["activity_total"] += 1
+        if a["user_id"]:
+            b["active_users"].add(a["user_name"] or f"user#{a['user_id']}")
+
+    for v in views:
+        month = month_of(v["viewed_at"])
+        if not month:
+            continue
+        bucket(month)["views_total"] += 1
+
+    result = []
+    for month in sorted(months):
+        if start_month and month < start_month:
+            continue
+        b = months[month]
+        result.append({
+            "month": month,
+            "active_users_count": len(b["active_users"]),
+            "active_users": sorted(b["active_users"]),
+            "reports_total": b["reports_total"],
+            "reports_by_user": sorted(b["reports_by_user"].items(), key=lambda kv: -kv[1]),
+            "activity_total": b["activity_total"],
+            "views_total": b["views_total"],
+        })
+    return result
 
 
 # --- 피드백 ---
