@@ -742,6 +742,13 @@ h1{{font-size:24px;margin-bottom:8px}}
 <form method="POST" onsubmit="syncShortfallCheckboxes()">
   <input type="hidden" name="_csrf_token" value="{csrf_token}">
   <div class="section">
+    <h2>공유 링크 열람 확인용 휴대폰번호</h2>
+    <p style="font-size:12px;color:#5B6B82;margin-bottom:16px">카카오톡 등으로 리포트를 공유하면, 아래 번호를 입력해야 열람할 수 있도록 확인 절차가 추가됩니다. 비워두면 확인 절차 없이 누구나 링크로 바로 열람할 수 있습니다.</p>
+    <input type="tel" name="customer_phone" value="{header.get('customer_phone', '')}" placeholder="010-1234-5678"
+           style="width:100%;max-width:280px;padding:8px 12px;border:1px solid #E3E7EE;border-radius:8px;font-family:inherit;font-size:13px">
+  </div>
+
+  <div class="section">
     <h2>1. 핵심 진단 및 제언</h2>
     <p style="font-size:12px;color:#5B6B82;margin-bottom:16px">항목을 수정하거나 새로 추가할 수 있습니다.</p>
     <div style="display:flex;gap:8px;margin-bottom:12px">
@@ -1331,6 +1338,7 @@ function syncShortfallCheckboxes() {{
     data["insights"] = modified_insights
     data["coverage_sections"] = modified_coverage_sections if modified_coverage_sections else coverage_sections
     data["shortfall_coverage"] = modified_shortfall_coverage
+    data["header"]["customer_phone"] = _normalize_phone(request.form.get("customer_phone", ""))
 
     # 생성일시 추가 (한국 시간)
     created_at = draft.get("created_at", time.time())
