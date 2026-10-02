@@ -747,6 +747,8 @@ h1{{font-size:24px;margin-bottom:8px}}
     <div style="display:flex;gap:8px;margin-bottom:12px">
       <button type="button" class="btn btn-secondary" onclick="setAllCheckboxes('insight_include_', true)">전체 선택</button>
       <button type="button" class="btn btn-secondary" onclick="setAllCheckboxes('insight_include_', false)">전체 해제</button>
+      <button type="button" class="btn btn-secondary" onclick="setAllCheckboxes('insight_urgent_', true)">긴급 전체 선택</button>
+      <button type="button" class="btn btn-secondary" onclick="setAllCheckboxes('insight_urgent_', false)">긴급 전체 해제</button>
     </div>
 """
 
