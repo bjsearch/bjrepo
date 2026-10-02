@@ -165,11 +165,11 @@ def _mask_phone(phone: str) -> str:
 
 
 def _extract_phone_from_filename(filename: str) -> str:
-    """업로드한 엑셀 파일명 끝에 붙여둔 의뢰인 휴대폰번호를 추출한다.
-    예: '홍길동_010-1234-5678.xlsx' -> '01012345678'. 못 찾으면 빈 문자열."""
+    """업로드한 엑셀 파일명 끝에 붙여둔 의뢰인 휴대폰번호 뒤 4자리를 추출한다.
+    예: '홍길동_5678.xlsx' -> '5678'. 못 찾으면 빈 문자열."""
     stem = re.sub(r"\.[^.]+$", "", filename or "")
-    m = re.search(r"(01[0-9])[-_ ]?(\d{3,4})[-_ ]?(\d{4})\s*$", stem)
-    return f"{m.group(1)}{m.group(2)}{m.group(3)}" if m else ""
+    m = re.search(r"(?:^|[-_ ])(\d{4})\s*$", stem)
+    return m.group(1) if m else ""
 
 
 def current_user() -> dict | None:
@@ -742,10 +742,10 @@ h1{{font-size:24px;margin-bottom:8px}}
 <form method="POST" onsubmit="syncShortfallCheckboxes()">
   <input type="hidden" name="_csrf_token" value="{csrf_token}">
   <div class="section">
-    <h2>공유 링크 열람 확인용 휴대폰번호</h2>
-    <p style="font-size:12px;color:#5B6B82;margin-bottom:16px">카카오톡 등으로 리포트를 공유하면, 아래 번호를 입력해야 열람할 수 있도록 확인 절차가 추가됩니다. 비워두면 확인 절차 없이 누구나 링크로 바로 열람할 수 있습니다.</p>
-    <input type="tel" name="customer_phone" value="{header.get('customer_phone', '')}" placeholder="010-1234-5678"
-           style="width:100%;max-width:280px;padding:8px 12px;border:1px solid #E3E7EE;border-radius:8px;font-family:inherit;font-size:13px">
+    <h2>공유 링크 열람 확인용 휴대폰번호 뒤 4자리</h2>
+    <p style="font-size:12px;color:#5B6B82;margin-bottom:16px">카카오톡 등으로 리포트를 공유하면, 의뢰인 휴대폰번호 뒤 4자리를 입력해야 열람할 수 있도록 확인 절차가 추가됩니다. 비워두면 확인 절차 없이 누구나 링크로 바로 열람할 수 있습니다.</p>
+    <input type="tel" name="customer_phone" value="{(header.get('customer_phone') or '')[-4:]}" placeholder="1234" maxlength="4" inputmode="numeric" pattern="[0-9]{{4}}"
+           style="width:100%;max-width:120px;padding:8px 12px;border:1px solid #E3E7EE;border-radius:8px;font-family:inherit;font-size:13px">
   </div>
 
   <div class="section">
@@ -1338,7 +1338,7 @@ function syncShortfallCheckboxes() {{
     data["insights"] = modified_insights
     data["coverage_sections"] = modified_coverage_sections if modified_coverage_sections else coverage_sections
     data["shortfall_coverage"] = modified_shortfall_coverage
-    data["header"]["customer_phone"] = _normalize_phone(request.form.get("customer_phone", ""))
+    data["header"]["customer_phone"] = _normalize_phone(request.form.get("customer_phone", ""))[-4:]
 
     # 생성일시 추가 (한국 시간)
     created_at = draft.get("created_at", time.time())
@@ -1717,19 +1717,20 @@ def shared_report(token: str):
     if not data:
         abort(404)
 
-    # 카카오톡 등으로 공유된 링크는 의뢰인 본인 휴대폰번호를 입력해야 열리도록 게이트를
-    # 둔다. 이 번호는 업로드한 엑셀 파일명 끝에 붙여둔 것에서 추출한 값이다. (파일명에
-    # 번호가 없는 옛 데이터 등 확인할 수 없는 경우는 게이트 없이 통과)
-    customer_phone = re.sub(r"\D", "", (data.get("header") or {}).get("customer_phone") or "")
+    # 카카오톡 등으로 공유된 링크는 의뢰인 본인 휴대폰번호 뒤 4자리를 입력해야 열리도록
+    # 게이트를 둔다. 이 번호는 업로드한 엑셀 파일명 끝에 붙여둔 것에서 추출한 값이다.
+    # (파일명에 번호가 없는 옛 데이터 등 확인할 수 없는 경우는 게이트 없이 통과. 과거에
+    # 전체 번호가 저장된 옛 리포트도 뒤 4자리만 비교하므로 그대로 호환된다.)
+    customer_phone = re.sub(r"\D", "", (data.get("header") or {}).get("customer_phone") or "")[-4:]
     verified_key = _share_verified_key(token)
     if customer_phone and not session.get(verified_key):
         error = None
         if request.method == "POST":
-            entered = _normalize_phone(request.form.get("phone", ""))
+            entered = _normalize_phone(request.form.get("phone", ""))[-4:]
             if entered and hmac.compare_digest(entered, customer_phone):
                 session[verified_key] = True
             else:
-                error = "휴대폰번호가 일치하지 않습니다. 다시 확인해주세요."
+                error = "휴대폰번호 뒤 4자리가 일치하지 않습니다. 다시 확인해주세요."
         if not session.get(verified_key):
             return render_template(
                 "share_gate.html.j2", error=error, customer_name=data["header"]["name"], logo_mark=LOGO_MARK
@@ -1818,7 +1819,7 @@ def shared_report_chat(token: str):
     data = storage.get_report_by_share_token(token)
     if not data:
         abort(404)
-    customer_phone = re.sub(r"\D", "", (data.get("header") or {}).get("customer_phone") or "")
+    customer_phone = re.sub(r"\D", "", (data.get("header") or {}).get("customer_phone") or "")[-4:]
     if customer_phone and not session.get(_share_verified_key(token)):
         abort(403)
     if _chat_rate_limited(f"s{token}"):
