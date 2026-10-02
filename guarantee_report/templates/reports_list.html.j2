@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http%3A//www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'><path%20d='M4%2021%20A16%2015%200%200%201%2036%2021%20Z'%20fill='%2310233F'/><rect%20x='9'%20y='21'%20width='4.4'%20height='6'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='17.8'%20y='21'%20width='4.4'%20height='10'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='26.6'%20y='21'%20width='4.4'%20height='14'%20rx='1.6'%20fill='%231D5BD8'/></svg>">
+<title>저장된 Team DIN 보장분석기 리포트</title>
+<style>
+  :root{--ink:#10233F;--paper:#F6F7F9;--card:#FFFFFF;--line:#E3E7EE;--sub:#5B6B82;--ok:#1D5BD8;--warn:#C77700;--gap:#C93030;--ok-bg:#EDF3FE;--warn-bg:#FDF3E3;--gap-bg:#FBEDED}
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,"Pretendard",sans-serif;background:var(--paper);color:var(--ink);margin:0;padding:40px 20px 80px;line-height:1.6}
+  .wrap{max-width:920px;margin:0 auto}
+  .top{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:6px}
+  h1{font-size:24px;margin:0}
+  a.new{font-size:13.5px;font-weight:700;color:var(--ok);text-decoration:none}
+  p.sub{color:var(--sub);font-size:14px;margin:6px 0 26px}
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:13.5px}
+  thead th{background:#F0F3F8;font-size:12px;font-weight:600;color:var(--sub);text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
+  tbody td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:#FAFBFC}
+  td.r{text-align:right}
+  .name-link{font-weight:700;color:var(--ink);text-decoration:none}
+  .name-link:hover{text-decoration:underline}
+  .chip{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;white-space:nowrap}
+  .chip.ok{color:var(--ok);background:var(--ok-bg)}
+  .chip.warn{color:var(--warn);background:var(--warn-bg)}
+  .chip.gap{color:var(--gap);background:var(--gap-bg)}
+  .chips{display:flex;gap:4px;flex-wrap:wrap}
+  .actions-cell{display:flex;gap:6px;align-items:center}
+  .del{background:none;border:none;color:var(--sub);font-size:12px;cursor:pointer;padding:4px 6px}
+  .del:hover{color:var(--gap)}
+  .download{background:none;border:none;color:var(--ok);font-size:12px;cursor:pointer;padding:4px 6px;text-decoration:none;display:inline}
+  .download:hover{color:var(--ink)}
+  .actions{margin-top:20px;display:flex;align-items:center;gap:12px}
+  button.compare{padding:11px 22px;border:none;border-radius:8px;background:var(--ink);color:#fff;font-size:14px;font-weight:700;cursor:pointer}
+  button.compare:disabled{opacity:.35;cursor:not-allowed}
+  .hint3{font-size:12.5px;color:var(--sub)}
+  .empty{padding:60px 20px;text-align:center;color:var(--sub);font-size:14px}
+  .navbar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 14px;margin-bottom:14px;font-size:13px;color:var(--sub)}
+  .navbar .brand-group{display:flex;align-items:center;gap:9px}
+  .navbar .brand{display:flex;align-items:center;gap:7px;text-decoration:none;flex:none}
+  .navbar .brand .wordmark{font-family:"Noto Serif KR",serif;font-weight:700;font-size:15.5px;color:var(--ink);letter-spacing:-.01em}
+  .navbar .menu{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px}
+  .navbar a,.navbar .who{white-space:nowrap}
+  .navbar a{display:inline-flex;align-items:center;gap:5px;color:var(--sub);text-decoration:none;font-weight:600}
+  .navbar a:hover{color:var(--ink)}
+  .navbar a.admin{color:var(--ok)}
+  .navbar a.admin:hover{color:var(--ink)}
+  .navbar a svg{width:14px;height:14px;flex:none}
+  .notes-btn{background:none;border:none;color:var(--ok);font-size:12px;cursor:pointer;padding:4px 6px;text-decoration:none;display:inline}
+  .notes-btn:hover{color:var(--ink)}
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(16,35,63,.6);z-index:100;align-items:center;justify-content:center}
+  .modal-overlay.show{display:flex}
+  .modal{background:var(--card);border-radius:12px;padding:24px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 12px 40px rgba(16,35,63,.3)}
+  .modal h2{margin:0 0 12px 0;font-size:18px;color:var(--ink)}
+  .modal-textarea{width:100%;min-height:150px;padding:12px;border:1px solid var(--line);border-radius:8px;font-family:inherit;font-size:13px;resize:vertical}
+  .modal-textarea:focus{outline:2px solid var(--ok);outline-offset:-1px}
+  .modal-actions{display:flex;gap:12px;margin-top:16px;justify-content:flex-end}
+  .modal-actions button{padding:10px 20px;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px}
+  .modal-actions .btn-save{background:var(--ok);color:#fff}
+  .modal-actions .btn-save:hover{opacity:.9}
+  .modal-actions .btn-delete{background:var(--gap);color:#fff}
+  .modal-actions .btn-delete:hover{opacity:.9}
+  .modal-actions .btn-cancel{background:var(--line);color:var(--sub)}
+  .modal-actions .btn-cancel:hover{background:var(--paper)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="navbar">
+    <div class="brand-group">
+      <a class="brand" href="/">
+        <svg viewBox="0 0 40 40" width="22" height="22" aria-hidden="true"><path d="M4 21 A16 15 0 0 1 36 21 Z" fill="#10233F"/><rect x="9" y="21" width="4.4" height="6" rx="1.6" fill="#1D5BD8"/><rect x="17.8" y="21" width="4.4" height="10" rx="1.6" fill="#1D5BD8"/><rect x="26.6" y="21" width="4.4" height="14" rx="1.6" fill="#1D5BD8"/></svg>
+        <span class="wordmark">Team DIN 보장분석기</span>
+      </a>
+    </div>
+    <div class="menu">
+      <span class="who">{{ user.name }}님{% if user.role == 'admin' %} · 관리자{% endif %}</span>
+      {% if user.role == 'admin' %}<a class="admin" href="/admin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>관리자 화면</a>{% endif %}
+      <a href="/change-password">🔑 비밀번호 변경</a>
+      <a href="/logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>로그아웃</a>
+    </div>
+  </div>
+  <div class="top">
+    <h1>저장된 Team DIN 보장분석기 리포트</h1>
+    <a class="new" href="/">+ 새 리포트 생성</a>
+  </div>
+  <p class="sub">체크박스로 2건 이상 선택하면 같은 체크리스트 기준으로 나란히 비교할 수 있습니다.</p>
+
+  {% if reports %}
+  <form action="/compare" method="get" id="cmpForm">
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>고객</th>
+          {% if user.role == 'admin' %}<th>생성자</th>{% endif %}
+          <th>생성일</th>
+          <th class="r">월 보험료</th>
+          <th>진단 결과</th>
+          <th>의견</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in reports %}
+        <tr>
+          <td><input type="checkbox" name="ids" value="{{ r.id }}" class="cb"></td>
+          <td><a class="name-link" href="/reports/{{ r.id }}">{{ r.customer_name }}</a></td>
+          {% if user.role == 'admin' %}<td>{{ r.created_by_name or '-' }}</td>{% endif %}
+          <td>{{ r.created_at[:10] }}</td>
+          <td class="r">{{ "{:,}".format(r.monthly_premium) if r.monthly_premium else '-' }}원</td>
+          <td>
+            <div class="chips">
+              <span class="chip ok">적정 {{ r.ok_count }}</span>
+              <span class="chip warn">주의·부족 {{ r.warn_count }}</span>
+              <span class="chip gap">미가입 {{ r.gap_count }}</span>
+            </div>
+          </td>
+          <td title="상세 보기는 리포트를 클릭하세요">
+            {% if r.feedback_count %}
+              <a href="/reports/{{ r.id }}" style="text-decoration:none;color:inherit">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span class="chip {% if r.feedback_resolved_count == r.feedback_count %}ok{% elif r.feedback_resolved_count > 0 %}warn{% else %}gap{% endif %}">
+                    💬 {{ r.feedback_resolved_count }}/{{ r.feedback_count }}
+                  </span>
+                  {% if r.feedback_count > 0 %}
+                    <div style="flex:1;height:6px;background:var(--line);border-radius:3px;overflow:hidden">
+                      <div style="height:100%;background:{% if r.feedback_resolved_count == r.feedback_count %}#1D5BD8{% elif r.feedback_resolved_count > 0 %}#C77700{% else %}#C93030{% endif %};width:{{ (r.feedback_resolved_count / r.feedback_count * 100)|int }}%"></div>
+                    </div>
+                  {% endif %}
+                </div>
+              </a>
+            {% else %}
+              <span style="color:var(--sub);font-size:12px">-</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="actions-cell">
+              <a href="/reports/{{ r.id }}/coverage-summary" class="download" title="담보보장 요약">📊</a>
+              <a href="/reports/{{ r.id }}/download-source" class="download" title="원본 파일 다운로드">⬇</a>
+              <button class="notes-btn" onclick="openNotesModal({{ r.id }}, '{{ r.customer_name }}')" title="수정사항">📝</button>
+              <form action="/reports/{{ r.id }}/delete" method="post" onsubmit="return confirm('{{ r.customer_name }}님 리포트를 삭제할까요?')" style="margin:0">
+                <button type="submit" class="del">삭제</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="actions">
+      <button type="submit" class="compare" id="cmpBtn" disabled>선택한 항목 비교하기</button>
+      <span class="hint3" id="cmpHint">2건 이상 선택하세요</span>
+    </div>
+  </form>
+  {% else %}
+  <div class="empty">아직 저장된 리포트가 없습니다. <a href="/">여기서 새 리포트를 생성</a>하면 자동으로 저장됩니다.</div>
+  {% endif %}
+
+  <div class="modal-overlay" id="notesModal">
+    <div class="modal">
+      <h2 id="notesTitle"></h2>
+      <textarea class="modal-textarea" id="notesTextarea" placeholder="리포트에 대한 수정사항이나 노트를 입력하세요."></textarea>
+      <div class="modal-actions">
+        <button type="button" class="btn-delete" onclick="deleteNotes()" style="display:none" id="deleteBtn">삭제</button>
+        <button type="button" class="btn-cancel" onclick="closeNotesModal()">취소</button>
+        <button type="button" class="btn-save" onclick="saveNotes()">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  const boxes = document.querySelectorAll('.cb');
+  const btn = document.getElementById('cmpBtn');
+  const hint = document.getElementById('cmpHint');
+  function update(){
+    const n = document.querySelectorAll('.cb:checked').length;
+    btn.disabled = n < 2;
+    hint.textContent = n < 2 ? '2건 이상 선택하세요' : n + '건 선택됨';
+  }
+  boxes.forEach(b => b.addEventListener('change', update));
+
+  let currentReportId = null;
+  let currentCustomerName = null;
+
+  function openNotesModal(reportId, customerName){
+    currentReportId = reportId;
+    currentCustomerName = customerName;
+    document.getElementById('notesTitle').textContent = `"${customerName}" 수정사항`;
+    document.getElementById('notesTextarea').value = '';
+    document.getElementById('deleteBtn').style.display = 'none';
+    document.getElementById('notesModal').classList.add('show');
+
+    fetch(`/reports/${reportId}/notes`)
+      .then(r => r.json())
+      .then(data => {
+        if(data.notes){
+          document.getElementById('notesTextarea').value = data.notes;
+          document.getElementById('deleteBtn').style.display = 'block';
+        }
+      })
+      .catch(e => console.error('Failed to load notes:', e));
+  }
+
+  function closeNotesModal(){
+    document.getElementById('notesModal').classList.remove('show');
+    currentReportId = null;
+    currentCustomerName = null;
+  }
+
+  function saveNotes(){
+    const notes = document.getElementById('notesTextarea').value.trim();
+    fetch(`/reports/${currentReportId}/notes`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({notes: notes || null})
+    })
+      .then(r => {
+        if(r.status === 403) alert('이 리포트에 접근할 권한이 없습니다.');
+        else if(!r.ok) alert('저장 실패: ' + r.statusText);
+        else closeNotesModal();
+      })
+      .catch(e => {
+        alert('저장 중 오류 발생: ' + e.message);
+      });
+  }
+
+  function deleteNotes(){
+    if(!confirm(`"${currentCustomerName}"의 수정사항을 삭제할까요?`)) return;
+    fetch(`/reports/${currentReportId}/notes`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({notes: null})
+    })
+      .then(r => {
+        if(r.status === 403) alert('이 리포트에 접근할 권한이 없습니다.');
+        else if(!r.ok) alert('삭제 실패: ' + r.statusText);
+        else closeNotesModal();
+      })
+      .catch(e => {
+        alert('삭제 중 오류 발생: ' + e.message);
+      });
+  }
+
+  document.getElementById('notesModal').addEventListener('click', function(e){
+    if(e.target === this) closeNotesModal();
+  });
+</script>
+</body>
+</html>

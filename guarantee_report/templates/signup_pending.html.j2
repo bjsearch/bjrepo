@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http%3A//www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'><path%20d='M4%2021%20A16%2015%200%200%201%2036%2021%20Z'%20fill='%2310233F'/><rect%20x='9'%20y='21'%20width='4.4'%20height='6'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='17.8'%20y='21'%20width='4.4'%20height='10'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='26.6'%20y='21'%20width='4.4'%20height='14'%20rx='1.6'%20fill='%231D5BD8'/></svg>">
+  <title>회원 가입 신청 완료</title>
+  <style>
+    :root {
+      --ink: #10233F;
+      --paper: #F6F7F9;
+      --card: #FFFFFF;
+      --line: #E3E7EE;
+      --sub: #5B6B82;
+      --ok: #1D5BD8;
+      --gap: #C93030;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, "Pretendard", sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      margin: 0;
+      padding: 64px 20px;
+      line-height: 1.6;
+    }
+    .wrap {
+      max-width: 400px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .icon {
+      font-size: 48px;
+      margin-bottom: 20px;
+    }
+    h1 {
+      font-size: 24px;
+      margin: 0 0 12px;
+    }
+    .sub {
+      color: var(--sub);
+      font-size: 14px;
+      margin-bottom: 28px;
+      line-height: 1.7;
+    }
+    .info-box {
+      background: #E8F5E9;
+      border: 1px solid #C8E6C9;
+      border-radius: 8px;
+      padding: 20px 16px;
+      margin-bottom: 24px;
+      font-size: 14px;
+      color: #1B5E20;
+    }
+    .info-title {
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .info-content {
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .back-link {
+      display: inline-block;
+      margin-top: 20px;
+      font-size: 14px;
+      color: var(--ok);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .back-link:hover {
+      text-decoration: underline;
+    }
+    .next-steps {
+      margin-top: 32px;
+      padding-top: 28px;
+      border-top: 1px solid var(--line);
+    }
+    .next-steps-title {
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--sub);
+      margin-bottom: 12px;
+    }
+    .step {
+      font-size: 13px;
+      color: var(--sub);
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="icon">✅</div>
+    <h1>회원 가입 신청 완료</h1>
+    <p class="sub">가입 신청이 접수되었습니다!</p>
+
+    <div class="info-box">
+      <div class="info-title">{{ user_name }}님 가입 신청이 접수되었습니다.</div>
+      <div class="info-content">
+        관리자의 승인을 기다려주세요.<br>
+        승인 후에 로그인할 수 있습니다.
+      </div>
+    </div>
+
+    <div class="next-steps">
+      <div class="next-steps-title">다음 단계</div>
+      <div class="step">1️⃣ 관리자가 신청을 검토합니다</div>
+      <div class="step">2️⃣ 승인되면 알림이 전달됩니다</div>
+      <div class="step">3️⃣ 로그인하여 서비스를 이용합니다</div>
+    </div>
+
+    <a class="back-link" href="/login">로그인 페이지로 이동 →</a>
+  </div>
+</body>
+</html>
