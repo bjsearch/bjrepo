@@ -123,8 +123,8 @@ td.r,th.r{text-align:right}
 .insights{display:grid;gap:0}
 .insight{display:flex;gap:24px;align-items:flex-start;background:transparent;border:none;border-top:1px solid var(--line);border-radius:0;padding:24px 0;line-height:1.7;box-shadow:none}
 .insights .insight:last-child{border-bottom:1px solid var(--line)}
-.icon-badge{flex:none;width:112px;height:112px;border-radius:50%;background:var(--panel);border:1px solid var(--line);display:flex;align-items:center;justify-content:center}
-.icon-badge svg{width:64px;height:64px}
+.icon-badge{flex:none;width:112px;height:112px;border-radius:50%;background:var(--panel);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.icon-badge svg{width:110px;height:110px}
 .insight .body{flex:1;min-width:0}
 .insight b{display:block;margin-bottom:7px;font-size:14.5px;color:var(--ink);font-weight:600}
 .insight p{font-size:13.5px;color:var(--sub);line-height:1.8}
@@ -207,7 +207,7 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
   .chip{font-size:11px;padding:2px 8px}
   .insight{padding:16px 0;gap:18px}
   .icon-badge{width:92px;height:92px}
-  .icon-badge svg{width:52px;height:52px}
+  .icon-badge svg{width:90px;height:90px}
   .insight b{font-size:14px}
   .insight p{font-size:13px}
   .gauge-cell{width:80px;font-size:13px}
@@ -240,7 +240,7 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
   .chip{font-size:10px;padding:1px 6px}
   .insight{padding:14px 0;gap:16px}
   .icon-badge{width:80px;height:80px}
-  .icon-badge svg{width:44px;height:44px}
+  .icon-badge svg{width:78px;height:78px}
   .insight b{font-size:13px}
   .insight p{font-size:12px;line-height:1.5}
   .gauge-cell{width:70px;font-size:11px}
@@ -276,7 +276,7 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-si
   .chip{font-size:9px;padding:1px 5px}
   .insight{padding:12px 0;gap:14px;border-radius:8px}
   .icon-badge{width:68px;height:68px}
-  .icon-badge svg{width:38px;height:38px}
+  .icon-badge svg{width:66px;height:66px}
   .insight b{font-size:12px;line-height:1.3}
   .insight p{font-size:11px;line-height:1.5}
   .gauge-cell{width:60px;font-size:10px}
@@ -537,12 +537,13 @@ body.device-preview-active>.page{display:none}
 
   <!-- 보험료·갱신: 달력 + 원화 + 갱신 화살표 -->
   <symbol id="ic-renew" viewBox="0 0 32 32">
-    <rect x="5" y="7" width="22" height="20" rx="2.5" fill="url(#gGoldPale)" stroke="#9B7A3D" stroke-width="1"/>
-    <path d="M5 13h22" stroke="#9B7A3D" stroke-width="1"/>
-    <path d="M11 4v5M21 4v5" stroke="#E7CE93" stroke-width="1.6" stroke-linecap="round"/>
-    <text x="16" y="23.5" font-family="'Pretendard Variable',Pretendard,sans-serif" font-size="11" font-weight="700" fill="#E7CE93" text-anchor="middle">₩</text>
-    <path d="M23.5 16.5a3.6 3.6 0 1 1-1.2-2.7" stroke="var(--gap)" stroke-width="1.6" fill="none" stroke-linecap="round"/>
-    <path d="M23.5 13v3.2h-3.2" stroke="var(--gap)" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="3" y="6" width="26" height="23" rx="2.5" fill="url(#gGoldPale)" stroke="#9B7A3D" stroke-width="1"/>
+    <path d="M3 12.5h26" stroke="#9B7A3D" stroke-width="1"/>
+    <path d="M10 3v5M22 3v5" stroke="#E7CE93" stroke-width="1.8" stroke-linecap="round"/>
+    <text x="16" y="24.5" font-family="'Pretendard Variable',Pretendard,sans-serif" font-size="13" font-weight="700" fill="#E7CE93" text-anchor="middle">₩</text>
+    <circle cx="25" cy="25.5" r="5.5" fill="#15181D" stroke="var(--gap)" stroke-width="1.1"/>
+    <path d="M23.3 23.7a2.6 2.6 0 1 1-.9 1.9" stroke="var(--gap)" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+    <path d="M23.3 21.8v1.9h1.9" stroke="var(--gap)" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
   </symbol>
 
   <!-- 기본값: 분석 문서 -->
