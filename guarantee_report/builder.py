@@ -646,7 +646,7 @@ def _build_insights(
     filtered_insights = [
         i for i in insights
         if not any(ltc_keyword in (i.get("title", "") + i.get("text", ""))
-                   for ltc_keyword in ["치매", "간병", "LTC"])
+                   for ltc_keyword in ["치매", "간병", "장기요양", "LTC"])
     ]
 
     return filtered_insights

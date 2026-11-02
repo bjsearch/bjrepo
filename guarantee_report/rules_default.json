@@ -10,7 +10,12 @@
         {"label": "질병 80% 이상 후유장해", "categories": ["질병80%이상후유장해", "질병후유장해"], "recommend": 10000},
         {"label": "재해(상해)장해 3% 일경우", "categories": ["상해후유장해"], "multiplier": 0.03, "recommend": 300},
         {"label": "질병후유장해 3% 일경우", "categories": ["질병후유장해"], "multiplier": 0.03, "recommend": 300},
-        {"label": "치매(LTC) · 경증치매 진단", "categories_contains": ["치매"], "recommend": 3000, "recommend_display": "3,000 / 400"}
+        {"label": "치매(LTC) · 경증치매 진단", "categories_contains": ["치매"], "recommend": 3000, "recommend_display": "3,000 / 400"},
+        {"label": "장기요양진단비 (1~5급)", "categories": ["장기요양진단비"], "recommend": 3000},
+        {"label": "장기요양 재가급여 보장", "categories": ["장기요양재가급여"], "recommend": 50},
+        {"label": "장기요양 시설급여 보장", "categories": ["장기요양시설급여"], "recommend": 30},
+        {"label": "장기요양 복합재가급여 보장", "categories": ["장기요양복합재가급여"], "recommend": 100},
+        {"label": "장기요양 주야간보호·복지용구·방문요양", "categories": ["장기요양주야간보호등"], "recommend": 30}
       ]
     },
     {
@@ -50,7 +55,11 @@
         {"label": "질병 / 상해 입원일당", "kind": "each_pair", "categories": ["질병입원일당", "상해입원일당"], "recommend": 10},
         {"label": "특정질병입원일당", "categories": ["특정질병입원일당"], "kind": "info", "recommend": null},
         {"label": "간병인사용/지원 입원일당", "kind": "each_pair", "categories": ["간병인지원질병입원일당", "간병인지원상해입원일당"], "recommend": 10},
-        {"label": "간호간병통합서비스 일당", "kind": "each_pair", "categories": ["질병간호간병통합서비스사용일당", "상해간호간병통합서비스사용일당"], "recommend": null}
+        {"label": "간호간병통합서비스 일당", "kind": "each_pair", "categories": ["질병간호간병통합서비스사용일당", "상해간호간병통합서비스사용일당"], "recommend": null},
+        {"label": "간병인사용일당", "categories": ["간병인사용일당"], "recommend": 10},
+        {"label": "간병인지원일당", "categories": ["간병인지원일당"], "recommend": 10},
+        {"label": "간호간병통합서비스사용일당", "categories": ["간호간병통합서비스사용일당"], "kind": "info", "recommend": null},
+        {"label": "간호간병통합서비스병원일당", "categories": ["간호간병통합서비스병원일당"], "kind": "info", "recommend": null}
       ]
     },
     {
@@ -64,6 +73,8 @@
         {"label": "화상진단", "categories": ["화상진단"], "recommend": 50},
         {"label": "임플란트", "categories_contains": ["임플란트"], "recommend": 150},
         {"label": "크라운", "categories_contains": ["크라운"], "recommend": 150},
+        {"label": "치아 보존치료", "categories": ["보존치료"], "recommend": 50},
+        {"label": "치아 보철치료", "categories": ["보철치료"], "recommend": 150},
         {"label": "교통사고처리지원금", "categories_contains": ["교통사고처리"], "recommend": 20000},
         {"label": "벌금(대물)", "categories_contains": ["벌금"], "recommend": 500},
         {"label": "벌금(대인)", "categories_contains": ["벌금"], "recommend": 3000},
