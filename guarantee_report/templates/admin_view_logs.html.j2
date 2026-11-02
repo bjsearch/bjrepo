@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http%3A//www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'><path%20d='M4%2021%20A16%2015%200%200%201%2036%2021%20Z'%20fill='%2310233F'/><rect%20x='9'%20y='21'%20width='4.4'%20height='6'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='17.8'%20y='21'%20width='4.4'%20height='10'%20rx='1.6'%20fill='%231D5BD8'/><rect%20x='26.6'%20y='21'%20width='4.4'%20height='14'%20rx='1.6'%20fill='%231D5BD8'/></svg>">
+<title>열람 현황 — Team DIN 보장분석기 리포트</title>
+<style>
+  :root{--ink:#10233F;--paper:#F6F7F9;--card:#FFFFFF;--line:#E3E7EE;--sub:#5B6B82;--ok:#1D5BD8;--warn:#C77700;--gap:#C93030;--ok-bg:#EDF3FE;--warn-bg:#FDF3E3;--gap-bg:#FBEDED}
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,"Pretendard",sans-serif;background:var(--paper);color:var(--ink);margin:0;padding:28px 20px 80px;line-height:1.6;font-size:14px}
+  .wrap{max-width:1100px;margin:0 auto}
+  .navbar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 14px;margin-bottom:14px;font-size:13px;color:var(--sub)}
+  .navbar .brand-group{display:flex;align-items:center;gap:9px}
+  .navbar .brand{display:flex;align-items:center;gap:7px;text-decoration:none;flex:none}
+  .navbar .brand .wordmark{font-family:"Noto Serif KR",serif;font-weight:700;font-size:15.5px;color:var(--ink);letter-spacing:-.01em}
+  .navbar .menu{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px}
+  .navbar a,.navbar .who{white-space:nowrap}
+  .navbar a{display:inline-flex;align-items:center;gap:5px;color:var(--sub);text-decoration:none;font-weight:600}
+  .navbar a:hover{color:var(--ink)}
+  .top{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:24px}
+  h1{font-size:24px;margin:0}
+  .sub-note{color:var(--sub);font-size:13px;margin-top:4px}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;box-shadow:0 1px 2px rgba(16,35,63,.05),0 1px 3px rgba(16,35,63,.06)}
+  .kpi .label{font-size:12.5px;color:var(--sub);margin-bottom:6px}
+  .kpi .value{font-size:22px;font-weight:700}
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:13.5px;box-shadow:0 1px 2px rgba(16,35,63,.05),0 1px 3px rgba(16,35,63,.06)}
+  thead th{background:#F0F3F8;font-size:12px;font-weight:600;color:var(--sub);text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
+  tbody td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:#F9FAFB}
+  td.r{text-align:right}
+  .name-link{font-weight:700;color:var(--ink);text-decoration:none}
+  .name-link:hover{text-decoration:underline}
+  .chip{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;white-space:nowrap}
+  .chip.ok{color:var(--ok);background:var(--ok-bg)}
+  .chip.warn{color:var(--warn);background:var(--warn-bg)}
+  .muted{color:var(--sub)}
+  .empty{padding:30px 20px;text-align:center;color:var(--sub);font-size:13.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="navbar">
+    <div class="brand-group">
+      <a class="brand" href="/">
+        <svg viewBox="0 0 40 40" width="22" height="22" aria-hidden="true"><path d="M4 21 A16 15 0 0 1 36 21 Z" fill="#10233F"/><rect x="9" y="21" width="4.4" height="6" rx="1.6" fill="#1D5BD8"/><rect x="17.8" y="21" width="4.4" height="10" rx="1.6" fill="#1D5BD8"/><rect x="26.6" y="21" width="4.4" height="14" rx="1.6" fill="#1D5BD8"/></svg>
+        <span class="wordmark">Team DIN 보장분석기</span>
+      </a>
+    </div>
+    <div class="menu">
+      <span class="who">{{ user.name }}님 · 관리자</span>
+      <a href="/admin">← 관리자 화면</a>
+      <a href="/reports">저장된 리포트</a>
+      <a href="/logout">로그아웃</a>
+    </div>
+  </div>
+  <div class="top">
+    <div>
+      <h1>열람 현황</h1>
+      <div class="sub-note">카카오톡 등으로 공유된 리포트가 열람됐는지, 언제·어느 지역에서 열람됐는지 확인합니다.</div>
+    </div>
+  </div>
+
+  {% set viewed_count = rows | selectattr('view_count', 'gt', 0) | list | length %}
+  <div class="kpis">
+    <div class="kpi"><div class="label">공유된 리포트</div><div class="value">{{ rows|length }}건</div></div>
+    <div class="kpi"><div class="label">열람됨</div><div class="value">{{ viewed_count }}건</div></div>
+    <div class="kpi"><div class="label">미열람</div><div class="value">{{ rows|length - viewed_count }}건</div></div>
+  </div>
+
+  {% if rows %}
+  <table>
+    <thead>
+      <tr><th>고객</th><th>생성자</th><th>공유(생성)일</th><th>열람 여부</th><th class="r">열람 횟수</th><th>최근 열람 시각</th><th>최근 열람 지역</th><th class="r">최근 열람 시간</th><th class="r">총 열람 시간</th></tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td><a class="name-link" href="/reports/{{ r.id }}">{{ r.customer_name }}</a></td>
+        <td>{{ r.created_by_name or '-' }}</td>
+        <td class="muted">{{ r.created_at or '-' }}</td>
+        <td>
+          {% if r.view_count > 0 %}<span class="chip ok">열람함</span>{% else %}<span class="chip warn">안 봄</span>{% endif %}
+        </td>
+        <td class="r">{{ r.view_count }}회</td>
+        <td class="muted">{{ r.last_viewed_at or '-' }}</td>
+        <td class="muted">{{ r.last_location or ('위치 확인 불가' if r.view_count > 0 else '-') }}</td>
+        <td class="r muted">{{ r.last_duration_display or '-' }}</td>
+        <td class="r muted">{{ r.total_duration_display or '-' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">아직 카카오톡 등으로 공유된 리포트가 없습니다.</div>
+  {% endif %}
+</div>
+</body>
+</html>
