@@ -8,9 +8,14 @@ rules_default.json (또는 --rules로 지정한 커스텀 파일)에 정의된 �
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass, field
 
 from .parser import CategoryTotal, DetailItem, IndemnityItem
+
+# 고객의 가입 담보 종류 · 금액이 포함된 디버그 로그를 운영 환경에서 항상 stderr에
+# 남기지 않도록 opt-in 플래그로 가드한다 (webapp.py의 REPORT_DEBUG_LOGS와 동일).
+_DEBUG_LOGS = os.environ.get("REPORT_DEBUG_LOGS", "").strip().lower() in ("1", "true", "yes")
 
 
 @dataclass
@@ -132,14 +137,15 @@ def evaluate(
     consumed: set[str] = set()
     sections: list[EvaluatedSection] = []
 
-    # 디버깅: 파싱된 데이터 로깅
-    import sys
-    print(f"[DEBUG] category_totals: {len(category_totals)} items", file=sys.stderr)
-    print(f"[DEBUG] indemnity_items: {len(indemnity_items)} items", file=sys.stderr)
-    if indemnity_items:
-        for item in indemnity_items[:3]:
-            print(f"  - {item.company}: {item.coverage_name} ({item.detail_type}) = {item.amount_won}", file=sys.stderr)
-    print(f"[DEBUG] 카테고리 맵: {list(totals_by_cat.keys())[:5]}", file=sys.stderr)
+    # 디버깅: 파싱된 데이터 로깅 (고객의 가입 담보 내역이 포함되므로 opt-in일 때만)
+    if _DEBUG_LOGS:
+        import sys
+        print(f"[DEBUG] category_totals: {len(category_totals)} items", file=sys.stderr)
+        print(f"[DEBUG] indemnity_items: {len(indemnity_items)} items", file=sys.stderr)
+        if indemnity_items:
+            for item in indemnity_items[:3]:
+                print(f"  - {item.company}: {item.coverage_name} ({item.detail_type}) = {item.amount_won}", file=sys.stderr)
+        print(f"[DEBUG] 카테고리 맵: {list(totals_by_cat.keys())[:5]}", file=sys.stderr)
 
     for sec in rules["sections"]:
         rows: list[EvaluatedRow] = []
@@ -159,11 +165,12 @@ def evaluate(
                        (match.replace("의료비", "") in i.coverage_name and "의료" in i.coverage_name)
                 ]
                 # 디버깅: 매칭 결과
-                import sys
-                print(f"[DEBUG] {r['label']}: match='{match}', matched={len(matched)}", file=sys.stderr)
-                if matched:
-                    for m in matched[:2]:
-                        print(f"  → {m.company}: {m.coverage_name} ({m.detail_type})", file=sys.stderr)
+                if _DEBUG_LOGS:
+                    import sys
+                    print(f"[DEBUG] {r['label']}: match='{match}', matched={len(matched)}", file=sys.stderr)
+                    if matched:
+                        for m in matched[:2]:
+                            print(f"  → {m.company}: {m.coverage_name} ({m.detail_type})", file=sys.stderr)
                 disease = sum(i.amount_won for i in matched if "질병" in i.coverage_name) // 10000
                 injury = sum(i.amount_won for i in matched if "질병" not in i.coverage_name) // 10000
 

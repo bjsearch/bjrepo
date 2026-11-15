@@ -60,6 +60,12 @@
           <label for="phone">휴대폰번호</label>
           <input type="tel" id="phone" name="phone" required placeholder="010-1234-5678" value="{{ user_phone or '' }}">
         </div>
+        {% if need_password %}
+        <div class="form-group">
+          <label for="team_password">팀 비밀번호</label>
+          <input type="password" id="team_password" name="team_password" required>
+        </div>
+        {% endif %}
         <div class="form-group">
           <label for="password">비밀번호</label>
           <input type="password" id="password" name="password" required placeholder="6자 이상">

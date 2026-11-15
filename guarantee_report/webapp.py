@@ -71,6 +71,10 @@ except Exception as e:  # noqa: BLE001 — DB가 기동 시점에 잠깐 응답 
         flush=True,
     )
 
+# 디버그 로그 opt-in 플래그 — 꺼져 있으면(기본값) 고객 생년월일·성별·보험료 계산값
+# 등이 포함된 디버그 로그를 stdout/파일에 남기지 않는다. 로컬 개발 시에만 켠다.
+REPORT_DEBUG_LOGS = os.environ.get("REPORT_DEBUG_LOGS", "").strip().lower() in ("1", "true", "yes")
+
 TEAM_PASSWORD = os.environ.get("APP_PASSWORD")
 ADMIN_PHONES = {re.sub(r"\D", "", p) for p in os.environ.get("ADMIN_PHONES", "").split(",") if p.strip()}
 # 승인자 목록 (관리자만 신규 가입자를 승인할 수 있음)
@@ -100,7 +104,12 @@ _draft_reports = {}
 
 def _log_shortfall(msg: str) -> None:
     """부족 보장 추가 디버그 로그 — stdout(Render Logs 탭에서 조회 가능)과
-    /tmp 파일에 동시에 기록한다."""
+    /tmp 파일에 동시에 기록한다.
+
+    고객 생년월일 · 성별 · 보험료 계산값 등 개인정보가 포함될 수 있으므로
+    REPORT_DEBUG_LOGS=1 환경변수를 켠 경우에만(로컬 디버깅용) 기록한다."""
+    if not REPORT_DEBUG_LOGS:
+        return
     print(f"[SHORTFALL] {msg}", flush=True)
     try:
         with open("/tmp/shortfall_debug.log", "a", encoding="utf-8") as f:
@@ -176,17 +185,55 @@ def current_user() -> dict | None:
     return session.get("user")
 
 
+def _rate_limited(store: dict[str, list[float]], key: str, max_hits: int, window: float) -> bool:
+    """key별 최근 window(초) 동안의 시도 횟수가 max_hits를 넘으면 True.
+    (시도 자체는 항상 기록되므로, 호출측에서 '제한에 걸렸을 때도 시도를 셀지'를
+    따로 고민할 필요가 없다.)"""
+    now = time.time()
+    hits = [t for t in store.get(key, []) if now - t < window]
+    hits.append(now)
+    store[key] = hits
+    return len(hits) > max_hits
+
+
 _CHAT_RATE_LIMIT: dict[str, list[float]] = {}
 _CHAT_RATE_MAX = 12  # 분당 최대 질문 수 (챗봇 API 비용 남용 방지)
 _CHAT_RATE_WINDOW = 60.0
 
 
 def _chat_rate_limited(key: str) -> bool:
-    now = time.time()
-    hits = [t for t in _CHAT_RATE_LIMIT.get(key, []) if now - t < _CHAT_RATE_WINDOW]
-    hits.append(now)
-    _CHAT_RATE_LIMIT[key] = hits
-    return len(hits) > _CHAT_RATE_MAX
+    return _rate_limited(_CHAT_RATE_LIMIT, key, _CHAT_RATE_MAX, _CHAT_RATE_WINDOW)
+
+
+# 로그인 시도 제한 — 휴대폰번호(아이디)+IP 조합으로 비밀번호 무차별 대입을 막는다.
+_LOGIN_RATE_LIMIT: dict[str, list[float]] = {}
+_LOGIN_RATE_MAX = 8
+_LOGIN_RATE_WINDOW = 300.0  # 5분
+
+
+def _login_rate_limited(key: str) -> bool:
+    return _rate_limited(_LOGIN_RATE_LIMIT, key, _LOGIN_RATE_MAX, _LOGIN_RATE_WINDOW)
+
+
+# 회원가입 시도 제한 — 대량 계정 생성/휴대폰번호 존재 여부 스캔을 막는다.
+_SIGNUP_RATE_LIMIT: dict[str, list[float]] = {}
+_SIGNUP_RATE_MAX = 10
+_SIGNUP_RATE_WINDOW = 600.0  # 10분
+
+
+def _signup_rate_limited(key: str) -> bool:
+    return _rate_limited(_SIGNUP_RATE_LIMIT, key, _SIGNUP_RATE_MAX, _SIGNUP_RATE_WINDOW)
+
+
+# 공유 링크 휴대폰번호 뒤 4자리 게이트 시도 제한 — 10,000가지뿐인 4자리 숫자를
+# 무차별 대입해 고객의 비공개 리포트를 열람하는 것을 막는다.
+_SHARE_GATE_RATE_LIMIT: dict[str, list[float]] = {}
+_SHARE_GATE_RATE_MAX = 8
+_SHARE_GATE_RATE_WINDOW = 600.0  # 10분
+
+
+def _share_gate_rate_limited(key: str) -> bool:
+    return _rate_limited(_SHARE_GATE_RATE_LIMIT, key, _SHARE_GATE_RATE_MAX, _SHARE_GATE_RATE_WINDOW)
 
 
 def _geolocate_ip(ip: str | None) -> dict:
@@ -318,6 +365,15 @@ def login():
     if not name or len(phone) < 9:
         return _fail("이름과 휴대폰번호를 정확히 입력해주세요.")
 
+    # 비밀번호/팀 비밀번호 무차별 대입 방지: 휴대폰번호+IP 조합으로 시도 횟수 제한.
+    # (팀 비밀번호 검증보다 먼저 확인해야 팀 비밀번호 자체에 대한 무차별 대입도 막힌다.)
+    if _login_rate_limited(f"{phone}:{request.remote_addr}"):
+        return _fail(
+            "❌ 로그인 시도가 너무 많습니다.\n\n"
+            "잠시 후 다시 시도해주세요.",
+            429
+        )
+
     # 팀 비밀번호 검증 (설정되어 있으면)
     if TEAM_PASSWORD and not hmac.compare_digest(team_password, TEAM_PASSWORD):
         return _fail(
@@ -326,46 +382,52 @@ def login():
             401
         )
 
-    # 비밀번호가 비어있으면 기본값 "000000" 사용
     if not user_password:
-        user_password = "000000"
+        return _fail("비밀번호를 입력해주세요.")
 
     role = "admin" if phone in ADMIN_PHONES else "user"
     try:
-        # 기존 사용자 확인
+        # 기존 사용자 확인 — /login은 기존 계정으로만 로그인하며, 신원 확인(휴대폰
+        # 인증) 없이 처음 보는 휴대폰번호로 계정을 즉석 생성하지 않는다. 그런 자동
+        # 생성을 허용하면 관리자 휴대폰번호를 아는 사람이 누구나 /login만으로
+        # 관리자 승인 절차를 건너뛰고 곧장 관리자 권한(전체 고객 PII 열람)을 받을
+        # 수 있었다. 신규 가입은 승인 대기 절차가 있는 /signup에서만 받는다.
         existing_user = storage.get_user_by_phone(phone)
-        if existing_user:
-            # 승인 상태 확인
-            approval_status = existing_user.get("approval_status", "approved")
-            if approval_status == "pending":
-                return _fail(
-                    "❌ 승인 대기 중입니다.\n\n"
-                    "귀하의 계정이 관리자의 승인을 기다리고 있습니다.\n"
-                    "승인되면 로그인할 수 있습니다.",
-                    401
-                )
-            elif approval_status == "rejected":
-                return _fail(
-                    "❌ 가입이 거부되었습니다.\n\n"
-                    "관리자가 귀하의 가입을 거부했습니다.\n"
-                    "자세한 사항은 관리자에게 문의하세요.",
-                    403
-                )
+        if not existing_user:
+            return _fail(
+                "❌ 등록되지 않은 계정입니다.\n\n"
+                "이 휴대폰번호로 가입된 계정이 없습니다. 먼저 회원가입을 진행해주세요.",
+                404
+            )
 
-            # 기존 사용자: 비밀번호 검증
-            password_hash = existing_user.get("password_hash")
-            if not storage.verify_password(user_password, password_hash):
-                return _fail(
-                    "❌ 비밀번호가 올바르지 않습니다.\n\n"
-                    "입력하신 비밀번호를 다시 확인해주세요. 혹은 비밀번호를 변경하려면 "
-                    "회원 가입 페이지에서 새로운 비밀번호로 등록할 수 있습니다.",
-                    401
-                )
-            # 이름과 역할 업데이트
-            user = storage.upsert_user(name, phone, role)
-        else:
-            # 신규 사용자: 계정 생성
-            user = storage.upsert_user(name, phone, role, user_password)
+        # 승인 상태 확인
+        approval_status = existing_user.get("approval_status", "approved")
+        if approval_status == "pending":
+            return _fail(
+                "❌ 승인 대기 중입니다.\n\n"
+                "귀하의 계정이 관리자의 승인을 기다리고 있습니다.\n"
+                "승인되면 로그인할 수 있습니다.",
+                401
+            )
+        elif approval_status == "rejected":
+            return _fail(
+                "❌ 가입이 거부되었습니다.\n\n"
+                "관리자가 귀하의 가입을 거부했습니다.\n"
+                "자세한 사항은 관리자에게 문의하세요.",
+                403
+            )
+
+        # 기존 사용자: 비밀번호 검증
+        password_hash = existing_user.get("password_hash")
+        if not storage.verify_password(user_password, password_hash):
+            return _fail(
+                "❌ 비밀번호가 올바르지 않습니다.\n\n"
+                "입력하신 비밀번호를 다시 확인해주세요. 혹은 비밀번호를 변경하려면 "
+                "회원 가입 페이지에서 새로운 비밀번호로 등록할 수 있습니다.",
+                401
+            )
+        # 이름과 역할 업데이트
+        user = storage.upsert_user(name, phone, role)
     except Exception as e:  # noqa: BLE001 — DB 문제를 화면에 바로 보여줘 진단을 돕는다
         import traceback
 
@@ -384,11 +446,14 @@ def logout():
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if request.method == "GET":
-        return render_template("signup.html.j2", error=None, logo_mark=LOGO_MARK)
+        return render_template(
+            "signup.html.j2", error=None, need_password=bool(TEAM_PASSWORD), logo_mark=LOGO_MARK
+        )
 
     name = request.form.get("name", "").strip()
     phone_raw = request.form.get("phone", "").strip()
     phone = _normalize_phone(phone_raw)
+    team_password = request.form.get("team_password", "")
     password = request.form.get("password", "")
     password_confirm = request.form.get("password_confirm", "")
 
@@ -397,6 +462,7 @@ def signup():
             render_template(
                 "signup.html.j2",
                 error=msg,
+                need_password=bool(TEAM_PASSWORD),
                 user_name=name,
                 user_phone=phone_raw,
                 logo_mark=LOGO_MARK,
@@ -406,6 +472,23 @@ def signup():
 
     if not name or len(phone) < 9:
         return _fail("❌ 입력 오류\n\n이름과 휴대폰번호를 모두 정확히 입력해주세요.")
+
+    # 대량 계정 생성/휴대폰번호 존재 여부 스캔, 팀 비밀번호 무차별 대입 방지.
+    if _signup_rate_limited(f"{phone}:{request.remote_addr}"):
+        return _fail(
+            "❌ 요청이 너무 많습니다.\n\n잠시 후 다시 시도해주세요.",
+            429
+        )
+
+    # 팀 비밀번호 검증 (설정되어 있으면) — 외부인이 임의의 이름 · 휴대폰번호로
+    # (특히 관리자 휴대폰번호를 입력해) 계정을 만들 수 없도록 /login과 동일하게
+    # 가입 단계에서도 팀 비밀번호를 요구한다.
+    if TEAM_PASSWORD and not hmac.compare_digest(team_password, TEAM_PASSWORD):
+        return _fail(
+            "❌ 팀 비밀번호가 올바르지 않습니다.\n\n"
+            "팀에서 공유받은 비밀번호를 다시 확인하고 입력해주세요.",
+            401
+        )
 
     if not password or len(password) < 6:
         return _fail(
@@ -1726,11 +1809,16 @@ def shared_report(token: str):
     if customer_phone and not session.get(verified_key):
         error = None
         if request.method == "POST":
-            entered = _normalize_phone(request.form.get("phone", ""))[-4:]
-            if entered and hmac.compare_digest(entered, customer_phone):
-                session[verified_key] = True
+            # 4자리 숫자는 경우의 수가 10,000가지뿐이라 토큰이 유출되면 무차별
+            # 대입으로 뚫릴 수 있다 — 토큰+IP 조합으로 시도 횟수를 제한한다.
+            if _share_gate_rate_limited(f"{token}:{request.remote_addr}"):
+                error = "시도 횟수가 너무 많습니다. 잠시 후 다시 시도해주세요."
             else:
-                error = "휴대폰번호 뒤 4자리가 일치하지 않습니다. 다시 확인해주세요."
+                entered = _normalize_phone(request.form.get("phone", ""))[-4:]
+                if entered and hmac.compare_digest(entered, customer_phone):
+                    session[verified_key] = True
+                else:
+                    error = "휴대폰번호 뒤 4자리가 일치하지 않습니다. 다시 확인해주세요."
         if not session.get(verified_key):
             return render_template(
                 "share_gate.html.j2", error=error, customer_name=data["header"]["name"], logo_mark=LOGO_MARK
