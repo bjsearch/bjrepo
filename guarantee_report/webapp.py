@@ -33,7 +33,7 @@ from flask import Flask, request, render_template, Response, redirect, url_for, 
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.utils import secure_filename
 
-from . import chatbot, storage
+from . import storage
 from .builder import (
     build_report_data,
     _get_available_coverage_amounts,
@@ -1506,7 +1506,7 @@ def view_report(report_id: int):
             "is_public_view": False,
             "kakao_js_key": KAKAO_JS_KEY,
             "chat_endpoint": url_for("report_chat", report_id=report_id),
-            "chat_enabled": bool(chatbot.ANTHROPIC_API_KEY),
+            "chat_enabled": False,  # 챗봇 기능 종료 (리포트 PII를 외부 LLM API로 전송하던 기능)
         }
     )
     filename = f"{data['header']['name']}_성우아빠의보장분석리포트.html"
@@ -1853,7 +1853,7 @@ def shared_report(token: str):
             "is_public_view": True,
             "kakao_js_key": None,
             "chat_endpoint": url_for("shared_report_chat", token=token),
-            "chat_enabled": bool(chatbot.ANTHROPIC_API_KEY),
+            "chat_enabled": False,  # 챗봇 기능 종료 (리포트 PII를 외부 LLM API로 전송하던 기능)
             "view_id": view_id,
             "view_report_id": report_id,
             "view_duration_endpoint": url_for("report_view_duration", token=token) if view_id else None,
@@ -1887,37 +1887,14 @@ def report_view_duration(token: str):
 
 @app.post("/reports/<int:report_id>/chat")
 def report_chat(report_id: int):
-    user = current_user()
-    meta = storage.get_report_meta(report_id)
-    if not meta or not _can_access(meta, user):
-        abort(403)
-    if _chat_rate_limited(f"r{report_id}"):
-        return {"error": "질문이 너무 잦습니다. 잠시 후 다시 시도해주세요."}, 429
-    body = request.get_json(silent=True) or {}
-    data = storage.get_report(report_id)
-    try:
-        answer = chatbot.ask(body.get("question", ""), data, body.get("history"))
-    except chatbot.ChatbotError as e:
-        return {"error": str(e)}, 400
-    return {"answer": answer}
+    # 챗봇 기능 종료 — 리포트(PII 포함) 전체를 외부 LLM API로 전송하는 경로라 비활성화했다.
+    abort(404)
 
 
 @app.post("/s/<token>/chat")
 def shared_report_chat(token: str):
-    data = storage.get_report_by_share_token(token)
-    if not data:
-        abort(404)
-    customer_phone = re.sub(r"\D", "", (data.get("header") or {}).get("customer_phone") or "")[-4:]
-    if customer_phone and not session.get(_share_verified_key(token)):
-        abort(403)
-    if _chat_rate_limited(f"s{token}"):
-        return {"error": "질문이 너무 잦습니다. 잠시 후 다시 시도해주세요."}, 429
-    body = request.get_json(silent=True) or {}
-    try:
-        answer = chatbot.ask(body.get("question", ""), data, body.get("history"))
-    except chatbot.ChatbotError as e:
-        return {"error": str(e)}, 400
-    return {"answer": answer}
+    # 챗봇 기능 종료 — 위와 동일한 이유로 비활성화했다.
+    abort(404)
 
 
 @app.get("/compare")
